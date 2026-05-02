@@ -91,11 +91,6 @@ export function GroupToolsPanel() {
           >
             Discover
           </button>
-          <div className="ml-auto">
-            <Button size="sm" variant="secondary" onClick={() => setQuery("")}>
-              New group
-            </Button>
-          </div>
         </div>
 
         {/* Search */}
