@@ -73,14 +73,16 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
-      <div className="max-w-md w-full">
+      <div className="w-full max-w-md">
         {/* Header Card */}
-        <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-slate-900 to-slate-800 p-8 text-white shadow-lg mb-6">
+        <div className="relative mb-6 overflow-hidden rounded-2xl bg-linear-to-br from-slate-900 to-slate-800 p-6 text-white shadow-lg sm:p-8">
           <div className="relative z-10 text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 rounded-full mb-4">
               <Shield className="w-8 h-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold mb-2">Admin Portal</h1>
+            <h1 className="mb-2 text-2xl font-bold sm:text-3xl">
+              Admin Portal
+            </h1>
             <p className="text-sm text-slate-200">
               PowerMySport Administration Panel
             </p>
@@ -90,7 +92,7 @@ export default function AdminLoginPage() {
         </div>
 
         {/* Login Form Card */}
-        <div className="bg-white rounded-xl p-8 shadow-sm border border-slate-200">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
@@ -103,7 +105,7 @@ export default function AdminLoginPage() {
                 onChange={handleChange}
                 required
                 className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange/50 focus:border-power-orange bg-white text-slate-900 transition-all"
-                placeholder="admin@powermysport.com"
+                placeholder="teams@powermysport.com"
               />
             </div>
 

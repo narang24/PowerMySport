@@ -248,7 +248,11 @@ export interface Venue {
   amenities: string[];
   description: string;
   images: string[];
-  imageKeys?: string[]; // S3 keys for venue images (regenerate URLs as needed)
+  imageKeys?: string[]; // S3 keys for venue images (legacy, regenerate URLs as needed)
+  generalImages?: string[];
+  generalImageKeys?: string[];
+  sportImages?: Record<string, string[]>;
+  sportImageKeys?: Record<string, string[]>;
   coverPhotoUrl?: string;
   coverPhotoKey?: string; // S3 key for cover photo (regenerate URL as needed)
   allowExternalCoaches: boolean;

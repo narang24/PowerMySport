@@ -136,7 +136,7 @@ export const createNewVenue = async (
       approvalStatus: "PENDING", // Require admin approval for quality control
     });
 
-    const venueData = transformDocument(venue.toObject());
+    const venueData = transformDocument(venue);
 
     res.status(201).json({
       success: true,
@@ -167,7 +167,7 @@ export const getVenue = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const venueData = transformDocument(venue.toObject());
+    const venueData = transformDocument(venue);
 
     res.status(200).json({
       success: true,
@@ -339,7 +339,7 @@ export const updateVenueDetails = async (
       return;
     }
 
-    const venueData = transformDocument(venue.toObject());
+    const venueData = transformDocument(venue);
 
     res.status(200).json({
       success: true,

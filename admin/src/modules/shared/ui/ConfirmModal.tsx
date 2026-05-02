@@ -55,7 +55,7 @@ export function ConfirmModal({
       }}
     >
       <div
-        className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-xl"
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-xl border border-slate-200 bg-white p-4 shadow-xl sm:p-6"
         onClick={(event) => event.stopPropagation()}
       >
         <h3 className="text-lg font-semibold text-slate-900">{title}</h3>

@@ -195,13 +195,13 @@ export default function AdminBookingsPage() {
       />
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-slate-200">
+      <div className="admin-tabs-scroll border-b border-slate-200">
         <button
           onClick={() => {
             setActiveTab("ALL");
             setCurrentPage(1);
           }}
-          className={`px-4 py-3 font-semibold text-sm transition-colors border-b-2 ${
+          className={`px-3 py-2.5 font-semibold text-sm transition-colors border-b-2 sm:px-4 sm:py-3 ${
             activeTab === "ALL"
               ? "border-power-orange text-power-orange"
               : "border-transparent text-slate-600 hover:text-slate-900"
@@ -217,7 +217,7 @@ export default function AdminBookingsPage() {
             setActiveTab("VENUE");
             setCurrentPage(1);
           }}
-          className={`px-4 py-3 font-semibold text-sm transition-colors border-b-2 ${
+          className={`px-3 py-2.5 font-semibold text-sm transition-colors border-b-2 sm:px-4 sm:py-3 ${
             activeTab === "VENUE"
               ? "border-power-orange text-power-orange"
               : "border-transparent text-slate-600 hover:text-slate-900"
@@ -233,7 +233,7 @@ export default function AdminBookingsPage() {
             setActiveTab("COACH");
             setCurrentPage(1);
           }}
-          className={`px-4 py-3 font-semibold text-sm transition-colors border-b-2 ${
+          className={`px-3 py-2.5 font-semibold text-sm transition-colors border-b-2 sm:px-4 sm:py-3 ${
             activeTab === "COACH"
               ? "border-power-orange text-power-orange"
               : "border-transparent text-slate-600 hover:text-slate-900"
@@ -304,7 +304,7 @@ export default function AdminBookingsPage() {
                   return (
                     <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
+                        <div className="mb-3 flex flex-wrap items-center gap-2 sm:gap-3">
                           <h3 className="text-lg font-semibold text-slate-900">
                             Booking #{booking.id.slice(-6)}
                           </h3>

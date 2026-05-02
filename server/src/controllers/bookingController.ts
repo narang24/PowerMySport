@@ -18,6 +18,7 @@ import {
   validatePromoCodeForUser,
 } from "../services/BookingService";
 import { generateHourlySlots } from "../utils/booking";
+import { isWithinOpeningHours } from "../utils/openingHours";
 import { getPaginationParams } from "../utils/pagination";
 import { transformDocument } from "../middleware/responseTransform";
 
@@ -221,6 +222,15 @@ export const getVenueAvailability = async (
       return;
     }
 
+    const venue = await Venue.findById(venueId).select("openingHours");
+    if (!venue) {
+      res.status(404).json({
+        success: false,
+        message: "Venue not found",
+      });
+      return;
+    }
+
     // Get all bookings for this venue on the specified date
     const bookedSlots = await getVenueBookingsForDate(
       venueId,
@@ -234,8 +244,48 @@ export const getVenueAvailability = async (
       endTime: b.endTime,
     }));
 
-    const allSlots = generateHourlySlots(6, 23);
     const targetDate = new Date(date as string);
+    const dayNames = [
+      "sunday",
+      "monday",
+      "tuesday",
+      "wednesday",
+      "thursday",
+      "friday",
+      "saturday",
+    ] as const;
+    const dayName = dayNames[targetDate.getDay()];
+    const dayHours = dayName ? venue.openingHours?.[dayName] : null;
+
+    let allSlots: string[] = [];
+
+    if (dayHours?.isOpen && dayHours.openTime && dayHours.closeTime) {
+      const [openHourRaw, openMinuteRaw] = dayHours.openTime.split(":");
+      const [closeHourRaw, closeMinuteRaw] = dayHours.closeTime.split(":");
+      const openHour = parseInt(openHourRaw || "0", 10);
+      const openMinute = parseInt(openMinuteRaw || "0", 10);
+      const closeHour = parseInt(closeHourRaw || "0", 10);
+      const closeMinute = parseInt(closeMinuteRaw || "0", 10);
+
+      const slotStartHour = Number.isFinite(openHour) ? openHour : 0;
+      const slotEndHour =
+        (Number.isFinite(closeHour) ? closeHour : 0) +
+        (closeMinute > 0 ? 1 : 0);
+
+      allSlots = generateHourlySlots(slotStartHour, slotEndHour).filter(
+        (slot) => {
+          const slotHour = parseInt(slot.split(":")[0] || "0", 10);
+          const slotEnd = `${String(slotHour + 1).padStart(2, "0")}:00`;
+          return isWithinOpeningHours(
+            targetDate,
+            slot,
+            slotEnd,
+            venue.openingHours,
+          ).isValid;
+        },
+      );
+    }
+
     const now = new Date();
     const isToday =
       targetDate.getFullYear() === now.getFullYear() &&

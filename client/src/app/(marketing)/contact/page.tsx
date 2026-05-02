@@ -284,19 +284,19 @@ export default function ContactPage() {
                         <p className="text-muted-foreground">
                           General Inquiries:{" "}
                           <a
-                            href="mailto:hello@powermysport.com"
+                            href="mailto:teams@powermysport.com"
                             className="text-power-orange hover:underline"
                           >
-                            hello@powermysport.com
+                            teams@powermysport.com
                           </a>
                         </p>
                         <p className="text-muted-foreground">
                           Support:{" "}
                           <a
-                            href="mailto:support@powermysport.com"
+                            href="mailto:teams@powermysport.com"
                             className="text-power-orange hover:underline"
                           >
-                            support@powermysport.com
+                            teams@powermysport.com
                           </a>
                         </p>
                       </div>

@@ -37,9 +37,6 @@ const communityConversationSchema = new Schema<CommunityConversationDocument>(
     },
     participantKey: {
       type: String,
-      sparse: true,
-      unique: true,
-      index: true,
     },
     status: {
       type: String,
@@ -61,6 +58,17 @@ const communityConversationSchema = new Schema<CommunityConversationDocument>(
 
 communityConversationSchema.index({ participants: 1, updatedAt: -1 });
 communityConversationSchema.index({ groupId: 1, updatedAt: -1 });
+communityConversationSchema.index(
+  { participantKey: 1 },
+  {
+    unique: true,
+    name: "participantKey_dm_unique",
+    partialFilterExpression: {
+      conversationType: "DM",
+      participantKey: { $type: "string" },
+    },
+  },
+);
 
 export const CommunityConversation =
   mongoose.model<CommunityConversationDocument>(

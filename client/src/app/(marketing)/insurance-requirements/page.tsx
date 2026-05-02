@@ -580,19 +580,19 @@ export default function InsuranceRequirements() {
               <p>
                 Email:{" "}
                 <a
-                  href="mailto:compliance@powermysport.com"
+                  href="mailto:teams@powermysport.com"
                   className="text-blue-600 hover:underline"
                 >
-                  compliance@powermysport.com
+                  teams@powermysport.com
                 </a>
               </p>
               <p>
                 Email (Vendors):{" "}
                 <a
-                  href="mailto:vendor-support@powermysport.com"
+                  href="mailto:teams@powermysport.com"
                   className="text-blue-600 hover:underline"
                 >
-                  vendor-support@powermysport.com
+                  teams@powermysport.com
                 </a>
               </p>
               <p>Response Time: 48 hours</p>

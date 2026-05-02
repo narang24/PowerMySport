@@ -424,7 +424,7 @@ export const deleteVenueOnboardingHandler = async (
     }
 
     // Delete associated S3 files
-    const { s3Service } = await import("../services/S3Service.js");
+    const { s3Service } = await import("../services/S3Service");
     if (venue.images?.length > 0) {
       await s3Service.deleteFiles(venue.images, "images");
     }

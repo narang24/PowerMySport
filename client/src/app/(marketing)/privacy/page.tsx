@@ -247,7 +247,7 @@ export default function PrivacyPolicyPage() {
             <div className="bg-slate-50 p-4 rounded-lg">
               <p className="text-slate-700 flex items-center gap-2 mb-2">
                 <Mail size={18} className="text-power-orange" />
-                <strong>Email:</strong> privacy@powermysport.com
+                <strong>Email:</strong> teams@powermysport.com
               </p>
               <p className="text-slate-700">
                 <strong>Address:</strong> PowerMySport HQ, Sports Complex Road,

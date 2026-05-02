@@ -16,7 +16,7 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
  */
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = "default", children, onClick, ...props }, ref) => {
-    const baseStyles = "bg-card border border-border rounded-lg p-6";
+    const baseStyles = "bg-card border border-border rounded-lg p-4 sm:p-6";
 
     const variants = {
       default: "",
@@ -81,10 +81,7 @@ export const CardTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({
   ...props
 }) => {
   return (
-    <h3
-      className={cn("text-xl font-bold text-white", className)}
-      {...props}
-    >
+    <h3 className={cn("text-xl font-bold text-white", className)} {...props}>
       {children}
     </h3>
   );
@@ -135,4 +132,3 @@ export const CardFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
     </div>
   );
 };
-

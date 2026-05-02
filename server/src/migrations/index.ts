@@ -14,6 +14,8 @@ import { migrateCoachVenueToProfile } from "./06_separate_coach_venue_roles";
 import { up as addGroupBookingSupport } from "./07_add_group_booking_support";
 import { up as addNotificationsSystem } from "./08_add_notifications_system";
 import { up as backfillLegalConsents } from "./09_backfill_legal_consents";
+import { migrateVenueImages } from "./10_migrate_venue_images";
+import { fixCommunityConversationIndexes } from "./11_fix_community_conversation_indexes";
 
 const runAllMigrations = async () => {
   console.log("=".repeat(60));
@@ -76,6 +78,18 @@ const runAllMigrations = async () => {
     console.log("📋 Running Migration 9: Backfill Legal Consents");
     console.log("-".repeat(60));
     await backfillLegalConsents();
+    console.log();
+
+    // Migration 10: Migrate Venue Images
+    console.log("📋 Running Migration 10: Consolidate Venue Images");
+    console.log("-".repeat(60));
+    await migrateVenueImages();
+    console.log();
+
+    // Migration 11: Fix Community Conversation Indexes
+    console.log("📋 Running Migration 11: Fix Community Conversation Indexes");
+    console.log("-".repeat(60));
+    await fixCommunityConversationIndexes();
     console.log();
 
     console.log("=".repeat(60));

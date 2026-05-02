@@ -9,6 +9,7 @@ import { Button } from "@/modules/shared/ui/Button";
 import { Card } from "@/modules/shared/ui/Card";
 import { sportsApi } from "@/modules/sports/services/sports";
 import { Venue } from "@/types";
+import { getVenueImageUrls } from "@/utils/venueImages";
 import {
   ArrowRight,
   Bookmark,
@@ -468,6 +469,7 @@ export default function VenuesPage() {
                         Number(venue.reviewCount || 0) >= 10 ||
                         (Number(venue.rating || 0) >= 4.3 &&
                           Number(venue.reviewCount || 0) >= 5);
+                      const venueImages = getVenueImageUrls(venue);
                       const onToggleFollowVenue = () => {
                         if (!venueId) {
                           return;
@@ -488,16 +490,27 @@ export default function VenuesPage() {
 
                       return (
                         <>
-                          {venue.images && venue.images.length > 0 ? (
-                            <div className="h-48 w-full overflow-hidden bg-slate-100">
+                          {venueImages.length > 0 ? (
+                            <div className="relative h-52 w-full overflow-hidden bg-slate-100">
                               <img
-                                src={venue.images[0]}
+                                src={venueImages[0]}
                                 alt={venue.name}
                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                               />
+                              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/55 via-black/20 to-transparent" />
+                              <div className="absolute bottom-3 left-3 flex items-center gap-2 text-white">
+                                <span className="rounded-full border border-white/40 bg-black/35 px-2.5 py-1 text-[11px] font-semibold backdrop-blur-sm">
+                                  {venueImages.length} photos
+                                </span>
+                                {venue.sports[0] && (
+                                  <span className="rounded-full border border-white/40 bg-white/15 px-2.5 py-1 text-[11px] font-semibold backdrop-blur-sm">
+                                    {venue.sports[0]}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           ) : (
-                            <div className="h-48 w-full bg-linear-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                            <div className="h-52 w-full bg-linear-to-br from-slate-100 to-slate-200 flex items-center justify-center">
                               <Building2 size={48} className="text-slate-300" />
                             </div>
                           )}

@@ -9,7 +9,7 @@ const vapidKeys = {
   privateKey: process.env.VAPID_PRIVATE_KEY || "",
 };
 
-const vapidEmail = process.env.VAPID_EMAIL || "mailto:admin@powermysport.com";
+const vapidEmail = process.env.VAPID_EMAIL || "mailto:teams@powermysport.com";
 
 // Set VAPID details for web-push
 webpush.setVapidDetails(vapidEmail, vapidKeys.publicKey, vapidKeys.privateKey);

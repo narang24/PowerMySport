@@ -196,7 +196,7 @@ export class ReminderMonitoringService {
     const adminEmail =
       process.env.ALERT_EMAIL ||
       process.env.EMAIL_USER ||
-      "admin@powermysport.com";
+      "teams@powermysport.com";
     const appName = "PowerMySport Reminder System";
 
     const issuesList = healthStatus.issues
@@ -295,7 +295,7 @@ export class ReminderMonitoringService {
     const adminEmail =
       process.env.ALERT_EMAIL ||
       process.env.EMAIL_USER ||
-      "admin@powermysport.com";
+      "teams@powermysport.com";
     const stats = await this.getMonitoringStats();
     const healthStatus = await this.checkSchedulerHealth();
     const failedReminders = await this.getFailedReminders(10);

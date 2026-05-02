@@ -26,8 +26,8 @@ export interface VenueDocument extends Document {
   address: string;
   openingHours: import("../types").OpeningHours;
   description: string;
-  images: string[]; // Presigned URLs (regenerated on-demand) - LEGACY: for backward compatibility
-  imageKeys: string[]; // S3 keys for images - LEGACY: for backward compatibility
+  images: string[]; // DEPRECATED: Legacy presigned URLs. Use generalImages instead. Migrate with: npm run migrate:venue-images
+  imageKeys: string[]; // DEPRECATED: Legacy S3 keys. Use generalImageKeys instead. Migrate with: npm run migrate:venue-images
   generalImages?: string[]; // General venue images (3 required for new venues)
   generalImageKeys?: string[]; // S3 keys for general images
   sportImages?: Record<string, string[]>; // Sport-specific images (5 per sport)
@@ -364,32 +364,62 @@ venueSchema.methods.refreshDocumentUrls = async function () {
 venueSchema.methods.refreshImageUrls = async function () {
   const { s3Service } = require("../services/S3Service");
 
-  // Refresh gallery images
-  if (this.imageKeys && this.imageKeys.length > 0) {
+  const extractKeyFromUrl = (url?: string): string | null => {
+    if (!url || typeof url !== "string") return null;
+
+    try {
+      const parsed = new URL(url);
+      const rawPath = parsed.pathname.startsWith("/")
+        ? parsed.pathname.slice(1)
+        : parsed.pathname;
+      const key = decodeURIComponent(rawPath);
+      return key.length > 0 ? key : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const refreshFromKeys = async (keys: string[]): Promise<string[]> => {
     const freshImages = await Promise.all(
-      this.imageKeys.map(async (key: string) => {
+      keys.map(async (key: string) => {
         try {
-          return await s3Service.generateDownloadUrl(
-            key,
-            "verification",
-            604800,
-          ); // 7 days
+          return await s3Service.generateDownloadUrl(key, "images", 604800); // 7 days
         } catch (error) {
           console.error(`Failed to refresh URL for image ${key}:`, error);
-          return ""; // Placeholder for failed image
+          return "";
         }
       }),
     );
 
-    this.images = freshImages;
+    return freshImages.filter((url) => Boolean(url));
+  };
+
+  const imageKeysToUse: string[] =
+    Array.isArray(this.imageKeys) && this.imageKeys.length > 0
+      ? this.imageKeys
+      : Array.isArray(this.images)
+        ? this.images
+            .map((url: string) => extractKeyFromUrl(url))
+            .filter((key: string | null): key is string => Boolean(key))
+        : [];
+
+  // Refresh gallery images
+  if (imageKeysToUse.length > 0) {
+    this.images = await refreshFromKeys(imageKeysToUse);
   }
 
   // Refresh cover photo
-  if (this.coverPhotoKey) {
+  const coverKey =
+    this.coverPhotoKey ||
+    extractKeyFromUrl(this.coverPhotoUrl) ||
+    imageKeysToUse[0] ||
+    "";
+
+  if (coverKey) {
     try {
       this.coverPhotoUrl = await s3Service.generateDownloadUrl(
-        this.coverPhotoKey,
-        "verification",
+        coverKey,
+        "images",
         604800, // 7 days
       );
     } catch (error) {

@@ -379,16 +379,16 @@ export default function TermsOfServicePage() {
             <div className="bg-slate-50 p-4 rounded-lg">
               <p className="text-slate-700 flex items-center gap-2 mb-2">
                 <Mail size={18} className="text-power-orange" />
-                <strong>Email:</strong> legal@powermysport.com
+                <strong>Email:</strong> teams@powermysport.com
               </p>
               <p className="text-slate-700">
                 <strong>Address:</strong> PowerMySport HQ, Bangalore, India
               </p>
               <p className="text-slate-700 mt-2">
-                <strong>Legal Contact:</strong> legal@powermysport.com
+                <strong>Legal Contact:</strong> teams@powermysport.com
               </p>
               <p className="text-slate-700">
-                <strong>Privacy Contact:</strong> privacy@powermysport.com
+                <strong>Privacy Contact:</strong> teams@powermysport.com
               </p>
             </div>
           </section>

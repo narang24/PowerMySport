@@ -2,12 +2,29 @@
 import {
   ApiResponse,
   CoachPlan,
+  CoachVerificationDocument,
   CoachSubscriptionOverrideRequestRecord,
   CoachSubscriptionRecord,
   Coach,
   CoachVerificationStatus,
   RoleTemplate,
 } from "@/types";
+
+type OpeningHoursDay = {
+  isOpen: boolean;
+  openTime?: string;
+  closeTime?: string;
+};
+
+type OpeningHours = {
+  monday: OpeningHoursDay;
+  tuesday: OpeningHoursDay;
+  wednesday: OpeningHoursDay;
+  thursday: OpeningHoursDay;
+  friday: OpeningHoursDay;
+  saturday: OpeningHoursDay;
+  sunday: OpeningHoursDay;
+};
 
 export interface Admin {
   id: string;
@@ -606,6 +623,168 @@ export const adminApi = {
   ): Promise<ApiResponse<PromoCodeStats>> => {
     const response = await axiosInstance.get(
       `/admin/promo-codes/${codeId}/stats`,
+    );
+    return response.data;
+  },
+
+  // ===== NEW: Admin Venue & Coach Creation =====
+
+  createVenue: async (data: {
+    ownerName: string;
+    ownerEmail: string;
+    ownerPhone: string;
+    name: string;
+    address: string;
+    sports: string[];
+    pricePerHour: number;
+    sportPricing?: Record<string, number>;
+    amenities?: string[];
+    description?: string;
+    location: {
+      type: "Point";
+      coordinates: [number, number];
+    };
+    openingHours?: OpeningHours;
+    allowExternalCoaches?: boolean;
+    approvalStatus?: "PENDING" | "APPROVED" | "REJECTED" | "REVIEW";
+  }): Promise<ApiResponse<unknown>> => {
+    const response = await axiosInstance.post("/admin/venues/create", data);
+    return response.data;
+  },
+
+  updateVenue: async (
+    venueId: string,
+    data: {
+      name?: string;
+      address?: string;
+      sports?: string[];
+      pricePerHour?: number;
+      sportPricing?: Record<string, number>;
+      amenities?: string[];
+      description?: string;
+      location?: {
+        type: "Point";
+        coordinates: [number, number];
+      };
+      openingHours?: OpeningHours;
+      allowExternalCoaches?: boolean;
+      approvalStatus?: "PENDING" | "APPROVED" | "REJECTED" | "REVIEW";
+      generalImages?: string[];
+      generalImageKeys?: string[];
+      sportImages?: Record<string, string[]>;
+      sportImageKeys?: Record<string, string[]>;
+      coverPhotoUrl?: string;
+      coverPhotoKey?: string;
+      convertExistingUser?: boolean;
+    },
+  ): Promise<ApiResponse<unknown>> => {
+    const response = await axiosInstance.put(`/admin/venues/${venueId}`, data);
+    return response.data;
+  },
+
+  createCoach: async (data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    mobileNumber?: string;
+    bio?: string;
+    sports: string[];
+    certifications?: string[];
+    hourlyRate: number;
+    sportPricing?: Record<string, number>;
+    serviceMode?: "OWN_VENUE" | "FREELANCE" | "HYBRID";
+    baseLocation?: {
+      type: "Point";
+      coordinates: [number, number];
+    };
+    ownVenueDetails?: {
+      name: string;
+      address: string;
+      description?: string;
+      openingHours?: string;
+      images?: string[];
+      imageS3Keys?: string[];
+      location?: {
+        type: "Point";
+        coordinates: [number, number];
+      };
+    };
+    serviceRadiusKm?: number;
+    travelBufferTime?: number;
+    venueId?: string;
+    profilePhotoUrl?: string;
+    profilePhotoKey?: string;
+    verificationStatus?:
+      | "UNVERIFIED"
+      | "PENDING"
+      | "REVIEW"
+      | "VERIFIED"
+      | "REJECTED";
+    convertExistingUser?: boolean;
+  }): Promise<ApiResponse<unknown>> => {
+    const response = await axiosInstance.post("/admin/coaches/create", data);
+    return response.data;
+  },
+
+  getCoachPhotoUploadUrl: async (
+    fileName: string,
+    contentType: string,
+  ): Promise<
+    ApiResponse<{
+      uploadUrl: string;
+      downloadUrl: string;
+      key: string;
+    }>
+  > => {
+    const response = await axiosInstance.post(
+      "/admin/coaches/photo-upload-url",
+      {
+        fileName,
+        contentType,
+      },
+    );
+    return response.data;
+  },
+
+  getCoachVerificationUploadUrl: async (
+    coachId: string,
+    payload: {
+      fileName: string;
+      contentType: string;
+      documentType?: string;
+      purpose?: "DOCUMENT" | "VENUE_IMAGE";
+    },
+  ): Promise<
+    ApiResponse<{
+      uploadUrl: string;
+      downloadUrl: string;
+      key: string;
+      fileName?: string;
+    }>
+  > => {
+    const response = await axiosInstance.post(
+      `/admin/coaches/${coachId}/verification/upload-url`,
+      payload,
+    );
+    return response.data;
+  },
+
+  updateCoach: async (
+    coachId: string,
+    data: Record<string, unknown>,
+  ): Promise<ApiResponse<unknown>> => {
+    const response = await axiosInstance.put(`/admin/coaches/${coachId}`, data);
+    return response.data;
+  },
+
+  submitCoachVerificationAdmin: async (
+    coachId: string,
+    payload: { documents?: CoachVerificationDocument[] },
+  ): Promise<ApiResponse<unknown>> => {
+    const response = await axiosInstance.post(
+      `/admin/coaches/${coachId}/verification/submit`,
+      payload,
     );
     return response.data;
   },

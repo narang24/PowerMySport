@@ -157,10 +157,10 @@ export const Footer: React.FC = () => {
                 </Link>{" "}
                 before booking. Legal issues:{" "}
                 <a
-                  href="mailto:legal@powermysport.com"
+                  href="mailto:teams@powermysport.com"
                   className="text-power-orange hover:underline"
                 >
-                  legal@powermysport.com
+                  teams@powermysport.com
                 </a>
               </p>
             </div>

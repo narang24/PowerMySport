@@ -30,6 +30,9 @@ import { getVoteTransitionDeltas, normalizeTags } from "./communityQnaUtils";
 const buildParticipantKey = (a: string, b: string): string =>
   [a, b].sort().join(":");
 
+const buildGroupParticipantKey = (groupId: string): string =>
+  `group:${groupId}`;
+
 const normalizeOptionalText = (value?: string): string => value?.trim() || "";
 
 const escapeRegex = (value: string): string =>
@@ -1317,19 +1320,25 @@ export const CommunityService = {
       throw new Error("Group name is required");
     }
 
-    const group = await CommunityGroup.create({
-      name,
-      description: normalizeOptionalText(payload.description),
-      sport: normalizeOptionalText(payload.sport),
-      city: normalizeOptionalText(payload.city),
-      visibility: "PUBLIC",
-      memberAddPolicy: "ADMIN_ONLY",
-      audience: payload.audience || COMMUNITY_DEFAULT_GROUP_AUDIENCE,
-      createdBy: userId,
-      members: [userId],
-      admins: [userId],
-      inviteCode: generateInviteCode(),
-    });
+    const group = await CommunityGroup.findOneAndUpdate(
+      { createdBy: new mongoose.Types.ObjectId(userId), name },
+      {
+        $setOnInsert: {
+          name,
+          description: normalizeOptionalText(payload.description),
+          sport: normalizeOptionalText(payload.sport),
+          city: normalizeOptionalText(payload.city),
+          visibility: "PUBLIC",
+          memberAddPolicy: "ADMIN_ONLY",
+          audience: payload.audience || COMMUNITY_DEFAULT_GROUP_AUDIENCE,
+          createdBy: new mongoose.Types.ObjectId(userId),
+          members: [new mongoose.Types.ObjectId(userId)],
+          admins: [new mongoose.Types.ObjectId(userId)],
+          inviteCode: generateInviteCode(),
+        },
+      },
+      { upsert: true, new: true },
+    );
 
     trackCommunityRoleMixEvent("group_created", {
       groupId: String(group._id),
@@ -1337,14 +1346,21 @@ export const CommunityService = {
       audience: group.audience || COMMUNITY_DEFAULT_GROUP_AUDIENCE,
     });
 
-    const conversation = await CommunityConversation.create({
-      conversationType: "GROUP",
-      groupId: group._id,
-      participants: [userId],
-      status: "ACTIVE",
-      requestedBy: userId,
-      lastMessageAt: new Date(),
-    });
+    const conversation = await CommunityConversation.findOneAndUpdate(
+      { conversationType: "GROUP", groupId: group._id },
+      {
+        $setOnInsert: {
+          conversationType: "GROUP",
+          groupId: group._id,
+          participantKey: buildGroupParticipantKey(String(group._id)),
+          participants: [new mongoose.Types.ObjectId(userId)],
+          status: "ACTIVE",
+          requestedBy: new mongoose.Types.ObjectId(userId),
+          lastMessageAt: new Date(),
+        },
+      },
+      { upsert: true, new: true },
+    );
 
     return {
       id: String(group._id),
@@ -1425,6 +1441,7 @@ export const CommunityService = {
         $setOnInsert: {
           conversationType: "GROUP",
           groupId: group._id,
+          participantKey: buildGroupParticipantKey(String(group._id)),
           status: "ACTIVE",
           requestedBy: group.createdBy,
           lastMessageAt: new Date(),
@@ -1613,6 +1630,7 @@ export const CommunityService = {
         $setOnInsert: {
           conversationType: "GROUP",
           groupId: group._id,
+          participantKey: buildGroupParticipantKey(String(group._id)),
           status: "ACTIVE",
           requestedBy: group.createdBy,
           lastMessageAt: new Date(),

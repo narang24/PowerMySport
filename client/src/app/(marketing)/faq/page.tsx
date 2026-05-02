@@ -128,12 +128,12 @@ const faqs = [
       {
         question: "What is your cancellation and refund policy?",
         answer:
-          "We offer a tiered refund system based on cancellation timing:\n• More than 48 hours before: 100% refund\n• 24-48 hours before: 50% refund\n• Less than 24 hours before: No refund\nFor complex cases or emergencies, contact support@powermysport.com with documentation.",
+          "We offer a tiered refund system based on cancellation timing:\n• More than 48 hours before: 100% refund\n• 24-48 hours before: 50% refund\n• Less than 24 hours before: No refund\nFor complex cases or emergencies, contact teams@powermysport.com with documentation.",
       },
       {
         question: "What if I need to cancel due to an emergency?",
         answer:
-          "We understand emergencies happen. Please contact our support team immediately at support@powermysport.com with proof of the emergency (medical certificate, etc.). We will review your case and may approve an emergency refund exception on a case-by-case basis.",
+          "We understand emergencies happen. Please contact our support team immediately at teams@powermysport.com with proof of the emergency (medical certificate, etc.). We will review your case and may approve an emergency refund exception on a case-by-case basis.",
       },
       {
         question: "How do I request a refund?",
@@ -143,7 +143,7 @@ const faqs = [
       {
         question: "What if the coach or venue cancels on me?",
         answer:
-          "If the coach, venue, or PowerMySport cancels, you're entitled to a 100% refund. Additionally, you can open a dispute ticket in your account or file a complaint at support@powermysport.com.",
+          "If the coach, venue, or PowerMySport cancels, you're entitled to a 100% refund. Additionally, you can open a dispute ticket in your account or file a complaint at teams@powermysport.com.",
       },
     ],
   },
@@ -153,7 +153,7 @@ const faqs = [
       {
         question: "How do I file a dispute?",
         answer:
-          "You can file a dispute through your PowerMySport account: go to My Bookings, select the booking, and click 'File Dispute.' You'll receive a unique Dispute Ticket ID (format: DISP-YYYY-XXXXXX) to track your case. You can also email disputes@powermysport.com with booking details.",
+          "You can file a dispute through your PowerMySport account: go to My Bookings, select the booking, and click 'File Dispute.' You'll receive a unique Dispute Ticket ID (format: DISP-YYYY-XXXXXX) to track your case. You can also email teams@powermysport.com with booking details.",
       },
       {
         question: "How long does dispute resolution take?",
@@ -313,12 +313,12 @@ const faqs = [
       {
         question: "How do I use PowerMySport with a screen reader?",
         answer:
-          "Our website is optimized for NVDA (Windows), JAWS (Windows), VoiceOver (Mac/iOS), and TalkBack (Android). All buttons, links, and form labels are properly labeled. If you encounter an issue, email accessibility@powermysport.com with your device/screen reader version and we'll help.",
+          "Our website is optimized for NVDA (Windows), JAWS (Windows), VoiceOver (Mac/iOS), and TalkBack (Android). All buttons, links, and form labels are properly labeled. If you encounter an issue, email teams@powermysport.com with your device/screen reader version and we'll help.",
       },
       {
         question: "What if I find an accessibility issue?",
         answer:
-          "Please report it to accessibility@powermysport.com with: the issue description, what you were trying to do, your device/browser/assistive tech, and screenshots if possible. We aim to respond within 24-48 hours and fix issues quickly.",
+          "Please report it to teams@powermysport.com with: the issue description, what you were trying to do, your device/browser/assistive tech, and screenshots if possible. We aim to respond within 24-48 hours and fix issues quickly.",
       },
     ],
   },
@@ -328,7 +328,7 @@ const faqs = [
       {
         question: "Why can't I log in to my account?",
         answer:
-          "Try: (1) Reset your password via the login page; (2) Clear your browser cache; (3) Try a different browser; (4) Check that JavaScript is enabled. If still not working, email support@powermysport.com with your email address.",
+          "Try: (1) Reset your password via the login page; (2) Clear your browser cache; (3) Try a different browser; (4) Check that JavaScript is enabled. If still not working, email teams@powermysport.com with your email address.",
       },
       {
         question: "What payment methods do you accept?",
@@ -358,7 +358,7 @@ const faqs = [
       {
         question: "How do I contact PowerMySport?",
         answer:
-          "You can reach us via:\n• Email: support@powermysport.com (general queries)\n• Legal issues: legal@powermysport.com\n• Safety concerns: safeguarding@powermysport.com\n• Accessibility: accessibility@powermysport.com\n• Contact form: powermysport.com/contact\n• In-app help center available to logged-in users",
+          "You can reach us via:\n• Email: teams@powermysport.com (general queries)\n• Legal issues: teams@powermysport.com\n• Safety concerns: teams@powermysport.com\n• Accessibility: teams@powermysport.com\n• Contact form: powermysport.com/contact\n• In-app help center available to logged-in users",
       },
     ],
   },

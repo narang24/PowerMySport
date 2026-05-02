@@ -377,7 +377,7 @@ export default function AdminVenueApprovalPanel({
 
         <Card className="bg-white overflow-hidden">
           {/* Header */}
-          <div className="p-8 border-b border-slate-200">
+          <div className="border-b border-slate-200 p-5 sm:p-8">
             <h1 className="text-3xl font-bold text-slate-900">
               {selectedVenue.name}
             </h1>
@@ -390,7 +390,7 @@ export default function AdminVenueApprovalPanel({
           </div>
 
           {/* Venue Info */}
-          <div className="p-8 border-b border-slate-200 grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 border-b border-slate-200 p-5 sm:p-8 md:grid-cols-2">
             <div>
               <h3 className="font-semibold text-slate-900 mb-2">
                 Basic Details
@@ -448,7 +448,7 @@ export default function AdminVenueApprovalPanel({
           </div>
 
           {/* Description */}
-          <div className="p-8 border-b border-slate-200">
+          <div className="border-b border-slate-200 p-5 sm:p-8">
             <h3 className="font-semibold text-slate-900 mb-3">Description</h3>
             <p className="text-slate-700 leading-relaxed">
               {selectedVenue.description}
@@ -457,11 +457,11 @@ export default function AdminVenueApprovalPanel({
 
           {/* Photos */}
           {selectedVenue.images && selectedVenue.images.length > 0 && (
-            <div className="p-8 border-b border-slate-200">
+            <div className="border-b border-slate-200 p-5 sm:p-8">
               <h3 className="font-semibold text-slate-900 mb-4">
                 Uploaded Photos
               </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {selectedVenue.images.map((photo, idx) => (
                   <div
                     key={idx}
@@ -486,7 +486,7 @@ export default function AdminVenueApprovalPanel({
 
           {/* Documents */}
           {selectedVenue.documents && selectedVenue.documents.length > 0 && (
-            <div className="p-8 border-b border-slate-200">
+            <div className="border-b border-slate-200 p-5 sm:p-8">
               <h3 className="font-semibold text-slate-900 mb-4">
                 Uploaded Documents
               </h3>
@@ -494,7 +494,7 @@ export default function AdminVenueApprovalPanel({
                 {selectedVenue.documents.map((doc, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200"
+                    className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="flex items-center space-x-3">
                       <svg
@@ -504,7 +504,7 @@ export default function AdminVenueApprovalPanel({
                       >
                         <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V4z" />
                       </svg>
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-semibold text-slate-900">
                           {doc.type}
                         </p>
@@ -526,7 +526,7 @@ export default function AdminVenueApprovalPanel({
           )}
 
           {/* Action Buttons */}
-          <div className="p-8 bg-slate-50 border-t border-slate-200">
+          <div className="border-t border-slate-200 bg-slate-50 p-5 sm:p-8">
             <h3 className="font-semibold text-slate-900 mb-4">Admin Actions</h3>
 
             {/* Rejection Reason Field */}
@@ -557,7 +557,7 @@ export default function AdminVenueApprovalPanel({
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4">
               <button
                 onClick={handleApprove}
                 disabled={actionLoading}

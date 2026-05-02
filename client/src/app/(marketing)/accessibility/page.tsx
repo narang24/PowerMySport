@@ -451,10 +451,10 @@ export default function Accessibility() {
               <p>
                 Email:{" "}
                 <a
-                  href="mailto:accessibility@powermysport.com"
+                  href="mailto:teams@powermysport.com"
                   className="text-blue-600 hover:underline"
                 >
-                  accessibility@powermysport.com
+                  teams@powermysport.com
                 </a>
               </p>
               <p>
@@ -507,7 +507,7 @@ export default function Accessibility() {
               </li>
             </ul>
             <p className="mt-3">
-              Contact accessibility@powermysport.com to request these services.
+              Contact teams@powermysport.com to request these services.
             </p>
           </section>
 
@@ -544,10 +544,10 @@ export default function Accessibility() {
               <p>
                 Email:{" "}
                 <a
-                  href="mailto:accessibility@powermysport.com"
+                  href="mailto:teams@powermysport.com"
                   className="text-blue-600 hover:underline"
                 >
-                  accessibility@powermysport.com
+                  teams@powermysport.com
                 </a>
               </p>
               <p>Subject: Accessibility Suggestion</p>

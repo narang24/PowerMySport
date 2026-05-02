@@ -271,12 +271,12 @@ export default function AdminUsersPage() {
         subtitle="View role-specific users, analytics, and health metrics."
       />
 
-      <div className="flex gap-2 border-b border-slate-200">
+      <div className="admin-tabs-scroll border-b border-slate-200">
         {(["PLAYER", "COACH", "VENUE_LISTER"] as UsersTabRole[]).map((tab) => (
           <button
             key={tab}
             onClick={() => switchTab(tab)}
-            className={`px-4 py-3 font-semibold text-sm transition-colors border-b-2 ${
+            className={`px-3 py-2.5 font-semibold text-sm transition-colors border-b-2 sm:px-4 sm:py-3 ${
               activeTab === tab
                 ? "border-power-orange text-power-orange"
                 : "border-transparent text-slate-600 hover:text-slate-900"
@@ -488,7 +488,7 @@ export default function AdminUsersPage() {
           <>
             <Card className="p-0 bg-white overflow-hidden shadow-sm">
               <div className="overflow-x-auto">
-                <table className="min-w-230 w-full">
+                <table className="w-full min-w-full">
                   <thead className="bg-slate-100">
                     <tr>
                       <th className="px-6 py-3 text-left text-sm font-semibold text-slate-900">

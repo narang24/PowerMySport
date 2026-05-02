@@ -13,6 +13,11 @@ import {
   approveCoachVerification,
   changeAdminPasswordHandler,
   createAdminAccount,
+  createCoachAdminHandler,
+  createVenueAdminHandler,
+  getAdminCoachVerificationUploadUrlHandler,
+  updateCoachAdminHandler,
+  submitCoachVerificationAdminHandler,
   getCoachVerificationDetails,
   getAdminProfile,
   handleDispute,
@@ -25,6 +30,7 @@ import {
   rejectCoachVerification,
   reviewCommunityReport,
   listCommunityReports,
+  updateVenueAdminHandler,
   updateUserSafetyStatus,
   getRoleTemplates,
   updateAdminPermissionsHandler,
@@ -39,7 +45,9 @@ import {
 import {
   adminChangePasswordSchema,
   adminCreateCoachPlanSchema,
+  adminCreateCoachSchema,
   adminCreateSchema,
+  adminCreateVenueSchema,
   adminReviewCoachOverrideSchema,
   adminLoginSchema,
   adminUpdateCoachPlanSchema,
@@ -112,6 +120,106 @@ router.post(
   adminMiddleware,
   requirePermission("coaches:verify"),
   notifyCoachVerificationPending,
+);
+
+// ===== NEW: Admin venue and coach creation routes =====
+router.post(
+  "/venues/create",
+  authMiddleware,
+  adminMiddleware,
+  requirePermission("venues:create"),
+  validateRequest(adminCreateVenueSchema),
+  createVenueAdminHandler,
+);
+
+router.put(
+  "/venues/:venueId",
+  authMiddleware,
+  adminMiddleware,
+  requirePermission("venues:manage"),
+  updateVenueAdminHandler,
+);
+
+router.post(
+  "/coaches/create",
+  authMiddleware,
+  adminMiddleware,
+  requirePermission("coaches:create"),
+  validateRequest(adminCreateCoachSchema),
+  createCoachAdminHandler,
+);
+
+router.post(
+  "/coaches/photo-upload-url",
+  authMiddleware,
+  adminMiddleware,
+  requirePermission("coaches:create"),
+  async (req, res) => {
+    try {
+      const { fileName, contentType } = req.body;
+
+      if (!fileName || !contentType) {
+        return res.status(400).json({
+          success: false,
+          message: "fileName and contentType are required",
+        });
+      }
+
+      const S3Service = (await import("../services/S3Service")).S3Service;
+      const s3Service = new S3Service();
+      const { uploadUrl, downloadUrl, key } =
+        await s3Service.generateCoachPhotoUploadUrl(
+          fileName,
+          contentType,
+          "pending",
+        );
+
+      return res.json({
+        success: true,
+        data: {
+          uploadUrl,
+          downloadUrl,
+          key,
+        },
+      });
+    } catch (error) {
+      console.error("Photo upload URL generation error:", error);
+      return res.status(500).json({
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to generate upload URL",
+      });
+    }
+  },
+);
+
+// Admin: presigned upload URL for coach verification / venue images
+router.post(
+  "/coaches/:coachId/verification/upload-url",
+  authMiddleware,
+  adminMiddleware,
+  requirePermission("coaches:manage"),
+  getAdminCoachVerificationUploadUrlHandler,
+);
+
+// Admin: update coach profile partially
+router.put(
+  "/coaches/:coachId",
+  authMiddleware,
+  adminMiddleware,
+  requirePermission("coaches:manage"),
+  updateCoachAdminHandler,
+);
+
+// Admin: submit verification on behalf of coach
+router.post(
+  "/coaches/:coachId/verification/submit",
+  authMiddleware,
+  adminMiddleware,
+  requirePermission("coaches:verify"),
+  submitCoachVerificationAdminHandler,
 );
 
 // Coach subscription plan management

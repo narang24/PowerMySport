@@ -314,28 +314,28 @@ export default function CookiePolicy() {
               <p>
                 Email:{" "}
                 <a
-                  href="mailto:privacy@powermysport.com"
+                  href="mailto:teams@powermysport.com"
                   className="text-blue-600 hover:underline"
                 >
-                  privacy@powermysport.com
+                  teams@powermysport.com
                 </a>
               </p>
               <p>
                 Email (Legal):{" "}
                 <a
-                  href="mailto:legal@powermysport.com"
+                  href="mailto:teams@powermysport.com"
                   className="text-blue-600 hover:underline"
                 >
-                  legal@powermysport.com
+                  teams@powermysport.com
                 </a>
               </p>
               <p>
                 Support:{" "}
                 <a
-                  href="mailto:support@powermysport.com"
+                  href="mailto:teams@powermysport.com"
                   className="text-blue-600 hover:underline"
                 >
-                  support@powermysport.com
+                  teams@powermysport.com
                 </a>
               </p>
             </div>

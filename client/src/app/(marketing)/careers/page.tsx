@@ -309,7 +309,7 @@ export default function CareersPage() {
             and tell us why you'd be a great addition to our team.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a href="mailto:careers@powermysport.com">
+            <a href="mailto:teams@powermysport.com">
               <Button variant="primary" size="lg">
                 <Mail size={18} className="mr-2" />
                 Email Your Resume

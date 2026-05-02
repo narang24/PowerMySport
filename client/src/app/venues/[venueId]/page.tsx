@@ -14,7 +14,17 @@ import { reviewApi } from "@/modules/review/services/review";
 import { Button } from "@/modules/shared/ui/Button";
 import { Card } from "@/modules/shared/ui/Card";
 import { Availability, ReviewItem, ReviewSummary, Venue } from "@/types";
-import { Calendar, Check, IndianRupee, MapPin, Star } from "lucide-react";
+import { getVenueImageUrls, getVenueSportImageUrls } from "@/utils/venueImages";
+import {
+  Calendar,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  IndianRupee,
+  MapPin,
+  Star,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -38,6 +48,16 @@ export default function VenueDetailsPage() {
   const [selectedSport, setSelectedSport] = useState<string>("");
   const [bookingLoading, setBookingLoading] = useState(false);
   const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const venueImages = venue ? getVenueImageUrls(venue) : [];
+  const selectedSportImages = venue
+    ? getVenueSportImageUrls(venue, selectedSport)
+    : [];
+  const venuePhotoCount = venueImages.length;
+  const sportPhotoCount = selectedSportImages.length;
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchEndX, setTouchEndX] = useState<number | null>(null);
   const [reviewSummary, setReviewSummary] = useState<ReviewSummary>({
     averageRating: 0,
     reviewCount: 0,
@@ -59,6 +79,14 @@ export default function VenueDetailsPage() {
       sport: selectedSport || venue?.sports?.[0] || undefined,
     },
   });
+
+  const selectedSportPhotoCountLabel = (
+    sport: string,
+    count: number,
+  ): string => {
+    if (!sport || count <= 0) return "";
+    return `${sport}: ${count} photos`;
+  };
 
   useEffect(() => {
     if (venueId) {
@@ -86,6 +114,73 @@ export default function VenueDetailsPage() {
       setReviewEligibilityReason("");
     }
   }, [venueId, user?.id]);
+
+  useEffect(() => {
+    setSelectedImageIndex(0);
+  }, [venue?.id, venue?._id]);
+
+  const openLightbox = (index: number) => {
+    setSelectedImageIndex(index);
+    setLightboxOpen(true);
+  };
+
+  const showPreviousImage = () => {
+    if (venueImages.length <= 1) return;
+    setSelectedImageIndex((prev) =>
+      prev === 0 ? venueImages.length - 1 : prev - 1,
+    );
+  };
+
+  const showNextImage = () => {
+    if (venueImages.length <= 1) return;
+    setSelectedImageIndex((prev) =>
+      prev === venueImages.length - 1 ? 0 : prev + 1,
+    );
+  };
+
+  const handleLightboxTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    setTouchEndX(null);
+    setTouchStartX(e.targetTouches[0]?.clientX ?? null);
+  };
+
+  const handleLightboxTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    setTouchEndX(e.targetTouches[0]?.clientX ?? null);
+  };
+
+  const handleLightboxTouchEnd = () => {
+    if (touchStartX === null || touchEndX === null) return;
+
+    const swipeDistance = touchStartX - touchEndX;
+    const threshold = 50;
+
+    if (swipeDistance > threshold) {
+      showNextImage();
+    } else if (swipeDistance < -threshold) {
+      showPreviousImage();
+    }
+  };
+
+  useEffect(() => {
+    if (!lightboxOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setLightboxOpen(false);
+        return;
+      }
+
+      if (event.key === "ArrowLeft") {
+        showPreviousImage();
+      }
+
+      if (event.key === "ArrowRight") {
+        showNextImage();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [lightboxOpen, venueImages.length]);
 
   const loadVenueDetails = async () => {
     try {
@@ -329,16 +424,181 @@ export default function VenueDetailsPage() {
             {/* Left Column - Details */}
             <div className="lg:col-span-2 space-y-6">
               {/* Images */}
-              {venue.images && venue.images.length > 0 && (
+              {venueImages.length > 0 && (
                 <Card className="premium-shadow overflow-hidden rounded-3xl border border-slate-200/70 bg-white/92 p-0 backdrop-blur-sm">
-                  <div className="h-80 sm:h-96 w-full overflow-hidden bg-slate-100">
-                    <img
-                      src={venue.images[0]}
-                      alt={venue.name}
-                      className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                    />
+                  <div className="border-b border-slate-200/70 bg-white/80 px-4 py-3 sm:px-5">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
+                          Venue Gallery
+                        </p>
+                        <h2 className="text-lg font-bold text-slate-900">
+                          Explore the full venue visual story
+                        </h2>
+                      </div>
+                      <div className="flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+                        <span className="rounded-full bg-slate-100 px-3 py-1">
+                          {venuePhotoCount} venue photos
+                        </span>
+                        {sportPhotoCount > 0 && (
+                          <span className="rounded-full bg-power-orange/10 px-3 py-1 text-power-orange">
+                            {selectedSportPhotoCountLabel(
+                              selectedSport,
+                              sportPhotoCount,
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_180px]">
+                    <div
+                      className="group relative h-80 sm:h-[28rem] w-full overflow-hidden bg-slate-100 cursor-zoom-in"
+                      onClick={() => openLightbox(selectedImageIndex)}
+                    >
+                      <img
+                        src={venueImages[selectedImageIndex]}
+                        alt={venue.name}
+                        className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                      />
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black/70 via-black/35 to-transparent" />
+                      <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3 text-white">
+                        <div className="space-y-1">
+                          <p className="text-xs uppercase tracking-wide text-white/75">
+                            Tap to expand
+                          </p>
+                          <p className="text-sm font-semibold sm:text-base">
+                            Photo {selectedImageIndex + 1} of{" "}
+                            {venueImages.length}
+                          </p>
+                        </div>
+                        <div className="rounded-full border border-white/25 bg-black/30 px-3 py-1 text-xs font-semibold backdrop-blur-sm">
+                          {selectedImageIndex + 1}/{venueImages.length}
+                        </div>
+                      </div>
+
+                      {venueImages.length > 1 && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              showPreviousImage();
+                            }}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full border border-white/40 bg-black/35 p-2 text-white backdrop-blur-sm transition hover:bg-black/55"
+                            aria-label="Previous image"
+                          >
+                            <ChevronLeft size={18} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              showNextImage();
+                            }}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full border border-white/40 bg-black/35 p-2 text-white backdrop-blur-sm transition hover:bg-black/55"
+                            aria-label="Next image"
+                          >
+                            <ChevronRight size={18} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="border-t border-slate-200/70 bg-white lg:border-t-0 lg:border-l">
+                      <div className="flex items-center justify-between px-4 py-3">
+                        <p className="text-sm font-semibold text-slate-900">
+                          Photos
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          Scroll to browse
+                        </p>
+                      </div>
+                      <div className="overflow-y-auto overflow-x-hidden lg:h-[28rem] lg:overflow-y-auto lg:overflow-x-hidden">
+                        <div className="grid grid-cols-3 gap-2 px-4 pb-4 sm:grid-cols-4 lg:grid-cols-2">
+                          {venueImages.map((image, index) => (
+                            <button
+                              type="button"
+                              key={`${image}-${index}`}
+                              onClick={() => setSelectedImageIndex(index)}
+                              className={`group relative aspect-[4/3] overflow-hidden rounded-2xl border transition ${
+                                selectedImageIndex === index
+                                  ? "border-power-orange ring-2 ring-power-orange/40"
+                                  : "border-slate-200 hover:border-slate-300"
+                              }`}
+                              aria-label={`Show venue image ${index + 1}`}
+                            >
+                              <img
+                                src={image}
+                                alt={`${venue.name} thumbnail ${index + 1}`}
+                                className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                              />
+                              <div className="pointer-events-none absolute inset-0 bg-black/0 transition group-hover:bg-black/10" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </Card>
+              )}
+
+              {lightboxOpen && venueImages.length > 0 && (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+                  onClick={() => setLightboxOpen(false)}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setLightboxOpen(false)}
+                    className="absolute right-5 top-5 rounded-full border border-white/30 bg-black/35 p-2 text-white hover:bg-black/55"
+                    aria-label="Close gallery"
+                  >
+                    <X size={20} />
+                  </button>
+
+                  {venueImages.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          showPreviousImage();
+                        }}
+                        className="absolute left-5 rounded-full border border-white/30 bg-black/35 p-2 text-white hover:bg-black/55"
+                        aria-label="Previous image"
+                      >
+                        <ChevronLeft size={22} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          showNextImage();
+                        }}
+                        className="absolute right-5 rounded-full border border-white/30 bg-black/35 p-2 text-white hover:bg-black/55"
+                        aria-label="Next image"
+                      >
+                        <ChevronRight size={22} />
+                      </button>
+                    </>
+                  )}
+
+                  <div
+                    className="max-h-[86vh] max-w-5xl overflow-hidden rounded-2xl border border-white/20 bg-black"
+                    onClick={(e) => e.stopPropagation()}
+                    onTouchStart={handleLightboxTouchStart}
+                    onTouchMove={handleLightboxTouchMove}
+                    onTouchEnd={handleLightboxTouchEnd}
+                  >
+                    <img
+                      src={venueImages[selectedImageIndex]}
+                      alt={`${venue.name} photo ${selectedImageIndex + 1}`}
+                      className="max-h-[86vh] w-full object-contain"
+                    />
+                  </div>
+                </div>
               )}
 
               {/* Description */}
@@ -370,15 +630,71 @@ export default function VenueDetailsPage() {
                 </h2>
                 <div className="flex flex-wrap gap-2">
                   {venue.sports?.map((sport, index) => (
-                    <span
+                    <button
+                      type="button"
                       key={index}
-                      className="px-4 py-2 bg-linear-to-br from-power-orange/10 to-power-orange/5 border border-power-orange/20 text-power-orange rounded-lg text-sm font-semibold"
+                      onClick={() => setSelectedSport(sport)}
+                      className={`px-4 py-2 rounded-lg text-sm font-semibold border transition ${
+                        selectedSport === sport
+                          ? "bg-power-orange text-white border-power-orange shadow-sm"
+                          : "bg-linear-to-br from-power-orange/10 to-power-orange/5 border-power-orange/20 text-power-orange hover:border-power-orange/40"
+                      }`}
                     >
                       {sport}
-                    </span>
+                    </button>
                   ))}
                 </div>
               </Card>
+
+              {selectedSport && selectedSportImages.length > 0 && (
+                <Card className="premium-shadow overflow-hidden rounded-3xl border border-slate-200/70 bg-white/92 p-0 backdrop-blur-sm">
+                  <div className="flex items-center justify-between gap-3 border-b border-slate-200/70 bg-slate-50/80 px-5 py-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+                        Sport spotlight
+                      </p>
+                      <h2 className="text-lg font-bold text-slate-900">
+                        {selectedSport} Photos
+                      </h2>
+                    </div>
+                    <span className="rounded-full bg-power-orange/10 px-3 py-1 text-xs font-semibold text-power-orange">
+                      {selectedSportImages.length} images
+                    </span>
+                  </div>
+
+                  <div className="p-4">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                      {selectedSportImages.map((image, index) => {
+                        const globalIndex = venueImages.findIndex(
+                          (venueImage) => venueImage === image,
+                        );
+
+                        return (
+                          <button
+                            type="button"
+                            key={`${selectedSport}-${index}-${image}`}
+                            onClick={() =>
+                              openLightbox(globalIndex >= 0 ? globalIndex : 0)
+                            }
+                            className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                            aria-label={`Open ${selectedSport} image ${index + 1}`}
+                          >
+                            <img
+                              src={image}
+                              alt={`${venue.name} ${selectedSport} image ${index + 1}`}
+                              className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                            />
+                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition group-hover:opacity-100" />
+                            <div className="pointer-events-none absolute bottom-2 left-2 rounded-full bg-black/45 px-2 py-0.5 text-[11px] font-semibold text-white opacity-0 backdrop-blur-sm transition group-hover:opacity-100">
+                              {selectedSport} {index + 1}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </Card>
+              )}
 
               {/* Amenities */}
               {venue.amenities && venue.amenities.length > 0 && (

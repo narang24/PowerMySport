@@ -453,19 +453,19 @@ export default function RefundPolicy() {
               <p>
                 Email:{" "}
                 <a
-                  href="mailto:support@powermysport.com"
+                  href="mailto:teams@powermysport.com"
                   className="text-blue-600 hover:underline"
                 >
-                  support@powermysport.com
+                  teams@powermysport.com
                 </a>
               </p>
               <p>
                 Email (Disputes Only):{" "}
                 <a
-                  href="mailto:disputes@powermysport.com"
+                  href="mailto:teams@powermysport.com"
                   className="text-blue-600 hover:underline"
                 >
-                  disputes@powermysport.com
+                  teams@powermysport.com
                 </a>
               </p>
               <p>Response Time: 24 hours (business days)</p>

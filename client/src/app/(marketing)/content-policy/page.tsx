@@ -663,19 +663,19 @@ export default function ContentPolicy() {
               <p>
                 Email:{" "}
                 <a
-                  href="mailto:moderation@powermysport.com"
+                  href="mailto:teams@powermysport.com"
                   className="text-blue-600 hover:underline"
                 >
-                  moderation@powermysport.com
+                  teams@powermysport.com
                 </a>
               </p>
               <p>
                 Email (Urgent/Safety):{" "}
                 <a
-                  href="mailto:safety@powermysport.com"
+                  href="mailto:teams@powermysport.com"
                   className="text-blue-600 hover:underline"
                 >
-                  safety@powermysport.com
+                  teams@powermysport.com
                 </a>
               </p>
               <p>Response Time: 24-48 hours</p>

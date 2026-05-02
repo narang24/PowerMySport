@@ -4,7 +4,7 @@ import { toast } from "@/lib/toast";
 import { geoApi, GeoSuggestion } from "@/modules/geo/services/geo";
 import { OnboardingStep2Payload } from "@/modules/onboarding/types/onboarding";
 import { Button } from "@/modules/shared/ui/Button";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import OnboardingSectionCard from "./OnboardingSectionCard";
 import OpeningHoursInput, { getDefaultOpeningHours } from "./OpeningHoursInput";
 
@@ -82,6 +82,7 @@ export default function Step2VenueDetails({
   const [searchError, setSearchError] = useState("");
   const [hasSelectedLocation, setHasSelectedLocation] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const skipAutocompleteRef = useRef(false);
 
   const [selectedSports, setSelectedSports] = useState<string[]>([]);
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
@@ -94,6 +95,11 @@ export default function Step2VenueDetails({
   }, [formData.address]);
 
   useEffect(() => {
+    if (skipAutocompleteRef.current) {
+      skipAutocompleteRef.current = false;
+      return;
+    }
+
     const query = addressQuery.trim();
     if (query.length < 3) {
       setSuggestions([]);
@@ -140,6 +146,7 @@ export default function Step2VenueDetails({
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    skipAutocompleteRef.current = false;
     setAddressQuery(value);
     setHasSelectedLocation(false);
     setFormData((prev) => ({
@@ -149,6 +156,7 @@ export default function Step2VenueDetails({
   };
 
   const handleSelectSuggestion = (suggestion: GeoSuggestion) => {
+    skipAutocompleteRef.current = true;
     setHasSelectedLocation(true);
     setSuggestions([]);
     setSearchError("");
@@ -182,6 +190,7 @@ export default function Step2VenueDetails({
             return;
           }
 
+          skipAutocompleteRef.current = true;
           setHasSelectedLocation(true);
           setSuggestions([]);
           setAddressQuery(result.label);

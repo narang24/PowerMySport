@@ -981,10 +981,10 @@ export default function OnboardingContainer() {
           <p>
             Need help? Contact us at{" "}
             <a
-              href="mailto:support@powermysport.com"
+              href="mailto:teams@powermysport.com"
               className="text-power-orange hover:underline"
             >
-              support@powermysport.com
+              teams@powermysport.com
             </a>
           </p>
         </div>

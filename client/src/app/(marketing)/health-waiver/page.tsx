@@ -436,19 +436,19 @@ export default function HealthWaiver() {
               <p>
                 Email:{" "}
                 <a
-                  href="mailto:safety@powermysport.com"
+                  href="mailto:teams@powermysport.com"
                   className="text-blue-600 hover:underline"
                 >
-                  safety@powermysport.com
+                  teams@powermysport.com
                 </a>
               </p>
               <p>
                 Email (Legal):{" "}
                 <a
-                  href="mailto:legal@powermysport.com"
+                  href="mailto:teams@powermysport.com"
                   className="text-blue-600 hover:underline"
                 >
-                  legal@powermysport.com
+                  teams@powermysport.com
                 </a>
               </p>
             </div>

@@ -592,19 +592,19 @@ export default function ParentalConsent() {
               <p>
                 Email:{" "}
                 <a
-                  href="mailto:family@powermysport.com"
+                  href="mailto:teams@powermysport.com"
                   className="text-blue-600 hover:underline"
                 >
-                  family@powermysport.com
+                  teams@powermysport.com
                 </a>
               </p>
               <p>
                 Email (Urgent):{" "}
                 <a
-                  href="mailto:safeguarding@powermysport.com"
+                  href="mailto:teams@powermysport.com"
                   className="text-blue-600 hover:underline"
                 >
-                  safeguarding@powermysport.com
+                  teams@powermysport.com
                 </a>
               </p>
               <p>Response Time: 24 hours (business days)</p>
@@ -616,8 +616,8 @@ export default function ParentalConsent() {
               <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
               <span>
                 If you suspect abuse, exploitation, or harm to a minor, please
-                contact us immediately at safeguarding@powermysport.com or your
-                local law enforcement.
+                contact us immediately at teams@powermysport.com or your local
+                law enforcement.
               </span>
             </p>
           </section>

@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
+import crypto from "crypto";
 import mongoose from "mongoose";
 import { User } from "../models/User";
+import { Coach } from "../models/Coach";
+import { Venue } from "../models/Venue";
+import Admin from "../models/Admin";
 import { CommunityReport } from "../models/CommunityReport";
 import {
   changeAdminPassword,
@@ -16,10 +20,14 @@ import {
   getCoachById,
   listCoachVerificationRequests,
   updateCoachVerificationStatus,
+  updateCoach,
+  submitCoachVerification,
 } from "../services/CoachService";
+import { transformDocument } from "../middleware/responseTransform";
 import {
   sendCoachVerificationReminderEmail,
   sendCoachVerificationStatusEmail,
+  sendCredentialsEmail,
 } from "../utils/email";
 import { NotificationService } from "../services/NotificationService";
 
@@ -49,6 +57,32 @@ const normalizeAdminResponse = (admin: unknown) => {
     id,
   };
 };
+
+const generateTempPassword = (length = 12): string => {
+  const desiredLength = Math.max(8, length);
+  let password = "";
+
+  while (password.length < desiredLength) {
+    password += crypto.randomBytes(16).toString("base64url");
+    password = password.replace(/[^a-zA-Z0-9]/g, "");
+  }
+
+  return password.slice(0, desiredLength);
+};
+
+const buildUserSummary = (user: {
+  _id?: { toString?: () => string };
+  name?: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+}) => ({
+  id: user._id?.toString?.() || "",
+  name: user.name,
+  email: user.email,
+  phone: user.phone,
+  role: user.role,
+});
 
 // Admin login
 export const adminLogin = async (
@@ -329,6 +363,176 @@ export const updateAdminRoleHandler = async (
     res.status(400).json({
       success: false,
       message: error instanceof Error ? error.message : "Failed to update role",
+    });
+  }
+};
+
+/**
+ * Admin: Get presigned upload URL for coach verification documents / venue images
+ * POST /api/admin/coaches/:coachId/verification/upload-url
+ */
+export const getAdminCoachVerificationUploadUrlHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ success: false, message: "Unauthorized" });
+      return;
+    }
+
+    const coachId = (req.params as Record<string, unknown>).coachId as string;
+    if (!coachId) {
+      res.status(400).json({ success: false, message: "coachId is required" });
+      return;
+    }
+
+    const coach = await getCoachById(coachId);
+    if (!coach) {
+      res.status(404).json({ success: false, message: "Coach not found" });
+      return;
+    }
+
+    const { fileName, contentType, documentType, purpose } = req.body as {
+      fileName?: string;
+      contentType?: string;
+      documentType?: string;
+      purpose?: "DOCUMENT" | "VENUE_IMAGE";
+    };
+
+    if (!fileName || !contentType) {
+      res.status(400).json({
+        success: false,
+        message: "fileName and contentType are required",
+      });
+      return;
+    }
+
+    const { S3Service } = require("../services/S3Service");
+    const s3Service = new S3Service();
+
+    const uploadData =
+      purpose === "VENUE_IMAGE"
+        ? await s3Service.generateCoachVenueImageUploadUrl(
+            fileName,
+            contentType,
+            coach._id.toString(),
+          )
+        : await s3Service.generateCoachVerificationUploadUrl(
+            fileName,
+            contentType,
+            coach._id.toString(),
+            documentType,
+          );
+
+    res.status(200).json({
+      success: true,
+      message:
+        purpose === "VENUE_IMAGE"
+          ? "Venue image upload URL generated"
+          : "Verification document upload URL generated",
+      data: uploadData,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to generate upload URL",
+    });
+  }
+};
+
+/**
+ * Admin: Update coach profile (partial) by coachId
+ * PUT /api/admin/coaches/:coachId
+ */
+export const updateCoachAdminHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ success: false, message: "Unauthorized" });
+      return;
+    }
+
+    const coachId = (req.params as Record<string, unknown>).coachId as string;
+    if (!coachId) {
+      res.status(400).json({ success: false, message: "coachId is required" });
+      return;
+    }
+
+    const updates = req.body || {};
+
+    const updated = await updateCoach(coachId, updates as any);
+    if (!updated) {
+      res.status(404).json({ success: false, message: "Coach not found" });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Coach updated successfully",
+      data: transformDocument(updated.toJSON()),
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to update coach",
+    });
+  }
+};
+
+/**
+ * Admin: Submit coach verification on behalf of coach
+ * POST /api/admin/coaches/:coachId/verification/submit
+ */
+export const submitCoachVerificationAdminHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({ success: false, message: "Unauthorized" });
+      return;
+    }
+
+    const coachId = (req.params as Record<string, unknown>).coachId as string;
+    if (!coachId) {
+      res.status(400).json({ success: false, message: "coachId is required" });
+      return;
+    }
+
+    const coach = await getCoachById(coachId);
+    if (!coach) {
+      res.status(404).json({ success: false, message: "Coach not found" });
+      return;
+    }
+
+    const payload = req.body as { documents?: any[] };
+
+    const submitted = await submitCoachVerification(
+      (coach.userId as any).toString(),
+      {
+        documents: payload.documents || [],
+      },
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Verification submitted successfully",
+      data: transformDocument(submitted.toJSON()),
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to submit verification",
     });
   }
 };
@@ -1030,7 +1234,7 @@ export const notifyCoachVerificationPending = async (
 ): Promise<void> => {
   try {
     // const REMINDER_COOLDOWN_MS = 24 * 60 * 60 * 1000;
-    const REMINDER_COOLDOWN_MS =1000;
+    const REMINDER_COOLDOWN_MS = 1000;
 
     if (!req.user?.id) {
       res.status(401).json({
@@ -1124,6 +1328,470 @@ export const notifyCoachVerificationPending = async (
         error instanceof Error
           ? error.message
           : "Failed to send verification reminder",
+    });
+  }
+};
+
+/**
+ * Create venue directly from admin
+ * POST /api/admin/venues/create
+ */
+export const createVenueAdminHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+      return;
+    }
+
+    const {
+      ownerName,
+      ownerEmail,
+      ownerPhone,
+      name,
+      address,
+      sports,
+      pricePerHour,
+      sportPricing,
+      amenities,
+      description,
+      location,
+      openingHours,
+      allowExternalCoaches,
+      approvalStatus,
+    } = req.body;
+
+    const adminAccount = await Admin.findById(req.user.id).select("name email");
+
+    const newVenue = new Venue({
+      ownerName: ownerName || adminAccount?.name || "Admin Venue",
+      ownerEmail:
+        ownerEmail ||
+        adminAccount?.email ||
+        req.user.email ||
+        "admin@powersport.local",
+      ownerPhone: ownerPhone || req.user.id,
+      name,
+      address,
+      sports,
+      pricePerHour,
+      sportPricing: sportPricing || {},
+      amenities: amenities || [],
+      description: description || "",
+      location,
+      openingHours: openingHours || {
+        monday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
+        tuesday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
+        wednesday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
+        thursday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
+        friday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
+        saturday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
+        sunday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
+      },
+      allowExternalCoaches: allowExternalCoaches !== false,
+      approvalStatus: approvalStatus || "APPROVED",
+      createdBy: req.user.id,
+    });
+
+    const venue = await newVenue.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Venue created successfully",
+      data: venue,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to create venue",
+    });
+  }
+};
+
+/**
+ * Update venue directly from admin
+ * PUT /api/admin/venues/:venueId
+ */
+export const updateVenueAdminHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+      return;
+    }
+
+    const venueId = (req.params as Record<string, unknown>).venueId as string;
+
+    const venue = await Venue.findById(venueId);
+
+    if (!venue) {
+      res.status(404).json({
+        success: false,
+        message: "Venue not found",
+      });
+      return;
+    }
+
+    const updatePayload = { ...req.body } as Record<string, unknown>;
+    const convertExistingUser = updatePayload.convertExistingUser === true;
+    delete updatePayload.convertExistingUser;
+
+    const nextApprovalStatus =
+      typeof updatePayload.approvalStatus === "string"
+        ? (updatePayload.approvalStatus as string)
+        : venue.approvalStatus;
+
+    let ownerUser: typeof venue.ownerId | null = null;
+    let tempPassword: string | null = null;
+    let createdUser = false;
+
+    if (nextApprovalStatus === "APPROVED" && !venue.ownerId) {
+      const ownerEmailRaw =
+        (updatePayload.ownerEmail as string | undefined) || venue.ownerEmail;
+      const ownerPhoneRaw =
+        (updatePayload.ownerPhone as string | undefined) || venue.ownerPhone;
+
+      const ownerEmail = ownerEmailRaw?.trim().toLowerCase() || "";
+      const ownerPhone = ownerPhoneRaw?.trim() || "";
+
+      const existingUser = await User.findOne({
+        $or: [{ email: ownerEmail }, { phone: ownerPhone }],
+      });
+
+      if (existingUser) {
+        if (existingUser.role === "VENUE_LISTER") {
+          ownerUser = existingUser._id;
+        } else if (existingUser.role === "PLAYER") {
+          if (!convertExistingUser) {
+            res.status(409).json({
+              success: false,
+              message:
+                "User already exists as PLAYER. Convert this account to VENUE_LISTER to continue.",
+              requiresConversion: true,
+              existingRole: existingUser.role,
+              targetRole: "VENUE_LISTER",
+              existingUser: buildUserSummary(existingUser),
+            });
+            return;
+          }
+
+          existingUser.role = "VENUE_LISTER";
+          existingUser.venueListerProfile = existingUser.venueListerProfile || {
+            businessDetails: {
+              name: venue.ownerName,
+              address: venue.address || "",
+            },
+            payoutInfo: {
+              accountNumber: "",
+              ifsc: "",
+              bankName: "",
+            },
+            canAddMoreVenues: false,
+          };
+          existingUser.venueListerProfile.canAddMoreVenues = false;
+          await existingUser.save();
+          ownerUser = existingUser._id;
+        } else {
+          res.status(409).json({
+            success: false,
+            message:
+              "An account already exists with a different role. Venue lister accounts must be separate.",
+            requiresSeparateAccount: true,
+            existingRole: existingUser.role,
+            targetRole: "VENUE_LISTER",
+            existingUser: buildUserSummary(existingUser),
+          });
+          return;
+        }
+      } else {
+        tempPassword = generateTempPassword(12);
+
+        const ownerNameRaw =
+          (updatePayload.ownerName as string | undefined) || venue.ownerName;
+        const ownerName = ownerNameRaw?.trim() || "Venue Owner";
+
+        const newUser = new User({
+          name: ownerName,
+          email: ownerEmail,
+          phone: ownerPhone,
+          password: tempPassword,
+          role: "VENUE_LISTER",
+          venueListerProfile: {
+            businessDetails: {
+              name: ownerName,
+              address:
+                (updatePayload.address as string | undefined) ||
+                venue.address ||
+                "",
+            },
+            payoutInfo: {
+              accountNumber: "",
+              ifsc: "",
+              bankName: "",
+            },
+            canAddMoreVenues: false,
+          },
+        });
+
+        const savedUser = await newUser.save();
+        ownerUser = savedUser._id;
+        createdUser = true;
+      }
+
+      updatePayload.ownerId = ownerUser as unknown as string;
+      updatePayload.approvalStatus = "APPROVED";
+    }
+
+    const updatedVenue = await Venue.findByIdAndUpdate(venueId, updatePayload, {
+      new: true,
+    });
+
+    if (!updatedVenue) {
+      res.status(404).json({
+        success: false,
+        message: "Venue not found",
+      });
+      return;
+    }
+
+    if (createdUser && tempPassword) {
+      try {
+        await sendCredentialsEmail({
+          name: updatedVenue.ownerName,
+          email: updatedVenue.ownerEmail,
+          password: tempPassword,
+          loginUrl: `${process.env.FRONTEND_URL || "http://localhost:3000"}/login`,
+        });
+      } catch (emailError) {
+        console.error("Failed to send venue credentials email:", emailError);
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Venue updated successfully",
+      data: updatedVenue,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to update venue",
+    });
+  }
+};
+
+/**
+ * Create coach directly from admin
+ * POST /api/admin/coaches/create
+ */
+export const createCoachAdminHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+      return;
+    }
+
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      profilePhotoUrl,
+      profilePhotoKey,
+      bio,
+      sports,
+      hourlyRate,
+      sportPricing,
+      serviceMode,
+      baseLocation,
+      serviceRadiusKm,
+      travelBufferTime,
+      venueId,
+      ownVenueDetails,
+      verificationStatus,
+      convertExistingUser,
+    } = req.body;
+
+    const normalizedEmail = typeof email === "string" ? email.trim() : "";
+    const normalizedPhone = typeof phone === "string" ? phone.trim() : "";
+
+    let user = await User.findOne({
+      $or: [
+        { email: normalizedEmail.toLowerCase() },
+        { phone: normalizedPhone },
+      ],
+    });
+    let tempPassword: string | undefined;
+    let createdUser = false;
+
+    if (user) {
+      if (user.role === "COACH") {
+        const existingCoach = await Coach.findOne({ userId: user._id });
+        if (existingCoach) {
+          res.status(409).json({
+            success: false,
+            message: "Coach profile already exists for this account",
+            existingRole: user.role,
+            targetRole: "COACH",
+            existingUser: buildUserSummary(user),
+          });
+          return;
+        }
+      } else if (user.role === "PLAYER") {
+        if (!convertExistingUser) {
+          res.status(409).json({
+            success: false,
+            message:
+              "User already exists as PLAYER. Convert this account to COACH to continue.",
+            requiresConversion: true,
+            existingRole: user.role,
+            targetRole: "COACH",
+            existingUser: buildUserSummary(user),
+          });
+          return;
+        }
+
+        user.role = "COACH";
+        await user.save();
+      } else {
+        res.status(409).json({
+          success: false,
+          message:
+            "An account already exists with a different role. Coach accounts must be separate.",
+          requiresSeparateAccount: true,
+          existingRole: user.role,
+          targetRole: "COACH",
+          existingUser: buildUserSummary(user),
+        });
+        return;
+      }
+    } else {
+      tempPassword = generateTempPassword(12);
+      const newUser = new User({
+        name: `${firstName} ${lastName}`,
+        email: normalizedEmail,
+        phone: normalizedPhone,
+        role: "COACH",
+        isActive: true,
+        password: tempPassword, // Will be hashed by schema middleware
+      });
+
+      user = await newUser.save();
+      createdUser = true;
+    }
+
+    if (profilePhotoUrl || profilePhotoKey) {
+      user.photoUrl = profilePhotoUrl || user.photoUrl;
+      user.photoS3Key = profilePhotoKey || user.photoS3Key;
+      await user.save();
+    }
+
+    const normalizedOwnVenueDetails =
+      ownVenueDetails && typeof ownVenueDetails === "object"
+        ? {
+            name: ownVenueDetails.name,
+            address: ownVenueDetails.address,
+            description: ownVenueDetails.description || "",
+            openingHours: ownVenueDetails.openingHours || "",
+            images: ownVenueDetails.images || [],
+            imageS3Keys: ownVenueDetails.imageS3Keys || [],
+            location:
+              ownVenueDetails.location || ownVenueDetails.coordinates
+                ? {
+                    type: "Point",
+                    coordinates:
+                      ownVenueDetails.location?.coordinates ||
+                      ownVenueDetails.coordinates,
+                  }
+                : undefined,
+            sports,
+            amenities: [],
+            pricePerHour: hourlyRate,
+          }
+        : undefined;
+
+    // Create coach profile
+    const newCoach = new Coach({
+      userId: user._id,
+      bio,
+      sports,
+      hourlyRate,
+      sportPricing: sportPricing || {},
+      serviceMode: serviceMode || "FREELANCE",
+      baseLocation,
+      serviceRadiusKm,
+      travelBufferTime,
+      ...(normalizedOwnVenueDetails
+        ? { ownVenueDetails: normalizedOwnVenueDetails }
+        : {}),
+      venueId: venueId || undefined,
+      verificationStatus: verificationStatus || "VERIFIED",
+      isVerified: (verificationStatus || "VERIFIED") === "VERIFIED",
+      createdBy: req.user.id,
+    });
+
+    const coach = await newCoach.save();
+
+    if (createdUser && tempPassword) {
+      try {
+        await sendCredentialsEmail({
+          name: user.name,
+          email: user.email,
+          password: tempPassword,
+          loginUrl: `${process.env.FRONTEND_URL || "http://localhost:3000"}/login`,
+        });
+      } catch (emailError) {
+        console.error("Failed to send coach credentials email:", emailError);
+      }
+    }
+
+    // Send in-app notification
+    try {
+      NotificationService.send({
+        userId: user._id.toString(),
+        type: "COACH_VERIFICATION_VERIFIED",
+        title: "Welcome to PowerMySport",
+        message:
+          "Your coach account has been created and verified successfully.",
+        data: {
+          coachId: coach._id.toString(),
+          createdAt: new Date().toISOString(),
+        },
+      }).catch((err: Error) =>
+        console.error("Failed to send coach creation notification:", err),
+      );
+    } catch (notificationError) {
+      console.error("Failed to send in-app notification:", notificationError);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Coach created successfully",
+      data: { coach, user },
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to create coach",
     });
   }
 };

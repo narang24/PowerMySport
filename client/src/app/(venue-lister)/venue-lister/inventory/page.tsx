@@ -11,7 +11,7 @@ import { venueApi } from "@/modules/venue/services/venue";
 import { Venue } from "@/types";
 import { MapPin } from "lucide-react";
 import Link from "next/link";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 export default function VenueInventoryPage() {
   const { user } = useAuthStore();
@@ -38,6 +38,7 @@ export default function VenueInventoryPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState("");
   const [hasSelectedLocation, setHasSelectedLocation] = useState(false);
+  const skipAutocompleteRef = useRef(false);
   const [selectedImages, setSelectedImages] = useState<
     Array<{ file: File; preview: string }>
   >([]);
@@ -58,6 +59,11 @@ export default function VenueInventoryPage() {
   }, [formData.address]);
 
   useEffect(() => {
+    if (skipAutocompleteRef.current) {
+      skipAutocompleteRef.current = false;
+      return;
+    }
+
     const query = addressQuery.trim();
     if (query.length < 3) {
       setSuggestions([]);
@@ -188,6 +194,7 @@ export default function VenueInventoryPage() {
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+    skipAutocompleteRef.current = false;
     setAddressQuery(value);
     setHasSelectedLocation(false);
     setFormData((prev) => ({
@@ -197,6 +204,7 @@ export default function VenueInventoryPage() {
   };
 
   const handleSelectSuggestion = (suggestion: GeoSuggestion) => {
+    skipAutocompleteRef.current = true;
     setHasSelectedLocation(true);
     setSuggestions([]);
     setSearchError("");
@@ -226,6 +234,7 @@ export default function VenueInventoryPage() {
         setIsSearching(true);
         setSearchError("");
         try {
+          skipAutocompleteRef.current = true;
           const result = await geoApi.geocode(formData.address);
           if (!result) {
             toast.error(

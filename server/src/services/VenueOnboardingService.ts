@@ -606,7 +606,7 @@ export const approveVenue = async (
 
           <div class="info-box">
             <strong>📞 Need Help?</strong>
-            <p>If you have any questions, feel free to contact our support team at support@powermysport.com</p>
+            <p>If you have any questions, feel free to contact our support team at teams@powermysport.com</p>
           </div>
 
           <p>Best regards,<br/><strong>PowerMySport Team</strong></p>

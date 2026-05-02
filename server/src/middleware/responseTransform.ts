@@ -13,7 +13,10 @@ export function transformDocument<T extends Record<string, any>>(
 ): T & { id: string } {
   if (!doc) return doc as any;
 
-  const obj = typeof doc.toObject === "function" ? doc.toObject() : { ...doc };
+  const obj =
+    typeof doc.toJSON === "function"
+      ? doc.toJSON({ flattenMaps: true })
+      : { ...doc };
 
   if (obj._id) {
     return {
