@@ -227,7 +227,7 @@ const formatParticipant = (
       : profile?.isIdentityPublic
         ? participant.name
         : profile?.anonymousAlias || "Anonymous Member",
-    isIdentityPublic: profile?.isIdentityPublic || false,
+    isIdentityPublic: profile?.isIdentityPublic ?? true,
     photoUrl:
       !isSelf && profile?.isIdentityPublic ? participant.photoUrl : null,
     lastSeenAt: profile?.lastSeenVisible ? profile?.lastSeenAt || null : null,
@@ -398,7 +398,7 @@ export const CommunityService = {
                   : profile?.isIdentityPublic
                     ? author?.name || "Player"
                     : profile?.anonymousAlias || "Anonymous Player",
-              isIdentityPublic: profile?.isIdentityPublic || false,
+              isIdentityPublic: profile?.isIdentityPublic ?? true,
               photoUrl:
                 profile?.isIdentityPublic && author
                   ? await resolveUserPhotoUrl(author)
@@ -514,7 +514,7 @@ export const CommunityService = {
               : postAuthorProfile?.isIdentityPublic
                 ? postAuthor?.name || "Player"
                 : postAuthorProfile?.anonymousAlias || "Anonymous Player",
-          isIdentityPublic: postAuthorProfile?.isIdentityPublic || false,
+          isIdentityPublic: postAuthorProfile?.isIdentityPublic ?? true,
           photoUrl:
             postAuthorProfile?.isIdentityPublic && postAuthor
               ? await resolveUserPhotoUrl(postAuthor)
@@ -545,7 +545,7 @@ export const CommunityService = {
                   : answerProfile?.isIdentityPublic
                     ? answerUser?.name || "Player"
                     : answerProfile?.anonymousAlias || "Anonymous Player",
-              isIdentityPublic: answerProfile?.isIdentityPublic || false,
+              isIdentityPublic: answerProfile?.isIdentityPublic ?? true,
               photoUrl:
                 answerProfile?.isIdentityPublic && answerUser
                   ? await resolveUserPhotoUrl(answerUser)
@@ -1067,7 +1067,7 @@ export const CommunityService = {
         .map((user) => {
           const candidateId = String(user._id);
           const candidateProfile = profileMap.get(candidateId);
-          const isIdentityPublic = candidateProfile?.isIdentityPublic || false;
+          const isIdentityPublic = candidateProfile?.isIdentityPublic ?? true;
           const displayName = isIdentityPublic
             ? user.name
             : candidateProfile?.anonymousAlias || "Anonymous Member";
@@ -1141,7 +1141,7 @@ export const CommunityService = {
 
     const profile = targetProfile || {
       anonymousAlias: "Anonymous Member",
-      isIdentityPublic: false,
+      isIdentityPublic: true,
       messagePrivacy: "EVERYONE" as const,
       readReceiptsEnabled: true,
       lastSeenVisible: false,
@@ -2019,7 +2019,7 @@ export const CommunityService = {
             isIdentityPublic:
               conversationType === "GROUP"
                 ? true
-                : otherProfile?.isIdentityPublic || false,
+                : (otherProfile?.isIdentityPublic ?? true),
             photoUrl:
               conversationType === "GROUP"
                 ? null
@@ -2735,7 +2735,7 @@ export const CommunityService = {
       group.members.map(async (member: any) => {
         const memberId = String(member._id);
         const profile = profileMap.get(memberId);
-        const isIdentityPublic = profile?.isIdentityPublic || false;
+        const isIdentityPublic = profile?.isIdentityPublic ?? true;
 
         return {
           id: memberId,

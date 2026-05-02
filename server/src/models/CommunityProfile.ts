@@ -33,7 +33,7 @@ const communityProfileSchema = new Schema<CommunityProfileDocument>(
     },
     isIdentityPublic: {
       type: Boolean,
-      default: false,
+      default: true,
     },
     messagePrivacy: {
       type: String,

@@ -10,6 +10,7 @@
     "migrate": "ts-node src/migrations/index.ts",
     "migrate:venue-images": "ts-node src/migrations/10_migrate_venue_images.ts",
     "migrate:admin-permissions": "ts-node src/scripts/migrateAdminPermissions.ts",
+    "community:players-public": "ts-node src/scripts/makePlayerProfilesPublic.ts",
     "seed:sports": "ts-node src/scripts/seedSports.ts",
     "purge:venues": "ts-node src/scripts/deleteAllVenueData.ts",
     "purge:smoke-users": "ts-node src/scripts/deleteSmokeUsers.ts",

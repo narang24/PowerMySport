@@ -570,9 +570,6 @@ export default function FriendsPage() {
                             <h4 className="font-semibold text-slate-900">
                               {user.name}
                             </h4>
-                            <p className="text-sm text-slate-600">
-                              {user.email}
-                            </p>
                           </div>
                         </div>
                         <div>

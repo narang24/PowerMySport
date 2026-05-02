@@ -172,9 +172,6 @@ export function FriendSelector({
                 <p className="font-medium text-slate-900 truncate">
                   {friend.name}
                 </p>
-                <p className="text-xs text-slate-500 truncate">
-                  {friend.email}
-                </p>
               </div>
             </button>
           );
