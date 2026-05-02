@@ -25,12 +25,7 @@ export function GroupMembersList({
 }: GroupMembersListProps) {
   const prefersReducedMotion = useReducedMotion();
 
-  const {
-    data: members = [],
-    isLoading,
-    error,
-    execute,
-  } = useAsync(
+  const { data, isLoading, error, execute } = useAsync(
     async (signal) => {
       // Pass signal to axios via requestConfig
       const data = await communityService.getGroupMembers(groupId);
@@ -40,6 +35,7 @@ export function GroupMembersList({
     { onError: () => {} }, // Silent error handling - rely on error state
   );
 
+  const members = data ?? [];
   if (isLoading) {
     return (
       <div className="rounded-3xl border border-white/70 bg-white/90 p-5 shadow-sm">
@@ -75,7 +71,7 @@ export function GroupMembersList({
             Group Members
           </h3>
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-            {members.length}
+            {members?.length || 0}
           </span>
         </div>
         <button

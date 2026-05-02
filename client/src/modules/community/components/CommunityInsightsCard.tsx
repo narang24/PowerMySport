@@ -40,12 +40,14 @@ export function CommunityInsightsCard({
   ctaUrl,
   enabled,
   ctaTracking,
+  groupId,
 }: CommunityInsightsCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [items, setItems] = useState<CommunityInsightPost[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState(0);
   const { activeGroupId } = useActiveGroup();
+  const isLockedForActiveGroup = !canViewToolsFor(groupId, activeGroupId);
 
   useEffect(() => {
     if (!enabled) {
@@ -142,14 +144,14 @@ export function CommunityInsightsCard({
             </div>
           ) : null}
 
+          {isLockedForActiveGroup ? (
+            <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+              Tools for this group are locked while another group is open.
+            </div>
+          ) : null}
+
           {!enabled ? (
             <p className="mt-3 text-xs text-slate-500">
-              {/* If group tools are not allowed, show locked message */}
-              {!canViewToolsFor(groupId, activeGroupId) ? (
-                <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                  Tools for this group are locked while another group is open.
-                </div>
-              ) : null}
               Sign in as a player or coach to view live community insights.
             </p>
           ) : null}

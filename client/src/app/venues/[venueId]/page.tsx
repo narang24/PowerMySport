@@ -454,7 +454,7 @@ export default function VenueDetailsPage() {
 
                   <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_180px]">
                     <div
-                      className="group relative h-80 sm:h-[28rem] w-full overflow-hidden bg-slate-100 cursor-zoom-in"
+                      className="group relative h-80 sm:h-112 w-full overflow-hidden bg-slate-100 cursor-zoom-in"
                       onClick={() => openLightbox(selectedImageIndex)}
                     >
                       <img
@@ -462,7 +462,7 @@ export default function VenueDetailsPage() {
                         alt={venue.name}
                         className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
                       />
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-black/70 via-black/35 to-transparent" />
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-linear-to-t from-black/70 via-black/35 to-transparent" />
                       <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3 text-white">
                         <div className="space-y-1">
                           <p className="text-xs uppercase tracking-wide text-white/75">
@@ -515,14 +515,14 @@ export default function VenueDetailsPage() {
                           Scroll to browse
                         </p>
                       </div>
-                      <div className="overflow-y-auto overflow-x-hidden lg:h-[28rem] lg:overflow-y-auto lg:overflow-x-hidden">
+                      <div className="overflow-y-auto overflow-x-hidden lg:h-112 lg:overflow-y-auto lg:overflow-x-hidden">
                         <div className="grid grid-cols-3 gap-2 px-4 pb-4 sm:grid-cols-4 lg:grid-cols-2">
                           {venueImages.map((image, index) => (
                             <button
                               type="button"
                               key={`${image}-${index}`}
                               onClick={() => setSelectedImageIndex(index)}
-                              className={`group relative aspect-[4/3] overflow-hidden rounded-2xl border transition ${
+                              className={`group relative aspect-4/3 overflow-hidden rounded-2xl border transition ${
                                 selectedImageIndex === index
                                   ? "border-power-orange ring-2 ring-power-orange/40"
                                   : "border-slate-200 hover:border-slate-300"
@@ -676,7 +676,7 @@ export default function VenueDetailsPage() {
                             onClick={() =>
                               openLightbox(globalIndex >= 0 ? globalIndex : 0)
                             }
-                            className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                            className="group relative aspect-4/3 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                             aria-label={`Open ${selectedSport} image ${index + 1}`}
                           >
                             <img
@@ -684,7 +684,7 @@ export default function VenueDetailsPage() {
                               alt={`${venue.name} ${selectedSport} image ${index + 1}`}
                               className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                             />
-                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition group-hover:opacity-100" />
+                            <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/20 to-transparent opacity-0 transition group-hover:opacity-100" />
                             <div className="pointer-events-none absolute bottom-2 left-2 rounded-full bg-black/45 px-2 py-0.5 text-[11px] font-semibold text-white opacity-0 backdrop-blur-sm transition group-hover:opacity-100">
                               {selectedSport} {index + 1}
                             </div>

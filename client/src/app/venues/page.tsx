@@ -497,7 +497,7 @@ export default function VenuesPage() {
                                 alt={venue.name}
                                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                               />
-                              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/55 via-black/20 to-transparent" />
+                              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-black/55 via-black/20 to-transparent" />
                               <div className="absolute bottom-3 left-3 flex items-center gap-2 text-white">
                                 <span className="rounded-full border border-white/40 bg-black/35 px-2.5 py-1 text-[11px] font-semibold backdrop-blur-sm">
                                   {venueImages.length} photos

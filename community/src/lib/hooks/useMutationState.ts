@@ -7,7 +7,7 @@ interface MutationState {
   error: Error | null;
 }
 
-interface UseMutationStateOptions {
+export interface UseMutationStateOptions {
   onSuccess?: (id: string, result: any, payload?: any) => void;
   onError?: (id: string, error: Error, payload?: any) => void;
 }
