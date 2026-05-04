@@ -53,7 +53,7 @@ export default function ServicesPage() {
       icon: FeatureIcons.CreditCard,
     },
   ];
-  // Services for venue owners
+  // Services for venue owners and academy owners
   const venueOwnerFeatures = [
     {
       title: "Booking Management Dashboard",
@@ -352,19 +352,19 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      {/* For Venue Owners Section */}
+      {/* For Venue Owners and Academy Owners Section */}
       <section className="py-16 sm:py-20 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <p className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-slate-600">
-              For Venue Owners
+              For Venue Owners & Academy Owners
             </p>
             <h2 className="font-title text-3xl sm:text-4xl font-bold text-deep-slate mb-4">
-              Streamline Your Venue Operations
+              Streamline Your Facility Operations
             </h2>
             <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
               Powerful tools to manage bookings, increase revenue, and grow your
-              sports facility
+              sports facility or academy
             </p>
           </div>
 
@@ -376,10 +376,10 @@ export default function ServicesPage() {
 
           <div className="mt-12 text-center">
             <a
-              href="/onboarding"
+              href="/register"
               className="inline-block rounded-xl bg-deep-slate px-8 py-4 text-lg font-semibold text-white premium-shadow transition-colors hover:bg-slate-800"
             >
-              List Your Venue Today
+              Get Started Today
             </a>
           </div>
         </div>

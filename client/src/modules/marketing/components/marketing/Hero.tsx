@@ -25,6 +25,11 @@ export interface HeroProps {
   imageSrc?: string;
   imageAlt?: string;
   gradient?: boolean;
+  stats?: Array<{
+    label: string;
+    value: string;
+    helper?: string;
+  }>;
 }
 
 /**
@@ -41,6 +46,7 @@ export const Hero: React.FC<HeroProps> = ({
   imageSrc,
   imageAlt,
   gradient = true,
+  stats,
 }) => {
   // Home variant - Large hero with gradient background
   if (variant === "home") {
@@ -101,6 +107,31 @@ export const Hero: React.FC<HeroProps> = ({
                 )}
               </div>
             </StaggerItem>
+
+            {stats && stats.length > 0 && (
+              <StaggerItem>
+                <div className="mx-auto mt-6 grid max-w-4xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {stats.map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="rounded-2xl border border-slate-200 bg-white/85 p-4 text-left shadow-sm backdrop-blur-sm"
+                    >
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        {stat.label}
+                      </p>
+                      <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
+                        {stat.value}
+                      </p>
+                      {stat.helper && (
+                        <p className="mt-1 text-sm text-slate-600">
+                          {stat.helper}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </StaggerItem>
+            )}
           </StaggerContainer>
         </div>
       </section>

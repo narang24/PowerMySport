@@ -331,7 +331,8 @@ venueSchema.index({ approvalStatus: 1, createdAt: -1 });
  * Valid for 24 hours
  */
 venueSchema.methods.refreshDocumentUrls = async function () {
-  const { s3Service } = require("../services/S3Service");
+  // S3Service is imported at the top of the module
+  const { s3Service } = await import("../services/S3Service");
 
   if (Array.isArray(this.documents) && this.documents.length > 0) {
     await Promise.all(
@@ -362,7 +363,8 @@ venueSchema.methods.refreshDocumentUrls = async function () {
  * Valid for 7 days
  */
 venueSchema.methods.refreshImageUrls = async function () {
-  const { s3Service } = require("../services/S3Service");
+  // S3Service is imported at the top of the module
+  const { s3Service } = await import("../services/S3Service");
 
   const extractKeyFromUrl = (url?: string): string | null => {
     if (!url || typeof url !== "string") return null;

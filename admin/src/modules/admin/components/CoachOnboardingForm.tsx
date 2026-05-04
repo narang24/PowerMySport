@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Loader2, MapPin, Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "@/lib/toast";
 import { adminApi } from "@/modules/admin/services/admin";
@@ -39,6 +40,7 @@ type UploadedDocument = {
 type UploadedVenueImage = {
   file: File;
   fileName: string;
+  previewUrl: string;
 };
 
 type ExistingOwnVenueDetails = {
@@ -198,10 +200,12 @@ export function CoachOnboardingForm() {
   const [venueImageDrafts, setVenueImageDrafts] = useState<
     UploadedVenueImage[]
   >([]);
+  const venueImageInputRef = useRef<HTMLInputElement | null>(null);
+  const venueImagePreviewUrlsRef = useRef<string[]>([]);
 
-  const [verificationDocs, setVerificationDocs] = useState<UploadedDocument[]>([
-    { type: "CERTIFICATION", file: null, fileName: "" },
-  ]);
+  const [verificationDocs, setVerificationDocs] = useState<UploadedDocument[]>(
+    [],
+  );
 
   const isOwnVenue = serviceMode === "OWN_VENUE" || serviceMode === "HYBRID";
   const needsBaseLocation = serviceMode !== "OWN_VENUE";
@@ -222,6 +226,11 @@ export function CoachOnboardingForm() {
     }
     return payload;
   }, [pricingMode, sports, hourlyRate, sportPricing]);
+
+  const resolvedHourlyRate =
+    pricingMode === "SAME"
+      ? hourlyRate
+      : Math.max(0, ...Object.values(pricingPayload));
 
   const validateStep1 = () => {
     const nextErrors: FormErrors = {};
@@ -295,11 +304,6 @@ export function CoachOnboardingForm() {
 
   const validateStep3 = () => {
     const nextErrors: FormErrors = {};
-
-    if (!verificationDocs.some((doc) => doc.file)) {
-      nextErrors.verificationDocs =
-        "Upload at least one verification document before submitting";
-    }
 
     if (isOwnVenue && venueImageDrafts.length < 3) {
       nextErrors.venueImages =
@@ -403,9 +407,23 @@ export function CoachOnboardingForm() {
       return true;
     });
 
+    if (selected.length === 0) {
+      return;
+    }
+
+    setErrors((prev) => ({ ...prev, venueImages: "" }));
     setVenueImageDrafts((prev) => [
       ...prev,
-      ...selected.map((file) => ({ file, fileName: file.name })),
+      ...selected.map((file) => {
+        const previewUrl = URL.createObjectURL(file);
+        venueImagePreviewUrlsRef.current.push(previewUrl);
+
+        return {
+          file,
+          fileName: file.name,
+          previewUrl,
+        };
+      }),
     ]);
   };
 
@@ -446,9 +464,29 @@ export function CoachOnboardingForm() {
 
   const removeVenueImage = (index: number) => {
     setVenueImageDrafts((prev) =>
-      prev.filter((_, currentIndex) => currentIndex !== index),
+      prev.filter((image, currentIndex) => {
+        if (currentIndex === index) {
+          URL.revokeObjectURL(image.previewUrl);
+          venueImagePreviewUrlsRef.current =
+            venueImagePreviewUrlsRef.current.filter(
+              (previewUrl) => previewUrl !== image.previewUrl,
+            );
+          return false;
+        }
+
+        return true;
+      }),
     );
   };
+
+  useEffect(() => {
+    return () => {
+      for (const previewUrl of venueImagePreviewUrlsRef.current) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      venueImagePreviewUrlsRef.current = [];
+    };
+  }, []);
 
   const uploadFiles = async (
     coachId: string,
@@ -521,7 +559,7 @@ export function CoachOnboardingForm() {
         bio: bio.trim(),
         sports,
         certifications: [],
-        hourlyRate,
+        hourlyRate: resolvedHourlyRate,
         sportPricing: pricingPayload,
         serviceMode,
         verificationStatus: "PENDING",
@@ -647,7 +685,7 @@ export function CoachOnboardingForm() {
             imageS3Keys: uploadedVenueImages.map((item) => item.key),
             sports,
             amenities: existingOwnVenue.amenities || [],
-            pricePerHour: hourlyRate,
+            pricePerHour: resolvedHourlyRate,
           },
         });
       }
@@ -1458,8 +1496,8 @@ export function CoachOnboardingForm() {
                       Verification documents
                     </p>
                     <p className="text-sm text-slate-600">
-                      Upload at least one verification document before
-                      publishing the coach.
+                      Optional for admin-created coaches. Add documents only if
+                      you want them stored for review.
                     </p>
                   </div>
                   <Button
@@ -1557,11 +1595,6 @@ export function CoachOnboardingForm() {
                     {errors.venueImages}
                   </p>
                 ) : null}
-                {errors.verificationDocs ? (
-                  <p className="mt-3 text-xs text-red-600">
-                    {errors.verificationDocs}
-                  </p>
-                ) : null}
               </div>
 
               {isOwnVenue ? (
@@ -1576,19 +1609,26 @@ export function CoachOnboardingForm() {
                         attach, and activate the coach.
                       </p>
                     </div>
-                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => venueImageInputRef.current?.click()}
+                      disabled={loading}
+                    >
                       <Upload size={14} /> Add images
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        disabled={loading}
-                        onChange={(event) =>
-                          handleVenueImageSelect(event.target.files)
-                        }
-                      />
-                    </label>
+                    </button>
+                    <input
+                      ref={venueImageInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      disabled={loading}
+                      onChange={(event) => {
+                        handleVenueImageSelect(event.target.files);
+                        event.currentTarget.value = "";
+                      }}
+                    />
                   </div>
 
                   <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -1597,7 +1637,15 @@ export function CoachOnboardingForm() {
                         key={`${image.fileName}-${index}`}
                         className="rounded-2xl border border-slate-200 bg-white p-3"
                       >
-                        <div className="aspect-video rounded-xl bg-slate-100" />
+                        <div className="relative aspect-video overflow-hidden rounded-xl bg-slate-100">
+                          <Image
+                            src={image.previewUrl}
+                            alt={image.fileName}
+                            fill
+                            unoptimized
+                            className="object-cover"
+                          />
+                        </div>
                         <div className="mt-3 flex items-start justify-between gap-2">
                           <p className="truncate text-sm font-medium text-slate-700">
                             {image.fileName}

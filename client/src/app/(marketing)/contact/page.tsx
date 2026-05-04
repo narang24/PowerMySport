@@ -1,5 +1,7 @@
 ﻿"use client";
 
+import axiosInstance from "@/lib/api/axios";
+import { toast } from "@/lib/toast";
 import { Hero } from "@/modules/marketing/components/marketing/Hero";
 import { Button } from "@/modules/shared/ui/Button";
 import { Card, CardContent } from "@/modules/shared/ui/Card";
@@ -14,6 +16,15 @@ import {
   Twitter,
 } from "lucide-react";
 import React, { useState } from "react";
+import { useEffect } from "react";
+
+const SUBJECT_OPTIONS = [
+  "General enquiry",
+  "Partnership",
+  "Billing and payments",
+  "Technical support",
+  "Academy onboarding",
+];
 
 const iconMotion = {
   initial: { opacity: 0, y: 10, scale: 0.92 },
@@ -23,11 +34,18 @@ const iconMotion = {
 };
 
 export default function ContactPage() {
+  const [initialSubject, setInitialSubject] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setInitialSubject(params.get("subject") || "");
+  }, []);
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
-    subject: "",
+    subject: initialSubject,
     message: "",
     userType: "player",
   });
@@ -52,25 +70,35 @@ export default function ContactPage() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate form submission (replace with actual API call)
-    setTimeout(() => {
-      console.log("Contact form submitted:", formData);
-      setSubmitStatus("success");
-      setIsSubmitting(false);
+    try {
+      await axiosInstance.post("/support-tickets/public", {
+        requesterName: formData.name,
+        requesterEmail: formData.email,
+        requesterPhone: formData.phone,
+        requesterType: formData.userType,
+        subject: formData.subject,
+        description: formData.message,
+        category: "OTHER",
+        priority: "MEDIUM",
+      });
 
-      // Reset form
+      setSubmitStatus("success");
       setFormData({
         name: "",
         email: "",
         phone: "",
-        subject: "",
+        subject: initialSubject,
         message: "",
         userType: "player",
       });
-
-      // Reset success message after 5 seconds
-      setTimeout(() => setSubmitStatus("idle"), 5000);
-    }, 2000);
+      toast.success("Your message has been sent to our team.");
+    } catch (error) {
+      console.error("Contact form submission failed:", error);
+      setSubmitStatus("error");
+      toast.error("Failed to send your message. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -204,16 +232,23 @@ export default function ContactPage() {
                   >
                     Subject *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     id="subject"
                     name="subject"
                     value={formData.subject}
                     onChange={handleChange}
                     required
                     className="w-full rounded-xl border border-border px-4 py-3 focus:outline-none focus:ring-2 focus:ring-power-orange"
-                    placeholder="What is this regarding?"
-                  />
+                  >
+                    <option value="" disabled>
+                      Select a subject
+                    </option>
+                    {SUBJECT_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Message */}

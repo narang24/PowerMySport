@@ -107,6 +107,56 @@ const buildDaySeries = (
   return series;
 };
 
+export const getPublicPlatformStats = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const [totalUsers, roleCounts] = await Promise.all([
+      User.countDocuments(),
+      User.aggregate<{ _id: string; count: number }>([
+        {
+          $match: {
+            role: { $in: ["PLAYER", "COACH", "VENUE_LISTER"] },
+          },
+        },
+        {
+          $group: {
+            _id: "$role",
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+    ]);
+
+    const summary = {
+      PLAYER: 0,
+      COACH: 0,
+      VENUE_LISTER: 0,
+    };
+
+    for (const item of roleCounts) {
+      if (item._id in summary) {
+        summary[item._id as keyof typeof summary] = item.count;
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Public platform stats retrieved",
+      data: {
+        totalUsers,
+        roleCounts: summary,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Failed to get stats",
+    });
+  }
+};
+
 // Get platform statistics
 export const getPlatformStats = async (
   req: Request,

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import crypto from "crypto";
 import mongoose from "mongoose";
+import { S3Service } from "../services/S3Service";
 import { User } from "../models/User";
 import { Coach } from "../models/Coach";
 import { Venue } from "../models/Venue";
@@ -27,7 +28,8 @@ import { transformDocument } from "../middleware/responseTransform";
 import {
   sendCoachVerificationReminderEmail,
   sendCoachVerificationStatusEmail,
-  sendCredentialsEmail,
+  sendCoachAdminCredentialsEmail,
+  sendVenueAdminCredentialsEmail,
 } from "../utils/email";
 import { NotificationService } from "../services/NotificationService";
 
@@ -83,6 +85,31 @@ const buildUserSummary = (user: {
   phone: user.phone,
   role: user.role,
 });
+
+const normalizeCoachResponse = (coach: unknown) => {
+  if (!coach || typeof coach !== "object") {
+    return coach;
+  }
+
+  const objectValue = coach as { toObject?: () => Record<string, unknown> };
+  const plain =
+    typeof objectValue.toObject === "function"
+      ? objectValue.toObject()
+      : (coach as Record<string, unknown>);
+
+  return {
+    ...plain,
+    id:
+      typeof plain.id === "string"
+        ? plain.id
+        : plain._id &&
+            typeof plain._id === "object" &&
+            typeof (plain._id as { toString?: () => string }).toString ===
+              "function"
+          ? (plain._id as { toString: () => string }).toString()
+          : "",
+  };
+};
 
 // Admin login
 export const adminLogin = async (
@@ -274,6 +301,65 @@ export const listAdmins = async (
   }
 };
 
+/**
+ * Admin: List coaches
+ * GET /api/admin/coaches
+ */
+export const listCoaches = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    if (!req.user?.id) {
+      res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+      return;
+    }
+
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 12));
+    const skip = (page - 1) * limit;
+    const statusFilter =
+      typeof req.query.status === "string" ? req.query.status.trim() : "";
+
+    const filter: Record<string, unknown> = {};
+    if (statusFilter && statusFilter !== "ALL") {
+      filter.verificationStatus = statusFilter;
+    }
+
+    const [total, coaches] = await Promise.all([
+      Coach.countDocuments(filter),
+      Coach.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "userId",
+          select: "_id name email phone photoUrl photoS3Key role",
+        }),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      message: "Coaches retrieved successfully",
+      data: coaches.map((coach) => normalizeCoachResponse(coach)),
+      pagination: {
+        total,
+        page,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to fetch coaches",
+    });
+  }
+};
+
 // Get role templates
 export const getRoleTemplates = async (
   req: Request,
@@ -408,7 +494,6 @@ export const getAdminCoachVerificationUploadUrlHandler = async (
       return;
     }
 
-    const { S3Service } = require("../services/S3Service");
     const s3Service = new S3Service();
 
     const uploadData =
@@ -422,7 +507,7 @@ export const getAdminCoachVerificationUploadUrlHandler = async (
             fileName,
             contentType,
             coach._id.toString(),
-            documentType,
+            (documentType as any) || "OTHER",
           );
 
     res.status(200).json({
@@ -1567,7 +1652,7 @@ export const updateVenueAdminHandler = async (
 
     if (createdUser && tempPassword) {
       try {
-        await sendCredentialsEmail({
+        await sendVenueAdminCredentialsEmail({
           name: updatedVenue.ownerName,
           email: updatedVenue.ownerEmail,
           password: tempPassword,
@@ -1752,7 +1837,7 @@ export const createCoachAdminHandler = async (
 
     if (createdUser && tempPassword) {
       try {
-        await sendCredentialsEmail({
+        await sendCoachAdminCredentialsEmail({
           name: user.name,
           email: user.email,
           password: tempPassword,

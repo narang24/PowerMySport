@@ -76,7 +76,9 @@ export class S3Service {
       | "BUSINESS_REGISTRATION"
       | "TAX_DOCUMENT"
       | "INSURANCE"
-      | "CERTIFICATE",
+      | "CERTIFICATE"
+      | "panDocument"
+      | "gstDocument",
     venueId: string,
   ): Promise<UploadUrlResponse> {
     const fileExtension = fileName.split(".").pop();

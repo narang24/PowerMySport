@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { S3Service } from "../services/S3Service";
 import {
   createCoachPlanAdminHandler,
   listCoachPlansAdminHandler,
@@ -17,6 +18,7 @@ import {
   createVenueAdminHandler,
   getAdminCoachVerificationUploadUrlHandler,
   updateCoachAdminHandler,
+  listCoaches,
   submitCoachVerificationAdminHandler,
   getCoachVerificationDetails,
   getAdminProfile,
@@ -149,6 +151,14 @@ router.post(
   createCoachAdminHandler,
 );
 
+router.get(
+  "/coaches",
+  authMiddleware,
+  adminMiddleware,
+  requirePermission("coaches:view"),
+  listCoaches,
+);
+
 router.post(
   "/coaches/photo-upload-url",
   authMiddleware,
@@ -165,7 +175,6 @@ router.post(
         });
       }
 
-      const S3Service = (await import("../services/S3Service")).S3Service;
       const s3Service = new S3Service();
       const { uploadUrl, downloadUrl, key } =
         await s3Service.generateCoachPhotoUploadUrl(
@@ -200,7 +209,7 @@ router.post(
   "/coaches/:coachId/verification/upload-url",
   authMiddleware,
   adminMiddleware,
-  requirePermission("coaches:manage"),
+  requirePermission("coaches:create"),
   getAdminCoachVerificationUploadUrlHandler,
 );
 

@@ -26,6 +26,81 @@ type OpeningHours = {
   sunday: OpeningHoursDay;
 };
 
+export interface AcademyAdminQueueRecord {
+  id: string;
+  name: string;
+  legalName?: string;
+  city?: string;
+  sports: string[];
+  ownerEmail?: string;
+  ownerPhone?: string;
+  isApproved?: boolean;
+  kycVerified?: boolean;
+  isActive?: boolean;
+  submittedAt?: string;
+  lastReviewedAt?: string;
+  rejectionReason?: string;
+}
+
+export interface AcademyAdminReviewDetails extends AcademyAdminQueueRecord {
+  slug?: string;
+  description?: string;
+  address?: string;
+  state?: string;
+  pincode?: string;
+  placeId?: string;
+  logoUrl?: string;
+  coverPhotoUrl?: string;
+  photos?: string[];
+  ageGroups?: string[];
+  operatingHours?: OpeningHours;
+  languagesSpoken?: string[];
+  contactEmail?: string;
+  contactPhone?: string;
+  contactPersonName?: string;
+  allowsExternalCoaches?: boolean;
+  maxBatchSize?: number;
+  batchTimings?: string[];
+  sessionRatePerHour?: number;
+  trialsessionOffered?: boolean;
+  trialSessionPrice?: number;
+  bankAccountName?: string;
+  bankIfsc?: string;
+  upiId?: string;
+  payoutFrequency?: "weekly" | "biweekly" | "monthly";
+  cancellationPolicy?: string;
+  refundPolicy?: string;
+  panNumber?: string;
+  panDocumentUrl?: string;
+  gstNumber?: string;
+  gstDocumentUrl?: string;
+  ownerId?: {
+    _id?: string;
+    name?: string;
+    email?: string;
+    phone?: string;
+  };
+  venueIds?: Array<string | { _id?: string; id?: string; name?: string }>;
+  coachIds?: Array<string | { _id?: string; id?: string; name?: string }>;
+  subscriptionPlans?: Array<
+    string | { _id?: string; id?: string; name?: string }
+  >;
+  sessionPackages?: Array<
+    string | { _id?: string; id?: string; name?: string }
+  >;
+  rating?: number;
+  reviewCount?: number;
+  onboardingStep?: number;
+  onboardingCompleted?: boolean;
+}
+
+interface AcademyPendingQueueResponse {
+  academies: AcademyAdminQueueRecord[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
 export interface Admin {
   id: string;
   _id?: string;
@@ -115,12 +190,21 @@ export interface SupportTicketRecord {
   category: "BOOKING" | "PAYMENT" | "ACCOUNT" | "TECHNICAL" | "OTHER";
   status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
   priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-  userId: {
+  userId?: {
     _id: string;
     name: string;
     email: string;
     role: string;
-  };
+  } | null;
+  requesterName?: string;
+  requesterEmail?: string;
+  requesterPhone?: string;
+  requesterType?:
+    | "player"
+    | "venue_owner"
+    | "coach"
+    | "academy_owner"
+    | "other";
   assignedAdminId?: {
     _id: string;
     name: string;
@@ -271,6 +355,24 @@ export const adminApi = {
 
     const response = await axiosInstance.get(
       `/admin/coaches/verification?${query.toString()}`,
+    );
+    return response.data;
+  },
+
+  getCoaches: async (params?: {
+    status?: CoachVerificationStatus | "ALL";
+    page?: number;
+    limit?: number;
+  }): Promise<ApiResponse<Coach[]>> => {
+    const query = new URLSearchParams();
+    if (params?.status && params.status !== "ALL") {
+      query.append("status", params.status);
+    }
+    if (params?.page) query.append("page", params.page.toString());
+    if (params?.limit) query.append("limit", params.limit.toString());
+
+    const response = await axiosInstance.get(
+      `/admin/coaches${query.toString() ? `?${query.toString()}` : ""}`,
     );
     return response.data;
   },
@@ -785,6 +887,73 @@ export const adminApi = {
     const response = await axiosInstance.post(
       `/admin/coaches/${coachId}/verification/submit`,
       payload,
+    );
+    return response.data;
+  },
+
+  getPendingAcademies: async (params?: {
+    page?: number;
+    limit?: number;
+    filter?: "pending" | "approved" | "rejected";
+  }): Promise<ApiResponse<AcademyPendingQueueResponse>> => {
+    const query = new URLSearchParams();
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+    if (params?.filter) query.append("filter", params.filter);
+
+    const response = await axiosInstance.get(
+      `/academies/admin/pending${query.toString() ? `?${query.toString()}` : ""}`,
+    );
+    return response.data;
+  },
+
+  getAcademyReviewDetails: async (
+    academyId: string,
+  ): Promise<ApiResponse<AcademyAdminReviewDetails>> => {
+    const response = await axiosInstance.get(
+      `/academies/admin/${academyId}/review`,
+    );
+    return response.data;
+  },
+
+  approveAcademy: async (academyId: string): Promise<ApiResponse<unknown>> => {
+    const response = await axiosInstance.put(
+      `/academies/admin/${academyId}/approve`,
+    );
+    return response.data;
+  },
+
+  rejectAcademy: async (
+    academyId: string,
+    rejectionReason: string,
+  ): Promise<ApiResponse<unknown>> => {
+    const response = await axiosInstance.put(
+      `/academies/admin/${academyId}/reject`,
+      {
+        rejectionReason,
+      },
+    );
+    return response.data;
+  },
+
+  markAcademyKycVerified: async (
+    academyId: string,
+  ): Promise<ApiResponse<unknown>> => {
+    const response = await axiosInstance.put(
+      `/academies/admin/${academyId}/kyc-verify`,
+    );
+    return response.data;
+  },
+
+  suspendAcademy: async (
+    academyId: string,
+    reason?: string,
+  ): Promise<ApiResponse<unknown>> => {
+    const response = await axiosInstance.put(
+      `/academies/admin/${academyId}/suspend`,
+      {
+        reason,
+      },
     );
     return response.data;
   },

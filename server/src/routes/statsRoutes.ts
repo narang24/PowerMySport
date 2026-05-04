@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  getPublicPlatformStats,
   getPlatformStats,
   getAllUsers,
   getAllVenues,
@@ -23,6 +24,8 @@ import { funnelEventSchema } from "../middleware/schemas";
 import { validateRequest } from "../middleware/validation";
 
 const router = Router();
+
+router.get("/public", getPublicPlatformStats);
 
 // Authenticated events (players/coaches/venue-listers/admins)
 router.use(authMiddleware);

@@ -16,13 +16,19 @@ function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const roleParam = searchParams.get("role") || "PLAYER";
+  const initialRole =
+    roleParam === "PLAYER" ||
+    roleParam === "VENUE_LISTER" ||
+    roleParam === "COACH"
+      ? roleParam
+      : "PLAYER";
   const { setUser, setToken, setLoading } = useAuthStore();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     password: "",
-    role: roleParam as "PLAYER" | "VENUE_LISTER" | "COACH",
+    role: initialRole as "PLAYER" | "VENUE_LISTER" | "COACH",
     serviceMode: "OWN_VENUE" as "OWN_VENUE" | "FREELANCE" | "HYBRID",
     acceptedTerms: false,
     acceptedPrivacy: false,
@@ -317,12 +323,12 @@ function RegisterContent() {
                   <option value="COACH">Coach (Offer Coaching Services)</option>
                 </select>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">
-                  Want to list your venue?{" "}
+                  Want to list your venue or start academy onboarding?{" "}
                   <Link
                     href="/onboarding"
                     className="text-power-orange hover:text-orange-600 transition-colors bg-transparent border-0 font-semibold"
                   >
-                    Submit an inquiry
+                    Start venue onboarding
                   </Link>
                 </p>
               </div>

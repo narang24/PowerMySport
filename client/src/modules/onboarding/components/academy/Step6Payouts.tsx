@@ -1,0 +1,405 @@
+"use client";
+
+import { Button } from "@/modules/shared/ui/Button";
+import { useState } from "react";
+import { toast } from "@/lib/toast";
+import type {
+  AcademyPayoutFrequency,
+  AcademyStep6Payload,
+} from "@/modules/onboarding/types/academy";
+
+interface Step6PayoutsProps {
+  academyId: string;
+  onSubmit: (data: AcademyStep6Payload) => Promise<void>;
+  loading?: boolean;
+  onBack?: () => void;
+  previousData?: AcademyStep6Payload;
+}
+
+export default function Step6Payouts({
+  academyId,
+  onSubmit,
+  loading = false,
+  onBack,
+  previousData,
+}: Step6PayoutsProps) {
+  const [formData, setFormData] = useState({
+    bankAccountName: previousData?.bankAccountName || "",
+    bankAccountNumber: previousData?.bankAccountNumber || "",
+    bankIfsc: previousData?.bankIfsc || "",
+    upiId: previousData?.upiId || "",
+    payoutFrequency: (previousData?.payoutFrequency ||
+      "monthly") as AcademyPayoutFrequency,
+    cancellationPolicy: previousData?.cancellationPolicy || "",
+    refundPolicy: previousData?.refundPolicy || "",
+    agreedToTerms: false,
+  });
+
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    const hasBankDetails =
+      formData.bankAccountNumber ||
+      formData.bankIfsc ||
+      formData.bankAccountName;
+    const hasUpi = formData.upiId.trim();
+
+    // Must provide at least one payment method
+    if (!hasBankDetails && !hasUpi) {
+      errors.paymentMethod =
+        "Please provide either a bank account or UPI ID for payouts";
+    }
+
+    // If any bank field is filled, validate all bank fields
+    if (hasBankDetails) {
+      if (formData.bankAccountName.trim().length < 3) {
+        errors.bankAccountName =
+          "Account holder name is required (min 3 characters)";
+      }
+      if (!/^\d{9,18}$/.test(formData.bankAccountNumber)) {
+        errors.bankAccountNumber = "Invalid account number (9-18 digits)";
+      }
+      if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(formData.bankIfsc)) {
+        errors.bankIfsc = "Invalid IFSC code (e.g., SBIN0001234)";
+      }
+    }
+
+    // If UPI is provided, validate format
+    if (
+      hasUpi &&
+      !/^[a-zA-Z0-9._-]+@[a-zA-Z0-9]+$/.test(formData.upiId.trim())
+    ) {
+      errors.upiId = "Invalid UPI ID format (e.g., name@upi)";
+    }
+
+    if (formData.cancellationPolicy.trim().length < 10) {
+      errors.cancellationPolicy =
+        "Please provide a clear cancellation policy (min 10 characters)";
+    }
+    if (formData.refundPolicy.trim().length < 10) {
+      errors.refundPolicy =
+        "Please provide a clear refund policy (min 10 characters)";
+    }
+    if (!formData.agreedToTerms) {
+      errors.agreedToTerms = "You must agree to the terms and conditions";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      toast.error("Please fix the errors before submitting");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const payload: AcademyStep6Payload = {
+        academyId,
+        bankAccountName: formData.bankAccountName.trim(),
+        bankAccountNumber: formData.bankAccountNumber,
+        bankIfsc: formData.bankIfsc,
+        upiId: formData.upiId.trim(),
+        payoutFrequency: formData.payoutFrequency,
+        cancellationPolicy: formData.cancellationPolicy.trim(),
+        refundPolicy: formData.refundPolicy.trim(),
+      };
+      await onSubmit(payload);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save payouts",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-xs md:p-8">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold text-slate-900 mb-2">
+          Step 6: Payouts & Policies
+        </h2>
+        <p className="text-slate-600">
+          Final step - Set up your payment details
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Payment method error */}
+        {fieldErrors.paymentMethod && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+            <p className="text-red-600 text-sm">{fieldErrors.paymentMethod}</p>
+          </div>
+        )}
+
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <p className="text-amber-800 text-sm">
+            💡 Provide either a <strong>bank account</strong> or{" "}
+            <strong>UPI ID</strong> (or both) for receiving payouts.
+          </p>
+        </div>
+
+        {/* Bank Account */}
+        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+          <h3 className="font-semibold text-slate-900 mb-4">Bank Account</h3>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-1">
+                Account Holder Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.bankAccountName}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    bankAccountName: e.target.value,
+                  }))
+                }
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange ${
+                  fieldErrors.bankAccountName
+                    ? "border-red-300 bg-red-50"
+                    : "border-slate-300 bg-white"
+                }`}
+                disabled={isSubmitting}
+              />
+              {fieldErrors.bankAccountName && (
+                <p className="text-red-600 text-xs mt-1">
+                  {fieldErrors.bankAccountName}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-1">
+                Account Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.bankAccountNumber}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    bankAccountNumber: e.target.value.replace(/\D/g, ""),
+                  }))
+                }
+                placeholder="1234567890123456"
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange ${
+                  fieldErrors.bankAccountNumber
+                    ? "border-red-300 bg-red-50"
+                    : "border-slate-300 bg-white"
+                }`}
+                disabled={isSubmitting}
+              />
+              {fieldErrors.bankAccountNumber && (
+                <p className="text-red-600 text-xs mt-1">
+                  {fieldErrors.bankAccountNumber}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-900 mb-1">
+                IFSC Code <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={formData.bankIfsc}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    bankIfsc: e.target.value.toUpperCase(),
+                  }))
+                }
+                placeholder="SBIN0001234"
+                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange ${
+                  fieldErrors.bankIfsc
+                    ? "border-red-300 bg-red-50"
+                    : "border-slate-300 bg-white"
+                }`}
+                disabled={isSubmitting}
+              />
+              {fieldErrors.bankIfsc && (
+                <p className="text-red-600 text-xs mt-1">
+                  {fieldErrors.bankIfsc}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* UPI (Optional) */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-900 mb-2">
+            UPI ID{" "}
+            <span className="text-xs font-normal text-slate-500">
+              (optional if bank account provided)
+            </span>
+          </label>
+          <input
+            type="text"
+            value={formData.upiId}
+            onChange={(e) => {
+              setFormData((prev) => ({
+                ...prev,
+                upiId: e.target.value.toLowerCase(),
+              }));
+              if (fieldErrors.upiId)
+                setFieldErrors((prev) => ({
+                  ...prev,
+                  upiId: "",
+                  paymentMethod: "",
+                }));
+            }}
+            placeholder="username@upi"
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange ${
+              fieldErrors.upiId
+                ? "border-red-300 bg-red-50"
+                : "border-slate-300 bg-white"
+            }`}
+            disabled={isSubmitting}
+          />
+          {fieldErrors.upiId && (
+            <p className="text-red-600 text-xs mt-1">{fieldErrors.upiId}</p>
+          )}
+        </div>
+
+        {/* Payout Frequency */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-900 mb-2">
+            Payout Frequency <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={formData.payoutFrequency}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                payoutFrequency: e.target.value as AcademyPayoutFrequency,
+              }))
+            }
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange"
+            disabled={isSubmitting}
+          >
+            <option value="weekly">Weekly</option>
+            <option value="biweekly">Bi-weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+
+        {/* Policies */}
+        <div>
+          <label className="block text-sm font-semibold text-slate-900 mb-2">
+            Cancellation Policy <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            value={formData.cancellationPolicy}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                cancellationPolicy: e.target.value,
+              }))
+            }
+            placeholder="Describe your cancellation policy (e.g., 24 hours before session)"
+            rows={3}
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange ${
+              fieldErrors.cancellationPolicy
+                ? "border-red-300 bg-red-50"
+                : "border-slate-300 bg-white"
+            }`}
+            disabled={isSubmitting}
+          />
+          {fieldErrors.cancellationPolicy && (
+            <p className="text-red-600 text-xs mt-1">
+              {fieldErrors.cancellationPolicy}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-slate-900 mb-2">
+            Refund Policy <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            value={formData.refundPolicy}
+            onChange={(e) =>
+              setFormData((prev) => ({
+                ...prev,
+                refundPolicy: e.target.value,
+              }))
+            }
+            placeholder="Describe your refund policy"
+            rows={3}
+            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange ${
+              fieldErrors.refundPolicy
+                ? "border-red-300 bg-red-50"
+                : "border-slate-300 bg-white"
+            }`}
+            disabled={isSubmitting}
+          />
+          {fieldErrors.refundPolicy && (
+            <p className="text-red-600 text-xs mt-1">
+              {fieldErrors.refundPolicy}
+            </p>
+          )}
+        </div>
+
+        {/* Terms Agreement */}
+        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.agreedToTerms}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  agreedToTerms: e.target.checked,
+                }))
+              }
+              className="w-4 h-4 rounded mt-0.5 shrink-0"
+              disabled={isSubmitting}
+            />
+            <span className="text-sm text-blue-900">
+              I agree to PowerMySport Terms & Conditions and confirm all
+              information is accurate
+            </span>
+          </label>
+          {fieldErrors.agreedToTerms && (
+            <p className="text-red-600 text-xs mt-2">
+              {fieldErrors.agreedToTerms}
+            </p>
+          )}
+        </div>
+
+        <div className="flex gap-3 pt-4">
+          {onBack && (
+            <Button
+              type="button"
+              onClick={onBack}
+              variant="outline"
+              disabled={isSubmitting}
+            >
+              Back
+            </Button>
+          )}
+          <Button
+            type="submit"
+            disabled={isSubmitting || loading}
+            className="flex-1"
+          >
+            {isSubmitting ? "Submitting..." : "Submit for Approval"}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}

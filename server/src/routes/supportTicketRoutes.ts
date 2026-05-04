@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   createSupportTicket,
+  createPublicSupportTicket,
   getMySupportTickets,
   getSupportTicketsForAdmin,
   updateSupportTicketByAdmin,
@@ -13,6 +14,7 @@ import {
 
 const router = Router();
 
+router.post("/public", createPublicSupportTicket);
 router.post("/", authMiddleware, createSupportTicket);
 router.get("/my", authMiddleware, getMySupportTickets);
 

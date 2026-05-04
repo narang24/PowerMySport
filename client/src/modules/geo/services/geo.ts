@@ -4,6 +4,10 @@ export interface GeoSuggestion {
   label: string;
   lat: number;
   lon: number;
+  placeId?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
 }
 
 interface GeoResponse<T> {
@@ -36,4 +40,3 @@ export const geoApi = {
     return response.data.data || null;
   },
 };
-

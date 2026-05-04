@@ -67,6 +67,9 @@ export interface CommunityUserSearchResult {
   isIdentityPublic: boolean;
   role?: CommunityUserRole;
   photoUrl?: string | null;
+  city?: string | null;
+  age?: number | null;
+  sports: string[];
 }
 
 export interface CommunityMemberProfile {
@@ -77,6 +80,8 @@ export interface CommunityMemberProfile {
   isIdentityPublic: boolean;
   photoUrl?: string | null;
   sports: string[];
+  city?: string | null;
+  age?: number | null;
   dob?: string | null;
   createdAt: string;
   lastActiveAt?: string | null;

@@ -89,10 +89,17 @@ export const autocompleteLocation = async (req: Request, res: Response) => {
 
   try {
     const cacheKey = `autocomplete:${query.toLowerCase()}`;
-    const cached =
-      getFromCache<Array<{ label: string; lat: number; lon: number }>>(
-        cacheKey,
-      );
+    const cached = getFromCache<
+      Array<{
+        label: string;
+        lat: number;
+        lon: number;
+        placeId: string;
+        city?: string;
+        state?: string;
+        pincode?: string;
+      }>
+    >(cacheKey);
     if (cached) {
       return res.json({
         success: true,
@@ -138,16 +145,42 @@ export const autocompleteLocation = async (req: Request, res: Response) => {
         try {
           const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(
             prediction.place_id,
-          )}&key=${encodeURIComponent(GOOGLE_PLACES_API_KEY)}&fields=geometry`;
+          )}&key=${encodeURIComponent(GOOGLE_PLACES_API_KEY)}&fields=geometry,address_components,formatted_address,place_id`;
 
           const detailsData: any = await fetchJson(detailsUrl);
-          const location = detailsData?.result?.geometry?.location;
+          const result = detailsData?.result;
+          const location = result?.geometry?.location;
           if (!location) return null;
 
+          const addressComponents: Array<{
+            long_name?: string;
+            short_name?: string;
+            types?: string[];
+          }> = result?.address_components || [];
+
+          const getAddressComponent = (type: string): string | undefined => {
+            const component = addressComponents.find((item) =>
+              (item.types || []).includes(type),
+            );
+            return component?.long_name || component?.short_name;
+          };
+
+          const city =
+            getAddressComponent("locality") ||
+            getAddressComponent("administrative_area_level_2") ||
+            getAddressComponent("sublocality") ||
+            getAddressComponent("postal_town");
+          const state = getAddressComponent("administrative_area_level_1");
+          const pincode = getAddressComponent("postal_code");
+
           return {
-            label: prediction.description,
+            label: result?.formatted_address || prediction.description,
             lat: location.lat,
             lon: location.lng,
+            placeId: result?.place_id || prediction.place_id,
+            city,
+            state,
+            pincode,
           };
         } catch {
           return null;
@@ -156,8 +189,17 @@ export const autocompleteLocation = async (req: Request, res: Response) => {
     );
 
     const results = resolved.filter(
-      (item): item is { label: string; lat: number; lon: number } =>
-        item !== null,
+      (
+        item,
+      ): item is {
+        label: string;
+        lat: number;
+        lon: number;
+        placeId: string;
+        city?: string;
+        state?: string;
+        pincode?: string;
+      } => item !== null,
     );
 
     setCache(cacheKey, results);

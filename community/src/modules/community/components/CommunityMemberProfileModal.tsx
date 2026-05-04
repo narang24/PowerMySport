@@ -5,6 +5,7 @@ import {
   BadgeCheck,
   CalendarDays,
   Clock3,
+  MapPin,
   MessageSquare,
   Shield,
   UserCircle2,
@@ -61,6 +62,20 @@ const formatDateTime = (value?: string | null) => {
   return timeFormatter.format(date);
 };
 
+const calculateAgeFromDate = (value?: string | null) => {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const ageDate = new Date(Date.now() - date.getTime());
+  return Math.abs(ageDate.getUTCFullYear() - 1970);
+};
+
 export function CommunityMemberProfileModal({
   isOpen,
   isLoading,
@@ -70,6 +85,8 @@ export function CommunityMemberProfileModal({
   onMessage,
 }: CommunityMemberProfileModalProps) {
   const prefersReducedMotion = useReducedMotion();
+  const calculatedAge = calculateAgeFromDate(profile?.dob);
+  const age = profile?.age ?? calculatedAge;
 
   return (
     <AnimatePresence>
@@ -195,6 +212,17 @@ export function CommunityMemberProfileModal({
                           : "Community profile details"}
                       </p>
                       <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
+                        {profile.city && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1">
+                            <MapPin size={12} />
+                            {profile.city}
+                          </span>
+                        )}
+                        {age !== null && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1">
+                            {age} years old
+                          </span>
+                        )}
                         {profile.createdAt && (
                           <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1">
                             <CalendarDays size={12} />

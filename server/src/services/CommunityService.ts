@@ -73,6 +73,20 @@ const resolveUserPhotoUrl = async (user?: {
   }
 };
 
+const calculateAge = (dob?: Date | string | null): number | null => {
+  if (!dob) {
+    return null;
+  }
+
+  const birthDate = new Date(dob);
+  if (Number.isNaN(birthDate.getTime())) {
+    return null;
+  }
+
+  const ageDate = new Date(Date.now() - birthDate.getTime());
+  return Math.abs(ageDate.getUTCFullYear() - 1970);
+};
+
 const makeDefaultAlias = (name?: string): string => {
   const seed = Math.floor(1000 + Math.random() * 9000);
   const safeName = name?.trim().split(" ")[0] || "Member";
@@ -1037,7 +1051,9 @@ export const CommunityService = {
 
     const [users, profiles] = await Promise.all([
       User.find({ _id: { $in: ids }, role: { $in: COMMUNITY_ALLOWED_ROLES } })
-        .select("_id name photoUrl photoS3Key role")
+        .select(
+          "_id name photoUrl photoS3Key role city dob playerProfile.sports",
+        )
         .lean(),
       CommunityProfile.find({ userId: { $in: ids } })
         .select("userId anonymousAlias isIdentityPublic blockedUsers")
@@ -1071,13 +1087,19 @@ export const CommunityService = {
           const displayName = isIdentityPublic
             ? user.name
             : candidateProfile?.anonymousAlias || "Anonymous Member";
+          const sports = Array.isArray(user.playerProfile?.sports)
+            ? user.playerProfile.sports.filter(Boolean)
+            : [];
 
           return {
             id: candidateId,
             displayName,
             isIdentityPublic,
             role: user.role,
-            photoUrl: isIdentityPublic ? null : null,
+            photoUrl: null,
+            city: typeof user.city === "string" ? user.city.trim() : null,
+            age: calculateAge(user.dob),
+            sports,
           };
         })
         .sort((a, b) => a.displayName.localeCompare(b.displayName))
@@ -1086,12 +1108,11 @@ export const CommunityService = {
       Promise.all(
         items.map(async (item) => ({
           ...item,
-          photoUrl:
-            item.isIdentityPublic && item.id
-              ? await resolveUserPhotoUrl(
-                  users.find((user) => String(user._id) === item.id),
-                )
-              : null,
+          photoUrl: item.id
+            ? await resolveUserPhotoUrl(
+                users.find((user) => String(user._id) === item.id),
+              )
+            : null,
         })),
       ),
     );
@@ -1109,7 +1130,7 @@ export const CommunityService = {
     const [targetUser, targetProfile] = await Promise.all([
       User.findById(targetUserId)
         .select(
-          "_id name photoUrl photoS3Key role playerProfile dob createdAt lastActiveAt",
+          "_id name photoUrl photoS3Key role playerProfile dob city createdAt lastActiveAt",
         )
         .lean(),
       CommunityProfile.findOne({ userId: targetUserId })
@@ -1158,10 +1179,12 @@ export const CommunityService = {
         : profile.anonymousAlias || "Anonymous Member",
       alias: profile.anonymousAlias || "Anonymous Member",
       isIdentityPublic,
-      photoUrl: isIdentityPublic ? await resolveUserPhotoUrl(targetUser) : null,
+      photoUrl: await resolveUserPhotoUrl(targetUser),
       sports: Array.isArray(targetUser.playerProfile?.sports)
         ? targetUser.playerProfile.sports
         : [],
+      city: typeof targetUser.city === "string" ? targetUser.city.trim() : null,
+      age: calculateAge(targetUser.dob),
       dob: isIdentityPublic ? targetUser.dob || null : null,
       createdAt: targetUser.createdAt,
       lastActiveAt:

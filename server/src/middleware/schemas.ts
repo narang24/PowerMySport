@@ -146,6 +146,170 @@ const geoLocationSchema = z.object({
     ),
 });
 
+const openingHoursSchema = z.object({
+  monday: z
+    .object({
+      isOpen: z.boolean(),
+      openTime: z
+        .string()
+        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
+        .optional(),
+      closeTime: z
+        .string()
+        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
+        .optional(),
+    })
+    .refine(
+      (data) => {
+        if (data.isOpen) {
+          return (
+            data.openTime && data.closeTime && data.openTime < data.closeTime
+          );
+        }
+        return true;
+      },
+      { message: "Opening time must be before closing time when open" },
+    ),
+  tuesday: z
+    .object({
+      isOpen: z.boolean(),
+      openTime: z
+        .string()
+        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
+        .optional(),
+      closeTime: z
+        .string()
+        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
+        .optional(),
+    })
+    .refine(
+      (data) => {
+        if (data.isOpen) {
+          return (
+            data.openTime && data.closeTime && data.openTime < data.closeTime
+          );
+        }
+        return true;
+      },
+      { message: "Opening time must be before closing time when open" },
+    ),
+  wednesday: z
+    .object({
+      isOpen: z.boolean(),
+      openTime: z
+        .string()
+        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
+        .optional(),
+      closeTime: z
+        .string()
+        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
+        .optional(),
+    })
+    .refine(
+      (data) => {
+        if (data.isOpen) {
+          return (
+            data.openTime && data.closeTime && data.openTime < data.closeTime
+          );
+        }
+        return true;
+      },
+      { message: "Opening time must be before closing time when open" },
+    ),
+  thursday: z
+    .object({
+      isOpen: z.boolean(),
+      openTime: z
+        .string()
+        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
+        .optional(),
+      closeTime: z
+        .string()
+        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
+        .optional(),
+    })
+    .refine(
+      (data) => {
+        if (data.isOpen) {
+          return (
+            data.openTime && data.closeTime && data.openTime < data.closeTime
+          );
+        }
+        return true;
+      },
+      { message: "Opening time must be before closing time when open" },
+    ),
+  friday: z
+    .object({
+      isOpen: z.boolean(),
+      openTime: z
+        .string()
+        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
+        .optional(),
+      closeTime: z
+        .string()
+        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
+        .optional(),
+    })
+    .refine(
+      (data) => {
+        if (data.isOpen) {
+          return (
+            data.openTime && data.closeTime && data.openTime < data.closeTime
+          );
+        }
+        return true;
+      },
+      { message: "Opening time must be before closing time when open" },
+    ),
+  saturday: z
+    .object({
+      isOpen: z.boolean(),
+      openTime: z
+        .string()
+        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
+        .optional(),
+      closeTime: z
+        .string()
+        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
+        .optional(),
+    })
+    .refine(
+      (data) => {
+        if (data.isOpen) {
+          return (
+            data.openTime && data.closeTime && data.openTime < data.closeTime
+          );
+        }
+        return true;
+      },
+      { message: "Opening time must be before closing time when open" },
+    ),
+  sunday: z
+    .object({
+      isOpen: z.boolean(),
+      openTime: z
+        .string()
+        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
+        .optional(),
+      closeTime: z
+        .string()
+        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
+        .optional(),
+    })
+    .refine(
+      (data) => {
+        if (data.isOpen) {
+          return (
+            data.openTime && data.closeTime && data.openTime < data.closeTime
+          );
+        }
+        return true;
+      },
+      { message: "Opening time must be before closing time when open" },
+    ),
+});
+
 export const venueSchema = z.object({
   name: z.string().min(1, "Venue name is required"),
   location: geoLocationSchema,
@@ -1363,3 +1527,274 @@ export const verifyEmailCodeSchema = z.object({
     .regex(/^\d{6}$/, "Verification code must contain only digits"),
   venueId: z.string().min(1, "Venue ID is required"),
 });
+
+// ============================================
+// ACADEMY ONBOARDING SCHEMAS (6-Step Flow)
+// ============================================
+
+/**
+ * Step 1: Academy Basic Information
+ */
+export const academyOnboardingStep1Schema = z.object({
+  ownerName: z.string().min(2, "Name must be at least 2 characters"),
+  ownerEmail: z.string().email("Invalid email address"),
+  ownerPhone: z
+    .string()
+    .regex(/^\+91[0-9]{10}$/, "Phone must be +91 followed by 10 digits"),
+  name: z
+    .string()
+    .min(3, "Academy name must be at least 3 characters")
+    .max(100, "Academy name cannot exceed 100 characters"),
+  legalName: z
+    .string()
+    .min(3, "Legal name must be at least 3 characters")
+    .max(100, "Legal name cannot exceed 100 characters"),
+  sports: z.array(z.string().min(1)).min(1, "At least one sport is required"),
+  ageGroups: z
+    .array(z.enum(["kids", "teens", "adults", "all"]))
+    .min(1, "At least one age group is required"),
+  establishedYear: z
+    .number()
+    .min(1900, "Year must be 1900 or later")
+    .max(new Date().getFullYear(), "Year cannot be in the future")
+    .optional(),
+  description: z
+    .string()
+    .min(10, "Description must be at least 10 characters")
+    .max(300, "Description cannot exceed 300 characters"),
+  logoUrl: z
+    .preprocess(
+      (value) => (value === "" ? undefined : value),
+      z.string().url("Logo must be a valid URL").optional(),
+    )
+    .optional(),
+  logoKey: z.string().optional(),
+  coverPhotoUrl: z
+    .preprocess(
+      (value) => (value === "" ? undefined : value),
+      z.string().url("Cover photo must be a valid URL").optional(),
+    )
+    .optional(),
+  coverPhotoKey: z.string().optional(),
+  photos: z.array(z.string().url()).optional(),
+  photoKeys: z.array(z.string()).optional(),
+});
+
+/**
+ * Step 2: Location & Contact Information
+ */
+export const academyOnboardingStep2Schema = z
+  .object({
+    location: geoLocationSchema,
+    address: z.string().min(5, "Address must be at least 5 characters"),
+    city: z.string().min(2, "City name required"),
+    state: z.string().min(2, "State name required"),
+    pincode: z.string().regex(/^[0-9]{6}$/, "Pincode must be 6 digits"),
+    placeId: z.string().optional(),
+    contactPersonName: z.string().min(2, "Contact person name required"),
+    contactPhone: z
+      .string()
+      .regex(/^\+91[0-9]{10}$/, "Phone must be in format +91XXXXXXXXXX"),
+    whatsappNumber: z
+      .string()
+      .regex(
+        /^\+91[0-9]{10}$/,
+        "WhatsApp number must be in format +91XXXXXXXXXX",
+      ),
+    contactEmail: z.string().email("Invalid email format"),
+    languagesSpoken: z
+      .array(z.string())
+      .min(1, "At least one language required"),
+  })
+  .strip();
+
+/**
+ * Step 3: Legal & KYC Information
+ */
+export const academyOnboardingStep3Schema = z
+  .object({
+    businessType: z.enum([
+      "sole_proprietorship",
+      "partnership",
+      "pvt_ltd",
+      "ngo_trust",
+    ]),
+    panNumber: z
+      .string()
+      .regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN number format"),
+    panDocumentUrl: z.string().url("PAN document must be a valid URL"),
+    panDocumentKey: z.string().optional(),
+    gstNumber: z
+      .string()
+      .regex(
+        /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{3}$/,
+        "Invalid GST format",
+      )
+      .optional(),
+    gstDocumentUrl: z
+      .string()
+      .url("GST document must be a valid URL")
+      .optional(),
+    gstDocumentKey: z.string().optional(),
+    msmeRegistration: z.string().optional(),
+    sportsAuthorityAffiliation: z.string().optional(),
+    aadhaarLast4: z.string().regex(/^[0-9]{4}$/, "Aadhaar must be 4 digits"),
+  })
+  .strip();
+
+/**
+ * Step 4: Academy Venues
+ */
+export const academyOnboardingStep4Schema = z
+  .object({
+    academyVenues: z
+      .array(
+        z.object({
+          name: z.string().min(2, "Venue name required"),
+          address: z.string().min(5, "Venue address required"),
+          city: z.string().min(2, "City is required"),
+          state: z.string().min(2, "State is required"),
+          pincode: z.string().regex(/^[0-9]{6}$/, "Pincode must be 6 digits"),
+          placeId: z.string().optional(),
+          location: geoLocationSchema,
+          sports: z.array(z.string()).min(1, "Select at least one sport"),
+          pricePerHour: z.number().min(0, "Price must be non-negative"),
+          sportPricing: z
+            .record(z.string(), z.number().min(0, "Price must be non-negative"))
+            .optional(),
+          amenities: z.array(z.string()).default([]),
+          description: z.string().max(500).optional(),
+          openingHours: openingHoursSchema,
+          allowExternalCoaches: z.boolean().default(true),
+          generalImages: z
+            .array(z.string().url("General image URL must be valid"))
+            .min(3, "At least 3 general images are required"),
+          generalImageKeys: z.array(z.string()).optional().default([]),
+          sportImages: z.record(
+            z.string(),
+            z
+              .array(z.string().url("Sport image URL must be valid"))
+              .min(5, "At least 5 sport images are required per sport"),
+          ),
+          sportImageKeys: z.record(z.string(), z.array(z.string())).optional(),
+          coverPhotoUrl: z.string().url("Cover photo URL must be valid"),
+          coverPhotoKey: z.string().optional(),
+        }),
+      )
+      .min(1, "At least one academy venue is required"),
+  })
+  .strip();
+
+/**
+ * Step 5: Academy Coaches
+ */
+export const academyOnboardingStep5Schema = z
+  .object({
+    academyCoaches: z
+      .array(
+        z.object({
+          firstName: z.string().min(2, "Coach first name required"),
+          lastName: z.string().min(2, "Coach last name required"),
+          email: z.string().email("Coach email must be valid"),
+          phone: z
+            .string()
+            .regex(/^[+]?[0-9]{10,14}$/, "Coach phone must be valid"),
+          bio: z.string().min(20, "Coach bio must be at least 20 characters"),
+          profilePhotoUrl: z.string().url().optional(),
+          profilePhotoKey: z.string().optional(),
+          sports: z.array(z.string()).min(1, "Select at least one sport"),
+          hourlyRate: z.number().min(0, "Hourly rate must be non-negative"),
+          sportPricing: z
+            .record(z.string(), z.number().min(0, "Price must be non-negative"))
+            .optional(),
+          serviceMode: z.enum(["OWN_VENUE", "FREELANCE", "HYBRID"]),
+          baseLocation: geoLocationSchema.optional(),
+          serviceRadiusKm: z.number().min(0).optional(),
+          travelBufferTime: z.number().min(0).optional(),
+          ownVenueDetails: z
+            .object({
+              name: z.string().min(2).optional(),
+              address: z.string().min(5).optional(),
+              description: z.string().max(500).optional(),
+              openingHours: z.string().optional(),
+              amenities: z.array(z.string()).optional(),
+              images: z.array(
+                z.string().url("Own-venue image URL must be valid"),
+              ),
+              imageS3Keys: z.array(z.string()).optional(),
+              location: geoLocationSchema.optional(),
+            })
+            .optional(),
+          certifications: z.array(z.string()).optional(),
+        }),
+      )
+      .min(1, "At least one in-house coach is required"),
+  })
+  .strip();
+
+/**
+ * Step 6: Pricing & Subscriptions
+ */
+export const academyOnboardingStep6Schema = z
+  .object({
+    sessionRatePerHour: z.number().min(0, "Rate must be non-negative"),
+    batchTimings: z
+      .array(z.enum(["morning", "evening", "both"]))
+      .min(1, "Select at least one batch timing"),
+    maxBatchSize: z.number().min(1, "Batch size must be at least 1"),
+    trialsessionOffered: z.boolean(),
+    trialSessionPrice: z.number().min(0).optional(),
+    subscriptionPlans: z
+      .array(
+        z.object({
+          name: z.string().min(2, "Plan name required"),
+          duration: z.enum(["monthly", "quarterly", "annual"]),
+          price: z.number().min(0, "Price must be non-negative"),
+          includesVenue: z.boolean(),
+          includesCoaching: z.boolean(),
+          maxSessions: z.number().min(1).optional(),
+          description: z.string().max(150).optional(),
+        }),
+      )
+      .min(1, "At least one subscription plan required"),
+    sessionPackages: z
+      .array(
+        z.object({
+          name: z.string().min(2, "Package name required"),
+          sessionCount: z.number().min(1, "Session count must be at least 1"),
+          price: z.number().min(0, "Price must be non-negative"),
+          validityDays: z.number().min(1, "Validity must be at least 1 day"),
+          sport: z.string(),
+          coachId: z.string().optional(),
+        }),
+      )
+      .optional(),
+  })
+  .strip();
+
+/**
+ * Step 7: Payouts & Review
+ */
+export const academyOnboardingStep7Schema = z
+  .object({
+    bankAccountName: z.string().min(2, "Account holder name required"),
+    bankAccountNumber: z.string().min(8, "Account number too short"),
+    bankAccountNumberConfirm: z.string().min(8, "Account number too short"),
+    bankIfsc: z
+      .string()
+      .regex(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC code format"),
+    upiId: z
+      .string()
+      .regex(/^[a-zA-Z0-9._-]+@[a-zA-Z]{3,}$/, "Invalid UPI ID format"),
+    payoutFrequency: z.enum(["weekly", "biweekly", "monthly"]),
+    cancellationPolicy: z.string().min(10, "Cancellation policy required"),
+    refundPolicy: z.string().min(10, "Refund policy required"),
+    agreeToTerms: z
+      .boolean()
+      .refine((val) => val === true, "You must agree to the terms"),
+  })
+  .refine((data) => data.bankAccountNumber === data.bankAccountNumberConfirm, {
+    message: "Account numbers do not match",
+    path: ["bankAccountNumberConfirm"],
+  })
+  .strip();

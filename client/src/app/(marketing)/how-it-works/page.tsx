@@ -341,15 +341,15 @@ export default function HowItWorksPage() {
         </div>
       </section>
 
-      {/* For Venue Owners */}
+      {/* For Venue Owners and Academy Owners */}
       <section className="py-16 sm:py-20 lg:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <p className="mb-3 text-sm font-semibold uppercase tracking-[0.14em] text-slate-600">
-              For Venue Owners
+              For Venue Owners & Academy Owners
             </p>
             <h2 className="font-title text-3xl sm:text-4xl font-bold text-deep-slate mb-4">
-              List Your Venue & Start Earning
+              List Your Facility & Start Earning
             </h2>
           </div>
 
@@ -361,8 +361,8 @@ export default function HowItWorksPage() {
                 </div>
                 <CardTitle className="text-xl mb-3">Submit Inquiry</CardTitle>
                 <CardDescription className="text-base">
-                  Fill out our simple venue inquiry form with your facility
-                  details and contact information.
+                  Fill out our simple onboarding form with your facility details
+                  and contact information.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -375,7 +375,7 @@ export default function HowItWorksPage() {
                 <CardTitle className="text-xl mb-3">Approval Process</CardTitle>
                 <CardDescription className="text-base">
                   Our team reviews your submission and reaches out within 48
-                  hours. We verify details and discuss partnership.
+                  hours. We verify details and discuss the right setup.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -387,8 +387,8 @@ export default function HowItWorksPage() {
                 </div>
                 <CardTitle className="text-xl mb-3">Go Live</CardTitle>
                 <CardDescription className="text-base">
-                  Get access to your venue dashboard. Set up slots, pricing, and
-                  start accepting bookings immediately.
+                  Get access to your dashboard. Set up slots, pricing, and start
+                  accepting bookings immediately.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -396,10 +396,10 @@ export default function HowItWorksPage() {
 
           <div className="text-center mt-12">
             <a
-              href="/onboarding"
+              href="/register"
               className="inline-block rounded-xl bg-deep-slate px-8 py-4 text-lg font-semibold text-white premium-shadow transition-colors hover:bg-slate-800"
             >
-              List Your Venue
+              Get Started
             </a>
           </div>
         </div>

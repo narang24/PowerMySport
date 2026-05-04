@@ -20,53 +20,9 @@ export const createSupportTicket = async (
       return;
     }
 
-    const {
-      subject,
-      description,
-      category,
-      priority,
-      initialNote,
-    }: {
-      subject?: string;
-      description?: string;
-      category?: "BOOKING" | "PAYMENT" | "ACCOUNT" | "TECHNICAL" | "OTHER";
-      priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-      initialNote?: string;
-    } = req.body;
-
-    if (!subject?.trim() || !description?.trim()) {
-      res.status(400).json({
-        success: false,
-        message: "subject and description are required",
-      });
-      return;
-    }
-
-    const notes = initialNote?.trim()
-      ? [
-          {
-            authorType: "USER" as const,
-            authorId: new mongoose.Types.ObjectId(req.user.id),
-            message: initialNote.trim(),
-            createdAt: new Date(),
-          },
-        ]
-      : [];
-
-    const ticket = await SupportTicket.create({
-      userId: new mongoose.Types.ObjectId(req.user.id),
-      subject: subject.trim(),
-      description: description.trim(),
-      category: category || "OTHER",
-      priority: priority || "MEDIUM",
-      notes,
-      lastUpdatedBy: new mongoose.Types.ObjectId(req.user.id),
-    });
-
-    res.status(201).json({
-      success: true,
-      message: "Support ticket created",
-      data: ticket,
+    await createTicketFromRequest(req, res, {
+      requireAuth: true,
+      authorId: req.user.id,
     });
   } catch (error) {
     res.status(500).json({
@@ -75,6 +31,115 @@ export const createSupportTicket = async (
         error instanceof Error ? error.message : "Failed to create ticket",
     });
   }
+};
+
+export const createPublicSupportTicket = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    await createTicketFromRequest(req, res, { requireAuth: false });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Failed to create ticket",
+    });
+  }
+};
+
+const createTicketFromRequest = async (
+  req: Request,
+  res: Response,
+  options: { requireAuth: boolean; authorId?: string },
+): Promise<void> => {
+  const {
+    subject,
+    description,
+    category,
+    priority,
+    initialNote,
+    requesterName,
+    requesterEmail,
+    requesterPhone,
+    requesterType,
+  }: {
+    subject?: string;
+    description?: string;
+    category?: "BOOKING" | "PAYMENT" | "ACCOUNT" | "TECHNICAL" | "OTHER";
+    priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+    initialNote?: string;
+    requesterName?: string;
+    requesterEmail?: string;
+    requesterPhone?: string;
+    requesterType?:
+      | "player"
+      | "venue_owner"
+      | "coach"
+      | "academy_owner"
+      | "other";
+  } = req.body;
+
+  if (!subject?.trim() || !description?.trim()) {
+    res.status(400).json({
+      success: false,
+      message: "subject and description are required",
+    });
+    return;
+  }
+
+  if (!options.requireAuth) {
+    if (!requesterName?.trim() || !requesterEmail?.trim()) {
+      res.status(400).json({
+        success: false,
+        message: "name and email are required",
+      });
+      return;
+    }
+  }
+
+  const notes = initialNote?.trim()
+    ? [
+        {
+          authorType: options.requireAuth
+            ? ("USER" as const)
+            : ("ADMIN" as const),
+          authorId: options.authorId
+            ? new mongoose.Types.ObjectId(options.authorId)
+            : new mongoose.Types.ObjectId(),
+          message: initialNote.trim(),
+          createdAt: new Date(),
+        },
+      ]
+    : [];
+
+  const ticket = await SupportTicket.create({
+    ...(options.requireAuth && options.authorId
+      ? { userId: new mongoose.Types.ObjectId(options.authorId) }
+      : {}),
+    ...(requesterName?.trim() ? { requesterName: requesterName.trim() } : {}),
+    ...(requesterEmail?.trim()
+      ? { requesterEmail: requesterEmail.trim().toLowerCase() }
+      : {}),
+    ...(requesterPhone?.trim()
+      ? { requesterPhone: requesterPhone.trim() }
+      : {}),
+    ...(requesterType ? { requesterType } : {}),
+    subject: subject.trim(),
+    description: description.trim(),
+    category: category || "OTHER",
+    priority: priority || "MEDIUM",
+    notes,
+    ...(options.authorId
+      ? { lastUpdatedBy: new mongoose.Types.ObjectId(options.authorId) }
+      : {}),
+  });
+
+  res.status(201).json({
+    success: true,
+    message: "Support ticket created",
+    data: ticket,
+  });
 };
 
 export const getMySupportTickets = async (

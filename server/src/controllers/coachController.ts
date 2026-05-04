@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { S3Service } from "../services/S3Service";
 import { Booking } from "../models/Booking";
 import { User } from "../models/User";
 import {
@@ -1315,7 +1316,6 @@ export const getCoachVerificationUploadUrlHandler = async (
       return;
     }
 
-    const { S3Service } = require("../services/S3Service");
     const s3Service = new S3Service();
     const uploadData =
       purpose === "VENUE_IMAGE"

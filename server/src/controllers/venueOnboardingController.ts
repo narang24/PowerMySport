@@ -1,4 +1,6 @@
 import { Request, Response } from "express";
+import { S3Service } from "../services/S3Service";
+import { Venue } from "../models/Venue";
 import {
   startVenueOnboarding,
   getImageUploadPresignedUrls,
@@ -11,6 +13,7 @@ import {
   rejectVenue,
   markVenueForReview,
   deleteVenueOnboarding,
+  updateVenueDetails,
   UPLOAD_CONSTRAINTS,
 } from "../services/VenueOnboardingService";
 import { sendVerificationCode } from "../services/EmailVerificationService";
@@ -98,9 +101,6 @@ export const updateVenueDetailsStep2 = async (
       return;
     }
 
-    const {
-      updateVenueDetails,
-    } = require("../services/VenueOnboardingService");
     const venue = await updateVenueDetails(req.body);
 
     res.status(200).json({
@@ -143,7 +143,7 @@ export const getImageUploadUrls = async (
     const { venueId, sports } = req.body;
 
     // Verify venue exists (no auth required - public onboarding)
-    const venue = await require("../models/Venue").Venue.findById(venueId);
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       res.status(404).json({
         success: false,
@@ -208,7 +208,7 @@ export const getCoachPhotoUploadUrl = async (
     }
 
     // Verify venue exists
-    const venue = await require("../models/Venue").Venue.findById(venueId);
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       res.status(404).json({
         success: false,
@@ -218,7 +218,6 @@ export const getCoachPhotoUploadUrl = async (
     }
 
     // Generate presigned URL using S3Service
-    const { S3Service } = require("../services/S3Service");
     const s3Service = new S3Service();
     const uploadData = await s3Service.generateCoachPhotoUploadUrl(
       fileName,
@@ -261,7 +260,7 @@ export const confirmImagesStep2 = async (
     const { venueId } = req.body;
 
     // Verify venue exists (no auth required - public onboarding)
-    const venue = await require("../models/Venue").Venue.findById(venueId);
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       res.status(404).json({
         success: false,
@@ -312,7 +311,7 @@ export const getDocumentUploadUrls = async (
     const { venueId, documents } = req.body;
 
     // Verify venue exists (no auth required - public onboarding)
-    const venue = await require("../models/Venue").Venue.findById(venueId);
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       res.status(404).json({
         success: false,
@@ -365,7 +364,7 @@ export const finalizeOnboardingStep3 = async (
     const { venueId } = req.body;
 
     // Verify venue exists (no auth required - public onboarding)
-    const venue = await require("../models/Venue").Venue.findById(venueId);
+    const venue = await Venue.findById(venueId);
     if (!venue) {
       res.status(404).json({
         success: false,
@@ -412,8 +411,7 @@ export const deleteVenueOnboardingHandler = async (
 
     // For onboarding cancellation, we allow deletion without auth
     // (user just needs to know the venueId)
-    const venue =
-      await require("../models/Venue").Venue.findByIdAndDelete(venueId);
+    const venue = await Venue.findByIdAndDelete(venueId);
 
     if (!venue) {
       res.status(404).json({
@@ -424,7 +422,7 @@ export const deleteVenueOnboardingHandler = async (
     }
 
     // Delete associated S3 files
-    const { s3Service } = await import("../services/S3Service");
+    const s3Service = new S3Service();
     if (venue.images?.length > 0) {
       await s3Service.deleteFiles(venue.images, "images");
     }
@@ -689,7 +687,7 @@ export const addVenueCoaches = async (
       return;
     }
 
-    const { Venue } = require("../models/Venue");
+    // Venue is already imported at the top
 
     // Update venue with coaches
     const venue = await Venue.findByIdAndUpdate(

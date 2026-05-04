@@ -8,6 +8,7 @@ import {
   BadgeCheck,
   CalendarDays,
   Clock3,
+  MapPin,
   MessageSquare,
   Shield,
   UserCircle2,
@@ -55,6 +56,20 @@ const getLocalDateString = (value?: string | null) => {
     -Math.max(1, Math.floor((Date.now() - date.getTime()) / 86400000)),
     "day",
   );
+};
+
+const calculateAgeFromDate = (value?: string | null) => {
+  if (!value) {
+    return null;
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const ageDate = new Date(Date.now() - date.getTime());
+  return Math.abs(ageDate.getUTCFullYear() - 1970);
 };
 
 export default function MemberProfilePage() {
@@ -114,6 +129,7 @@ export default function MemberProfilePage() {
   }, [userId]);
 
   const sports = useMemo(() => profile?.sports || [], [profile?.sports]);
+  const age = profile?.age ?? calculateAgeFromDate(profile?.dob);
 
   const handleStartConversation = async () => {
     if (!profile) {
@@ -198,6 +214,17 @@ export default function MemberProfilePage() {
                           ? "Message requests"
                           : "Open messages"}
                     </span>
+                    {profile.city && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/85">
+                        <MapPin size={12} />
+                        {profile.city}
+                      </span>
+                    )}
+                    {age !== null && (
+                      <span className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white/85">
+                        {age} years old
+                      </span>
+                    )}
                   </>
                 )}
               </div>
@@ -259,6 +286,19 @@ export default function MemberProfilePage() {
                           ? `Known as ${profile.alias}`
                           : "Community member"}
                       </p>
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
+                        {profile.city && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1">
+                            <MapPin size={12} />
+                            {profile.city}
+                          </span>
+                        )}
+                        {age !== null && (
+                          <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2.5 py-1">
+                            {age} years old
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 

@@ -400,8 +400,7 @@ export const deleteDependent = async (
   }
 
   // Check if any bookings exist for this dependent as participant
-  const BookingModel = require("../models/Booking").Booking;
-  const bookingCount = await BookingModel.countDocuments({
+  const bookingCount = await Booking.countDocuments({
     participantId: dependentId,
   });
 

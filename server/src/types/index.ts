@@ -1,7 +1,12 @@
 // ============================================
 // ROLE & ENUM TYPES
 // ============================================
-export type UserRole = "PLAYER" | "VENUE_LISTER" | "COACH" | "ADMIN";
+export type UserRole =
+  | "PLAYER"
+  | "VENUE_LISTER"
+  | "COACH"
+  | "ACADEMY_OWNER"
+  | "ADMIN";
 
 // Admin role types
 export type AdminRole =
@@ -189,6 +194,32 @@ export interface IVenue {
   reviewCount: number;
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+// ============================================
+// ACADEMY TYPES
+// ============================================
+
+export interface IAcademyPendingReview {
+  id: string;
+  name: string;
+  legalName: string;
+  city: string;
+  sports: string[];
+  ownerEmail: string;
+  ownerPhone: string;
+  isApproved: boolean;
+  kycVerified: boolean;
+  submittedAt?: Date;
+  lastReviewedAt?: Date;
+}
+
+export interface IAcademyDocument {
+  type: "panDocument" | "gstDocument";
+  url: string;
+  s3Key?: string;
+  fileName: string;
+  uploadedAt: Date;
 }
 
 // ============================================

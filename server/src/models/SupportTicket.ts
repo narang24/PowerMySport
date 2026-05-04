@@ -9,7 +9,16 @@ export type SupportTicketStatus =
 export type SupportTicketPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
 export interface SupportTicketDocument extends Document {
-  userId: mongoose.Types.ObjectId;
+  userId?: mongoose.Types.ObjectId | null;
+  requesterName?: string;
+  requesterEmail?: string;
+  requesterPhone?: string;
+  requesterType?:
+    | "player"
+    | "venue_owner"
+    | "coach"
+    | "academy_owner"
+    | "other";
   subject: string;
   description: string;
   category: "BOOKING" | "PAYMENT" | "ACCOUNT" | "TECHNICAL" | "OTHER";
@@ -32,7 +41,26 @@ const supportTicketSchema = new Schema<SupportTicketDocument>(
     userId: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: false,
+      index: true,
+    },
+    requesterName: {
+      type: String,
+      trim: true,
+    },
+    requesterEmail: {
+      type: String,
+      trim: true,
+      lowercase: true,
+    },
+    requesterPhone: {
+      type: String,
+      trim: true,
+    },
+    requesterType: {
+      type: String,
+      enum: ["player", "venue_owner", "coach", "academy_owner", "other"],
+      default: "other",
       index: true,
     },
     subject: {

@@ -18,7 +18,7 @@ const faqs = [
       {
         question: "How do I create an account?",
         answer:
-          'Click on the "Sign Up" button in the top right corner and choose your account type (Player, Venue Lister, or Coach). Fill in your details and verify your email to get started.',
+          'Click on the "Sign Up" button in the top right corner and choose your account type (Player, Venue Lister, Coach, or Academy Owner). Fill in your details and verify your email to get started.',
       },
       {
         question: "Is PowerMySport free to use?",
@@ -73,12 +73,12 @@ const faqs = [
     ],
   },
   {
-    category: "For Venue Listers",
+    category: "For Venue & Academy Owners",
     questions: [
       {
-        question: "How do I list my venue?",
+        question: "How do I list my venue or academy?",
         answer:
-          "Sign up as a Venue Lister, complete the 4-step onboarding process including venue details, location, pricing, and documentation. Once approved by our review team, your venue will be live on the platform.",
+          "Sign up as a Venue Lister or Academy Owner, complete the onboarding process including facility details, location, pricing, and documentation. Once approved by our review team, your listing will be live on the platform.",
       },
       {
         question: "What documents do I need to provide?",
@@ -88,7 +88,7 @@ const faqs = [
       {
         question: "How do I receive payments?",
         answer:
-          "Payments are automatically deposited to your registered bank account after each booking is completed. You can track all earnings in your vendor dashboard.",
+          "Payments are automatically deposited to your registered bank account after each booking is completed. You can track all earnings in your dashboard.",
       },
       {
         question: "Can I set different prices for different sports?",
@@ -390,8 +390,8 @@ export default function FAQPage() {
                 Frequently Asked Questions
               </h1>
               <p className="text-slate-200 text-base sm:text-lg max-w-2xl">
-                Find answers to common questions about PowerMySport. Can't find
-                what you're looking for? Contact our support team.
+                Find answers to common questions about PowerMySport. Can&apos;t
+                find what you&apos;re looking for? Contact our support team.
               </p>
             </div>
             <div className="pointer-events-none absolute -right-20 -top-16 h-48 w-48 rounded-full bg-power-orange/20 blur-3xl" />
@@ -519,8 +519,8 @@ export default function FAQPage() {
             Still have questions?
           </h2>
           <p className="text-slate-600 mb-6 max-w-xl mx-auto">
-            Our support team is here to help. Reach out and we'll get back to
-            you as soon as possible.
+            Our support team is here to help. Reach out and we&apos;ll get back
+            to you as soon as possible.
           </p>
           <Link href="/contact">
             <Button variant="primary" size="lg">
@@ -530,34 +530,5 @@ export default function FAQPage() {
         </Card>
       </div>
     </div>
-  );
-}
-function FAQItem({ question, answer }: { question: string; answer: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  return (
-    <Card className="bg-white border-2 border-slate-100 hover:border-power-orange/30 transition-colors">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full p-5 text-left flex items-start justify-between gap-4"
-      >
-        <h3 className="text-lg font-semibold text-slate-900 flex-1">
-          {question}
-        </h3>
-        <ChevronDown
-          size={24}
-          className={`text-slate-400 shrink-0 transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
-        />
-      </button>
-      {isOpen && (
-        <div className="px-5 pb-5 border-t border-slate-100">
-          <p className="text-slate-600 leading-relaxed whitespace-pre-line mt-4">
-            {answer}
-          </p>
-        </div>
-      )}
-    </Card>
   );
 }

@@ -54,6 +54,18 @@ const roleSettingsLinks: Record<
       description: "Track and complete coach verification requirements.",
     },
   ],
+  ACADEMY_OWNER: [
+    {
+      href: "/academy",
+      label: "Academy Dashboard",
+      description: "Manage your academy profile and settings.",
+    },
+    {
+      href: "/contact?subject=Academy%20onboarding",
+      label: "Onboarding Support",
+      description: "Request academy onboarding help from the admin team.",
+    },
+  ],
   ADMIN: [
     {
       href: "/admin/users",

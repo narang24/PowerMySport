@@ -7,7 +7,7 @@ export const authApi = {
     email: string;
     phone: string;
     password: string;
-    role: "PLAYER" | "VENUE_LISTER" | "COACH";
+    role: "PLAYER" | "VENUE_LISTER" | "COACH" | "ACADEMY_OWNER";
     serviceMode?: "OWN_VENUE" | "FREELANCE" | "HYBRID";
     acceptedTerms: boolean;
     acceptedPrivacy: boolean;
@@ -72,7 +72,7 @@ export const authApi = {
     email: string;
     name: string;
     photoUrl?: string;
-    role?: "PLAYER" | "VENUE_LISTER" | "COACH";
+    role?: "PLAYER" | "VENUE_LISTER" | "COACH" | "ACADEMY_OWNER";
     action?: "login" | "register";
     acceptedTerms?: boolean;
     acceptedPrivacy?: boolean;

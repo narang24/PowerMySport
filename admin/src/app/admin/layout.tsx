@@ -4,6 +4,7 @@ import { adminApi } from "@/modules/admin/services/admin";
 import {
   BarChart2,
   Bell,
+  BookOpen,
   Building2,
   Calendar,
   CheckCircle,
@@ -64,6 +65,7 @@ export default function AdminLayout({
   const isLoginPage = pathname === "/admin/login";
   const isChangePasswordPage = pathname === "/admin/change-password";
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [pendingAcademyCount, setPendingAcademyCount] = useState(0);
 
   const storedAdminRaw = useSyncExternalStore(
     (onStoreChange) => {
@@ -131,6 +133,16 @@ export default function AdminLayout({
             label: "Coach Verification",
             icon: UserCheck,
           },
+          {
+            href: "/admin/academy-onboarding",
+            label: "Academy Onboarding",
+            icon: BookOpen,
+          },
+          {
+            href: "/admin/academies/add",
+            label: "Create Academy",
+            icon: Plus,
+          },
           { href: "/admin/bookings", label: "All Bookings", icon: Calendar },
           {
             href: "/admin/support-tickets",
@@ -141,6 +153,11 @@ export default function AdminLayout({
             href: "/admin/community-reports",
             label: "Community Reports",
             icon: MessageSquareWarning,
+          },
+          {
+            href: "/admin/coaches",
+            label: "All Coaches",
+            icon: Users,
           },
           {
             href: "/admin/coaches/add",
@@ -225,8 +242,38 @@ export default function AdminLayout({
   }, [isLoginPage, isChangePasswordPage, mustChangePassword, router]);
 
   useEffect(() => {
-    setIsMobileNavOpen(false);
+    queueMicrotask(() => setIsMobileNavOpen(false));
   }, [pathname]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadAcademyCount = async () => {
+      try {
+        const response = await adminApi.getPendingAcademies({
+          page: 1,
+          limit: 1,
+          filter: "pending",
+        });
+
+        if (!isCancelled && response.success && response.data) {
+          setPendingAcademyCount(response.data.total || 0);
+        }
+      } catch {
+        if (!isCancelled) {
+          setPendingAcademyCount(0);
+        }
+      }
+    };
+
+    if (!isLoginPage && !isChangePasswordPage) {
+      void loadAcademyCount();
+    }
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isLoginPage, isChangePasswordPage]);
 
   useEffect(() => {
     if (!isMobileNavOpen) {
@@ -253,7 +300,11 @@ export default function AdminLayout({
   };
 
   const [isMobile, setIsMobile] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -262,10 +313,6 @@ export default function AdminLayout({
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
-  }, []);
-
-  useEffect(() => {
-    setIsMounted(true);
   }, []);
 
   return (
@@ -367,6 +414,12 @@ export default function AdminLayout({
                                 <span className="text-sm font-semibold">
                                   {item.label}
                                 </span>
+                                {item.href === "/admin/academies" &&
+                                  pendingAcademyCount > 0 && (
+                                    <span className="ml-auto rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold">
+                                      {pendingAcademyCount}
+                                    </span>
+                                  )}
                               </Link>
                             );
                           })}
@@ -429,6 +482,12 @@ export default function AdminLayout({
                               <span className="text-sm font-semibold">
                                 {item.label}
                               </span>
+                              {item.href === "/admin/academies" &&
+                                pendingAcademyCount > 0 && (
+                                  <span className="ml-auto rounded-full bg-power-orange px-2 py-0.5 text-[11px] font-bold text-white">
+                                    {pendingAcademyCount}
+                                  </span>
+                                )}
                             </Link>
                           );
                         })}

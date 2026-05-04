@@ -21,7 +21,12 @@ export const Footer: React.FC = () => {
         { label: "Book Venues", href: "/venues" },
         { label: "List Your Venue", href: "/onboarding" },
         { label: "Become a Coach", href: "/register?role=COACH" },
+        {
+          label: "Request Academy Onboarding",
+          href: "/contact?subject=Academy%20onboarding",
+        },
         { label: "Browse Coaches", href: "/coaches" },
+        { label: "Browse Academies", href: "/academies" },
       ],
     },
     policies: {

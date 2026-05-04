@@ -4,6 +4,7 @@ const dashboardByRole: Record<UserRole, string> = {
   PLAYER: "/dashboard",
   VENUE_LISTER: "/venue-lister/inventory",
   COACH: "/coach/profile",
+  ACADEMY_OWNER: "/academy",
   ADMIN: "/admin/users",
 };
 

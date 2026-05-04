@@ -5,7 +5,12 @@ export interface IPlayerProfile {
   sports?: string[];
 }
 
-export type UserRole = "PLAYER" | "VENUE_LISTER" | "COACH" | "ADMIN";
+export type UserRole =
+  | "PLAYER"
+  | "VENUE_LISTER"
+  | "COACH"
+  | "ACADEMY_OWNER"
+  | "ADMIN";
 export type ServiceMode = "OWN_VENUE" | "FREELANCE" | "HYBRID";
 export type BookingStatus =
   | "PENDING_INVITES"

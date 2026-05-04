@@ -28,6 +28,7 @@ import venueOnboardingRoutes from "./routes/venueOnboardingRoutes";
 import venueRoutes from "./routes/venueRoutes";
 import reviewRoutes from "./routes/reviewRoutes";
 import ecommerceRoutes from "./routes/ecommerceRoutes";
+import academyOnboardingRoutes from "./routes/academyOnboardingRoutes";
 
 export const app: Express = express();
 
@@ -112,6 +113,7 @@ if (process.env.NODE_ENV === "development") {
 app.use("/api/auth", authRoutes);
 app.use("/api/venues", venueRoutes);
 app.use("/api/venues/onboarding", venueOnboardingRoutes);
+app.use("/api/academies", academyOnboardingRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/coaches", coachRoutes);
 app.use("/api/community", communityRoutes);

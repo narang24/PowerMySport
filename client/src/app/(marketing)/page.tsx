@@ -2,6 +2,7 @@
 import { useAuthStore } from "@/modules/auth/store/authStore";
 import { getCommunityAppUrl } from "@/lib/community/url";
 import { getDashboardPathByRole } from "@/utils/roleDashboard";
+import api from "@/lib/api/client";
 
 import { CTA } from "@/modules/marketing/components/marketing/CTA";
 import {
@@ -13,18 +14,68 @@ import { Testimonials } from "@/modules/marketing/components/marketing/Testimoni
 import {
   Building2,
   Check,
+  GraduationCap,
   Trophy,
   User as UserIcon,
   Users,
   Users2,
   Zap,
 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import Script from "next/script";
+import Link from "next/link";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://powermysport.com";
 export default function HomePage() {
   const { user } = useAuthStore();
   const communityUrl = getCommunityAppUrl();
+  const [platformUsers, setPlatformUsers] = useState<number | null>(null);
+  const [roleCounts, setRoleCounts] = useState({
+    PLAYER: 0,
+    COACH: 0,
+    VENUE_LISTER: 0,
+  });
+
+  useEffect(() => {
+    let isActive = true;
+
+    const loadPlatformUsers = async () => {
+      try {
+        const response = await api.get("/stats/public");
+        if (!isActive) {
+          return;
+        }
+
+        setPlatformUsers(response.data?.data?.totalUsers ?? null);
+        setRoleCounts({
+          PLAYER: response.data?.data?.roleCounts?.PLAYER ?? 0,
+          COACH: response.data?.data?.roleCounts?.COACH ?? 0,
+          VENUE_LISTER: response.data?.data?.roleCounts?.VENUE_LISTER ?? 0,
+        });
+      } catch {
+        if (isActive) {
+          setPlatformUsers(null);
+          setRoleCounts({ PLAYER: 0, COACH: 0, VENUE_LISTER: 0 });
+        }
+      }
+    };
+
+    void loadPlatformUsers();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  const formattedPlatformUsers = useMemo(() => {
+    if (platformUsers === null) {
+      return "—";
+    }
+
+    return new Intl.NumberFormat(undefined, { notation: "compact" }).format(
+      platformUsers,
+    );
+  }, [platformUsers]);
 
   const organizationSchema = {
     "@context": "https://schema.org",
@@ -156,9 +207,9 @@ export default function HomePage() {
       {/* Hero Section */}
       <Hero
         variant="home"
-        title="One Stop Solution For All Your Sports Needs"
-        subtitle="India's Premier Sports Booking Platform"
-        description="Discover venues, book trusted coaches, and manage your entire sports routine from one streamlined platform."
+        title="One Stop Solution For All Your Sporting Needs"
+        subtitle="India's Premier Sporting Platform"
+        description="Discover venues, book trusted coaches, and manage your entire sporting routine from one streamlined platform."
         primaryCTA={{
           label: user ? "Go to Dashboard" : "Start Booking Now",
           href: getDashboardLink(),
@@ -170,12 +221,67 @@ export default function HomePage() {
                 href: "/venue-lister/inventory",
               }
             : {
-                label: user ? "Browse Venues" : "List Your Venue",
-                href: user ? "/venues" : "/onboarding",
+                label: user ? "Browse Venues" : "List Your Venue or Academy",
+                href: user ? "/venues" : "/register",
               }
         }
         gradient
       />
+
+      <section className="relative py-12 sm:py-14">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="rounded-3xl border border-slate-200/70 bg-white/85 p-6 shadow-sm backdrop-blur-sm sm:p-8">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Platform Snapshot
+                </p>
+                <h2 className="mt-2 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                  PowerMySport Community by Role
+                </h2>
+              </div>
+              <p className="text-sm text-slate-600">
+                Total users: {formattedPlatformUsers}
+              </p>
+            </div>
+
+            <div className="mt-6 grid gap-4 sm:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  Players
+                </p>
+                <p className="mt-2 text-3xl font-bold text-slate-900">
+                  {new Intl.NumberFormat(undefined, {
+                    notation: "compact",
+                  }).format(roleCounts.PLAYER)}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  Coaches
+                </p>
+                <p className="mt-2 text-3xl font-bold text-slate-900">
+                  {new Intl.NumberFormat(undefined, {
+                    notation: "compact",
+                  }).format(roleCounts.COACH)}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  Venues
+                </p>
+                <p className="mt-2 text-3xl font-bold text-slate-900">
+                  {new Intl.NumberFormat(undefined, {
+                    notation: "compact",
+                  }).format(roleCounts.VENUE_LISTER)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Features Section */}
       <Features
@@ -191,7 +297,7 @@ export default function HomePage() {
       <Features
         title="A Community System That Helps You Decide Faster"
         subtitle="Community System"
-        description="PowerMySport connects discovery, reviews, and discussion so you can make better sports decisions with local context instead of guesswork."
+        description="PowerMySport connects discovery, reviews, and discussion so you can make better sporting decisions with local context instead of guesswork."
         features={communityFeatures}
         columns={3}
         variant="centered"
@@ -219,7 +325,7 @@ export default function HomePage() {
               For Parents & Guardians
             </p>
             <h2 className="font-title mb-4 text-3xl font-bold text-deep-slate sm:text-4xl lg:text-5xl">
-              Manage Your Kids' Sports Journey
+              Manage Your Kids&apos; Sports Journey
             </h2>
             <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
               Add multiple child profiles and handle bookings, training plans,
@@ -236,8 +342,9 @@ export default function HomePage() {
                 Add Multiple Kids
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Add unlimited dependents to your account. Track each child's
-                age, sports interests, and training needs separately.
+                Add unlimited dependents to your account. Track each
+                child&apos;s age, sports interests, and training needs
+                separately.
               </p>
             </div>
 
@@ -349,7 +456,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               {/* ... (Previous Player/Venue/Coach cards content kept same) ... */}
               {/* Player Card */}
               <div className="group shop-surface rounded-2xl p-8 premium-shadow flex flex-col transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
@@ -376,7 +483,7 @@ export default function HomePage() {
                     <span className="text-power-orange font-bold shrink-0 mt-0.5">
                       <Check size={14} />
                     </span>
-                    <span>Manage kids' sports activities</span>
+                    <span>Manage kids&apos; sports activities</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="text-power-orange font-bold shrink-0 mt-0.5">
@@ -431,10 +538,54 @@ export default function HomePage() {
                   </li>
                 </ul>
                 <a
-                  href="/onboarding"
+                  href="/register?role=VENUE_LISTER"
                   className="inline-block w-full rounded-xl bg-power-orange px-6 py-3 text-center font-semibold text-white transition-colors hover:bg-orange-600"
                 >
                   List Your Venue
+                </a>
+              </div>
+
+              <div className="group shop-surface relative flex flex-col rounded-2xl border-2 border-indigo-500 p-8 premium-shadow transition-all duration-200 hover:-translate-y-1 hover:shadow-lg md:scale-105">
+                <div className="absolute top-0 right-0 bg-indigo-600 text-white px-4 py-1 rounded-bl-lg rounded-tr-xl text-xs font-bold">
+                  NEW
+                </div>
+                <div className="w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center mx-auto mb-6 transition-transform group-hover:scale-110">
+                  <GraduationCap size={32} />
+                </div>
+                <h3 className="text-xl font-bold text-deep-slate mb-4 text-center">
+                  Academy Owners
+                </h3>
+                <ul className="text-sm text-muted-foreground mb-8 space-y-3 grow">
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 font-bold shrink-0 mt-0.5">
+                      <Check size={14} />
+                    </span>
+                    <span>Build a public academy profile</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 font-bold shrink-0 mt-0.5">
+                      <Check size={14} />
+                    </span>
+                    <span>Manage onboarding, batches, and coaches</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 font-bold shrink-0 mt-0.5">
+                      <Check size={14} />
+                    </span>
+                    <span>Track approval and payouts in one place</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="text-indigo-600 font-bold shrink-0 mt-0.5">
+                      <Check size={14} />
+                    </span>
+                    <span>Reach players, parents, and schools</span>
+                  </li>
+                </ul>
+                <a
+                  href="/contact?subject=Academy%20onboarding"
+                  className="inline-block w-full rounded-xl bg-indigo-600 px-6 py-3 text-center font-semibold text-white transition-colors hover:bg-indigo-700"
+                >
+                  Request Academy Onboarding
                 </a>
               </div>
 
@@ -492,10 +643,11 @@ export default function HomePage() {
             Start Exploring
           </h2>
           <p className="text-center text-slate-600 mb-8">
-            Browse venues and coaches to plan your next session with confidence
+            Browse venues, academies, and coaches to plan your next session with
+            confidence
           </p>
-          <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-            <a
+          <div className="grid gap-6 md:grid-cols-3">
+            <Link
               href="/venues"
               className="group rounded-2xl border border-white/70 bg-[linear-gradient(120deg,#fff9ef_0%,#fff3db_100%)] p-6 text-center premium-shadow transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
             >
@@ -512,8 +664,26 @@ export default function HomePage() {
               <span className="text-power-orange font-semibold">
                 View All Venues →
               </span>
-            </a>
-            <a
+            </Link>
+            <Link
+              href="/academies"
+              className="group rounded-2xl border border-white/70 bg-[linear-gradient(120deg,#eef4ff_0%,#dfe9ff_100%)] p-6 text-center premium-shadow transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
+            >
+              <GraduationCap
+                size={40}
+                className="mx-auto mb-3 text-indigo-600 transition-transform group-hover:scale-110"
+              />
+              <h3 className="text-xl font-bold text-slate-900 mb-2">
+                Browse Academies
+              </h3>
+              <p className="text-slate-600 text-sm mb-4">
+                Explore academies built for training, batches, and development
+              </p>
+              <span className="text-indigo-600 font-semibold">
+                View All Academies →
+              </span>
+            </Link>
+            <Link
               href="/coaches"
               className="group rounded-2xl border border-white/70 bg-[linear-gradient(120deg,#f2fff7_0%,#e5f8ef_100%)] p-6 text-center premium-shadow transition-all duration-200 hover:-translate-y-1 hover:shadow-lg"
             >
@@ -530,7 +700,7 @@ export default function HomePage() {
               <span className="text-turf-green font-semibold">
                 View All Coaches →
               </span>
-            </a>
+            </Link>
           </div>
         </div>
       </section>

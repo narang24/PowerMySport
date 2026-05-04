@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import mongoose, { Document, Schema } from "mongoose";
+import { S3Service } from "../services/S3Service";
 import { IPlayerProfile, IVenueListerProfile, UserRole } from "../types";
 
 export interface UserDocument extends Document {
@@ -11,6 +12,7 @@ export interface UserDocument extends Document {
   googleId?: string;
   photoUrl?: string;
   photoS3Key?: string; // S3 key for profile picture
+  city?: string;
   lastActiveAt?: Date;
   dob?: Date;
   legalConsents?: {
@@ -126,7 +128,7 @@ const userSchema = new Schema<UserDocument>(
     },
     role: {
       type: String,
-      enum: ["PLAYER", "VENUE_LISTER", "COACH", "ADMIN"],
+      enum: ["PLAYER", "VENUE_LISTER", "COACH", "ACADEMY_OWNER", "ADMIN"],
       default: "PLAYER",
     },
     playerProfile: {
@@ -176,6 +178,10 @@ const userSchema = new Schema<UserDocument>(
     },
     photoS3Key: {
       type: String,
+    },
+    city: {
+      type: String,
+      trim: true,
     },
     lastActiveAt: {
       type: Date,
@@ -349,7 +355,6 @@ userSchema.methods.refreshPhotoUrl = async function (
   if (!this.photoS3Key) return;
 
   try {
-    const { S3Service } = require("../services/S3Service");
     const s3Service = new S3Service();
     this.photoUrl = await s3Service.generateDownloadUrl(
       this.photoS3Key,

@@ -59,6 +59,8 @@ export default function LoginPage() {
           router.push("/venue-lister/inventory");
         } else if (response.data.user.role === "COACH") {
           router.push("/coach/verification");
+        } else if (response.data.user.role === "ACADEMY_OWNER") {
+          router.push("/academy");
         } else {
           router.push("/dashboard/my-bookings");
         }
@@ -107,6 +109,8 @@ export default function LoginPage() {
           router.push("/venue-lister/inventory");
         } else if (response.data.user.role === "COACH") {
           router.push("/coach/verification");
+        } else if (response.data.user.role === "ACADEMY_OWNER") {
+          router.push("/academy");
         } else {
           router.push("/dashboard/my-bookings");
         }
@@ -124,115 +128,121 @@ export default function LoginPage() {
       clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}
     >
       <SlideUp duration={0.6} yOffset={20}>
-      <Card className="w-full glass-panel-heavy premium-shadow border-0">
-        <CardHeader>
-          <h1 className="text-2xl font-bold text-center text-slate-900 dark:text-white sm:text-3xl">
-            Welcome Back
-          </h1>
-          <p className="text-center mt-2 text-sm text-slate-600 dark:text-slate-300 sm:text-base">
-            Sign in to continue to PowerMySport
-          </p>
-        </CardHeader>
+        <Card className="w-full glass-panel-heavy premium-shadow border-0">
+          <CardHeader>
+            <h1 className="text-2xl font-bold text-center text-slate-900 dark:text-white sm:text-3xl">
+              Welcome Back
+            </h1>
+            <p className="text-center mt-2 text-sm text-slate-600 dark:text-slate-300 sm:text-base">
+              Sign in to continue to PowerMySport
+            </p>
+          </CardHeader>
 
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium mb-2 text-slate-900 dark:text-white">
-                Email
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange/50 bg-white/50 backdrop-blur-sm text-slate-900 transition-all ${
-                  errors.email ? "border-red-500" : "border-slate-300 dark:border-slate-600"
-                }`}
-                placeholder="your@email.com"
-              />
-              {errors.email && (
-                <p className="text-red-500 text-sm mt-1.5">{errors.email}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2 text-slate-900 dark:text-white">
-                Password
-              </label>
-              <div className="relative">
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-slate-900 dark:text-white">
+                  Email
+                </label>
                 <input
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  value={formData.password}
+                  type="email"
+                  name="email"
+                  value={formData.email}
                   onChange={handleChange}
                   className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange/50 bg-white/50 backdrop-blur-sm text-slate-900 transition-all ${
-                    errors.password ? "border-red-500" : "border-slate-300 dark:border-slate-600"
+                    errors.email
+                      ? "border-red-500"
+                      : "border-slate-300 dark:border-slate-600"
                   }`}
-                  placeholder="••••••••"
+                  placeholder="your@email.com"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                  title="Toggle password visibility"
-                  aria-label="Toggle password visibility"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
+                {errors.email && (
+                  <p className="text-red-500 text-sm mt-1.5">{errors.email}</p>
+                )}
               </div>
-              {errors.password && (
-                <p className="text-red-500 text-sm mt-1.5">{errors.password}</p>
-              )}
-            </div>
 
-            <div className="flex justify-end">
-              <Link
-                href="/forgot-password"
-                className="text-sm font-medium text-power-orange hover:text-orange-600 transition-colors"
+              <div>
+                <label className="block text-sm font-medium mb-2 text-slate-900 dark:text-white">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange/50 bg-white/50 backdrop-blur-sm text-slate-900 transition-all ${
+                      errors.password
+                        ? "border-red-500"
+                        : "border-slate-300 dark:border-slate-600"
+                    }`}
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    title="Toggle password visibility"
+                    aria-label="Toggle password visibility"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-red-500 text-sm mt-1.5">
+                    {errors.password}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex justify-end">
+                <Link
+                  href="/forgot-password"
+                  className="text-sm font-medium text-power-orange hover:text-orange-600 transition-colors"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                variant="primary"
+                className="w-full premium-shadow"
               >
-                Forgot Password?
+                {isSubmitting ? "Signing in..." : "Sign In"}
+              </Button>
+            </form>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-300 dark:border-slate-700"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-3 bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 rounded-full border border-slate-200 dark:border-slate-700 backdrop-blur-sm">
+                  Or continue with
+                </span>
+              </div>
+            </div>
+
+            <div className="flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => toast.error("Google login failed")}
+              />
+            </div>
+
+            <p className="text-center mt-6 text-slate-600 dark:text-slate-300">
+              Don&apos;t have an account?{" "}
+              <Link
+                href="/register"
+                className="text-power-orange font-semibold hover:text-orange-600 transition-colors"
+              >
+                Register
               </Link>
-            </div>
-
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              variant="primary"
-              className="w-full premium-shadow"
-            >
-              {isSubmitting ? "Signing in..." : "Sign In"}
-            </Button>
-          </form>
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-300 dark:border-slate-700"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-3 bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 rounded-full border border-slate-200 dark:border-slate-700 backdrop-blur-sm">
-                Or continue with
-              </span>
-            </div>
-          </div>
-
-          <div className="flex justify-center">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => toast.error("Google login failed")}
-            />
-          </div>
-
-          <p className="text-center mt-6 text-slate-600 dark:text-slate-300">
-            Don&apos;t have an account?{" "}
-            <Link
-              href="/register"
-              className="text-power-orange font-semibold hover:text-orange-600 transition-colors"
-            >
-              Register
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
+            </p>
+          </CardContent>
+        </Card>
       </SlideUp>
     </GoogleOAuthProvider>
   );
