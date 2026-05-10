@@ -1,6 +1,14 @@
 import axiosInstance from "@/lib/api/axios";
 import { ApiResponse, IPayoutMethod } from "@/types";
 
+const isNotFoundError = (error: unknown): boolean =>
+  typeof error === "object" &&
+  error !== null &&
+  "response" in error &&
+  typeof (error as { response?: { status?: number } }).response?.status ===
+    "number" &&
+  (error as { response?: { status?: number } }).response?.status === 404;
+
 export const payoutApi = {
   // ── COACH ────────────────────────────────────────────────────────────────
 
@@ -8,10 +16,22 @@ export const payoutApi = {
   getCoachPayoutMethod: async (): Promise<
     ApiResponse<{ payoutMethod: IPayoutMethod | null }>
   > => {
-    const response = await axiosInstance.get(
-      "/payouts/coach/my-payout-method",
-    );
-    return response.data;
+    try {
+      const response = await axiosInstance.get(
+        "/payouts/coach/my-payout-method",
+      );
+      return response.data;
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return {
+          success: true,
+          message: "Payout method retrieved",
+          data: { payoutMethod: null },
+        };
+      }
+
+      throw error;
+    }
   },
 
   /** Create or replace the coach's payout method */
@@ -41,10 +61,22 @@ export const payoutApi = {
   getVenuePayoutMethod: async (): Promise<
     ApiResponse<{ payoutMethod: IPayoutMethod | null; venueName?: string }>
   > => {
-    const response = await axiosInstance.get(
-      "/payouts/venue/my-payout-method",
-    );
-    return response.data;
+    try {
+      const response = await axiosInstance.get(
+        "/payouts/venue/my-payout-method",
+      );
+      return response.data;
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return {
+          success: true,
+          message: "Payout method retrieved",
+          data: { payoutMethod: null },
+        };
+      }
+
+      throw error;
+    }
   },
 
   /** Create or replace the venue-lister's payout method */
