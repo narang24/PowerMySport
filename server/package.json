@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/server.ts",
-    "build": "node ./node_modules/typescript/bin/tsc",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && node ./node_modules/typescript/bin/tsc",
     "start": "node dist/server.js",
     "migrate": "ts-node src/migrations/index.ts",
     "migrate:venue-images": "ts-node src/migrations/10_migrate_venue_images.ts",

@@ -46,7 +46,13 @@ export const authMiddleware = async (
   next: NextFunction,
 ): Promise<void> => {
   try {
-    const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
+    const authHeader = req.headers.authorization;
+    const bearerToken =
+      typeof authHeader === "string" && authHeader.startsWith("Bearer ")
+        ? authHeader.slice(7).trim()
+        : "";
+    const cookieToken = req.cookies.token;
+    const token = bearerToken || cookieToken;
 
     if (!token) {
       res.status(401).json({
