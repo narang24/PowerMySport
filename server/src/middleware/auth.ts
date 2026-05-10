@@ -7,6 +7,7 @@ import {
   hasPermission,
   hasAnyPermission,
   hasAllPermissions,
+  isSystemAdminRole,
 } from "../utils/permissions";
 import { ADMIN_ROLES } from "../constants/adminPermissions";
 import Admin from "../models/Admin";
@@ -146,8 +147,10 @@ export const adminMiddleware = (
   next: NextFunction,
 ): void => {
   // Check if user has any admin role
-  const validAdminRoles = Object.values(ADMIN_ROLES);
-  if (!req.user?.role || !validAdminRoles.includes(req.user.role as any)) {
+  if (
+    !isSystemAdminRole(req.user?.role) &&
+    !Object.values(ADMIN_ROLES).includes(req.user?.role as any)
+  ) {
     res.status(403).json({
       success: false,
       message: "Access denied. Admin role required.",
@@ -162,7 +165,7 @@ export const superAdminMiddleware = (
   res: Response,
   next: NextFunction,
 ): void => {
-  if (req.user?.role !== ADMIN_ROLES.SYSTEM_ADMIN) {
+  if (!isSystemAdminRole(req.user?.role)) {
     res.status(403).json({
       success: false,
       message: "Access denied. System Admin role required.",

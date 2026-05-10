@@ -103,7 +103,10 @@ export default function AdminLayout({
   }, [storedAdminRaw]);
 
   const adminName = storedAdmin?.name || storedAdmin?.email || "Admin";
-  const isSuperAdmin = storedAdmin?.role === "SYSTEM_ADMIN";
+  const isSuperAdmin =
+    storedAdmin?.role === "SYSTEM_ADMIN" ||
+    storedAdmin?.role === "SUPER_ADMIN" ||
+    storedAdmin?.role === "ADMIN";
   const mustChangePassword = storedAdmin?.mustChangePassword === true;
 
   const navGroups = useMemo<NavGroup[]>(() => {

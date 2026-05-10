@@ -109,7 +109,11 @@ export default function AdminsManagementPage() {
       const raw = localStorage.getItem("admin");
       if (!raw) return false;
       const parsed = JSON.parse(raw) as { role?: string };
-      return parsed.role === "SYSTEM_ADMIN";
+      return (
+        parsed.role === "SYSTEM_ADMIN" ||
+        parsed.role === "SUPER_ADMIN" ||
+        parsed.role === "ADMIN"
+      );
     } catch {
       return false;
     }

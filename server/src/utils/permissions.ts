@@ -103,7 +103,7 @@ export const hasPermission = (
   requiredPermission: string,
 ): boolean => {
   // System Admins have all permissions
-  if (adminRole === ADMIN_ROLES.SYSTEM_ADMIN) {
+  if (isSystemAdminRole(adminRole)) {
     return true;
   }
 
@@ -127,7 +127,7 @@ export const hasAnyPermission = (
   requiredPermissions: string[],
 ): boolean => {
   // System Admins have all permissions
-  if (adminRole === ADMIN_ROLES.SYSTEM_ADMIN) {
+  if (isSystemAdminRole(adminRole)) {
     return true;
   }
 
@@ -145,7 +145,7 @@ export const hasAllPermissions = (
   requiredPermissions: string[],
 ): boolean => {
   // System Admins have all permissions
-  if (adminRole === ADMIN_ROLES.SYSTEM_ADMIN) {
+  if (isSystemAdminRole(adminRole)) {
     return true;
   }
 
@@ -203,5 +203,13 @@ export const groupPermissionsByModule = (
       return groups;
     },
     {} as Record<string, string[]>,
+  );
+};
+
+export const isSystemAdminRole = (role: string | undefined | null): boolean => {
+  return (
+    role === ADMIN_ROLES.SYSTEM_ADMIN ||
+    role === "SUPER_ADMIN" ||
+    role === "ADMIN"
   );
 };
