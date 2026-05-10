@@ -281,12 +281,15 @@ export default function BookingsPage() {
                           )}
                         </>
                       ) : activeTab === "venues" ? (
-                        <h3 className="text-lg font-semibold mb-2 text-slate-900">
-                          Venue ID:{" "}
-                          {typeof booking.venueId === "string"
-                            ? booking.venueId
-                            : "N/A"}
-                        </h3>
+                        <div className="mb-2">
+                          <h3 className="text-lg font-semibold text-slate-900">
+                            Venue details pending
+                          </h3>
+                          <p className="text-sm text-slate-500">
+                            We’ll show the full location once the venue details
+                            are resolved.
+                          </p>
+                        </div>
                       ) : null}
 
                       {/* Coach Booking */}

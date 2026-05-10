@@ -12,6 +12,7 @@ import { Button } from "@/modules/shared/ui/Button";
 import { Card } from "@/modules/shared/ui/Card";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Availability, Coach, ReviewItem, ReviewSummary } from "@/types";
+import { getOwnVenueLocationDisplay } from "@/utils/location";
 import {
   ArrowLeft,
   Award,
@@ -20,6 +21,7 @@ import {
   ImageIcon,
   IndianRupee,
   Info,
+  MapPin,
   Star,
   User,
 } from "lucide-react";
@@ -610,6 +612,54 @@ export default function CoachDetailsPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+              </Card>
+            )}
+
+            {coach.serviceMode === "OWN_VENUE" && coach.ownVenueDetails && (
+              <Card className="premium-shadow overflow-hidden rounded-3xl border border-slate-200/70 bg-white/92 p-0 backdrop-blur-sm">
+                <div className="bg-linear-to-br from-turf-green/5 to-slate-50 p-6 border-b border-slate-100">
+                  <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <MapPin size={24} className="text-turf-green" />
+                    Venue Location
+                  </h2>
+                </div>
+                <div className="p-6">
+                  {(() => {
+                    const venueLocation = getOwnVenueLocationDisplay(
+                      coach.ownVenueDetails,
+                    );
+
+                    if (!venueLocation) {
+                      return null;
+                    }
+
+                    return (
+                      <div className="space-y-3 text-sm text-slate-700">
+                        <div className="space-y-1">
+                          <p className="font-semibold text-slate-900">
+                            {venueLocation.title}
+                          </p>
+                          <p>{venueLocation.description}</p>
+                        </div>
+                        {venueLocation.mapsUrl && (
+                          <a
+                            href={venueLocation.mapsUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex text-xs font-semibold text-power-orange hover:underline"
+                          >
+                            Open in Maps
+                          </a>
+                        )}
+                        {coach.ownVenueDetails.description && (
+                          <p className="pt-2 text-slate-600">
+                            {coach.ownVenueDetails.description}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </Card>
             )}

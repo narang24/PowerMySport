@@ -1,10 +1,12 @@
 "use client";
 
 import { bookingApi } from "@/modules/booking/services/booking";
+import { coachApi } from "@/modules/coach/services/coach";
 import { PlayerPageHeader } from "@/modules/player/components/PlayerPageHeader";
 import { Button } from "@/modules/shared/ui/Button";
 import { Card } from "@/modules/shared/ui/Card";
 import { Booking, Venue } from "@/types";
+import { getOwnVenueLocationDisplay } from "@/utils/location";
 import { formatDate, formatTime } from "@/utils/format";
 import { toast } from "@/lib/toast";
 import {
@@ -50,6 +52,9 @@ const formatStatusLabel = (status: Booking["status"]) =>
 
 export default function CoachBookingsPage() {
   const [allCoachBookings, setAllCoachBookings] = useState<Booking[]>([]);
+  const [currentCoach, setCurrentCoach] = useState<Booking["coach"] | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [approvingId, setApprovingId] = useState<string | null>(null);
@@ -59,10 +64,18 @@ export default function CoachBookingsPage() {
     const fetchBookings = async () => {
       try {
         setIsLoading(true);
-        const response = await bookingApi.getMyBookings();
-        if (response.success && response.data) {
-          const coachBookings = response.data.filter((b) => b.coachId);
+        const [bookingsResponse, coachResponse] = await Promise.all([
+          bookingApi.getMyBookings(),
+          coachApi.getMyProfile().catch(() => null),
+        ]);
+
+        if (bookingsResponse.success && bookingsResponse.data) {
+          const coachBookings = bookingsResponse.data.filter((b) => b.coachId);
           setAllCoachBookings(coachBookings);
+        }
+
+        if (coachResponse?.success && coachResponse.data) {
+          setCurrentCoach(coachResponse.data);
         }
       } catch (error) {
         console.error("Failed to fetch bookings:", error);
@@ -287,9 +300,34 @@ export default function CoachBookingsPage() {
                                 </p>
                               )}
                             </>
+                          ) : currentCoach?.ownVenueDetails ? (
+                            (() => {
+                              const venueLocation = getOwnVenueLocationDisplay(
+                                currentCoach.ownVenueDetails,
+                              );
+
+                              if (!venueLocation) {
+                                return (
+                                  <p className="font-semibold text-slate-900">
+                                    Location on file
+                                  </p>
+                                );
+                              }
+
+                              return (
+                                <>
+                                  <p className="font-semibold text-slate-900">
+                                    {venueLocation.title}
+                                  </p>
+                                  <p className="mt-1 text-sm text-slate-600">
+                                    {venueLocation.description}
+                                  </p>
+                                </>
+                              );
+                            })()
                           ) : (
                             <p className="font-semibold text-slate-900">
-                              Venue ID: {String(booking.venueId || "N/A")}
+                              Location on file
                             </p>
                           )}
                           {booking.sport && (

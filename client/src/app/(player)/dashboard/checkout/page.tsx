@@ -43,6 +43,7 @@ import { coachApi } from "@/modules/coach/services/coach";
 import { CommunityInsightsCard } from "@/modules/community/components/CommunityInsightsCard";
 import { venueApi } from "@/modules/venue/services/venue";
 import { Coach, User, Venue } from "@/types";
+import { getOwnVenueLocationDisplay } from "@/utils/location";
 import { formatCurrency, formatDate, formatTime } from "@/utils/format";
 import { getDashboardPathByRole } from "@/utils/roleDashboard";
 
@@ -118,11 +119,13 @@ const getCoachLocationLabel = (coach: Coach) => {
     return "Freelance";
   }
   if (coach.serviceMode === "OWN_VENUE") {
-    return coach.ownVenueDetails?.name
-      ? `Own Venue • ${coach.ownVenueDetails.name}`
-      : coach.ownVenueDetails?.address
-        ? `Own Venue • ${coach.ownVenueDetails.address}`
-        : "Own Venue";
+    const venueLocation = getOwnVenueLocationDisplay(coach.ownVenueDetails);
+
+    if (!venueLocation) {
+      return "Own Venue";
+    }
+
+    return `Own Venue • ${venueLocation.title}`;
   }
   return "Hybrid";
 };
@@ -963,6 +966,9 @@ function CheckoutPageContent() {
                   const coachDisplayName = getCoachDisplayName(coach);
                   const coachImage = getCoachImageCandidates(coach)[0];
                   const locationLabel = getCoachLocationLabel(coach);
+                  const venueLocation = getOwnVenueLocationDisplay(
+                    coach.ownVenueDetails,
+                  );
 
                   return (
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -981,10 +987,32 @@ function CheckoutPageContent() {
                         <p className="text-lg font-bold text-slate-900">
                           {coachDisplayName}
                         </p>
-                        <p className="mt-1 flex items-center gap-2 text-sm text-slate-600">
-                          <MapPin size={16} />
-                          {locationLabel}
-                        </p>
+                        {venueLocation ? (
+                          <div className="mt-1 flex items-start gap-2 text-sm text-slate-600">
+                            <MapPin size={16} className="mt-0.5 shrink-0" />
+                            <div className="space-y-1">
+                              <p className="font-medium text-slate-800">
+                                {locationLabel}
+                              </p>
+                              <p>{venueLocation.description}</p>
+                              {venueLocation.mapsUrl && (
+                                <a
+                                  href={venueLocation.mapsUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex text-xs font-semibold text-power-orange hover:underline"
+                                >
+                                  Open in Maps
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="mt-1 flex items-center gap-2 text-sm text-slate-600">
+                            <MapPin size={16} />
+                            {locationLabel}
+                          </p>
+                        )}
                         <p className="mt-1 text-xs text-slate-500">
                           ★ {coach.rating.toFixed(1)} ({coach.reviewCount}{" "}
                           reviews)
