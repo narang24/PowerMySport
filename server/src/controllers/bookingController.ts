@@ -1242,8 +1242,8 @@ export const initiatePhonePePaymentForBooking = async (
 
     const merchantOrderId = `bk_${bookingId}_${Date.now()}`;
     const redirectBase =
+      process.env.FRONTEND_URL ||
       process.env.PHONEPE_REDIRECT_URL_BASE ||
-      process.env.CLIENT_URL ||
       "http://localhost:3000";
     const redirectUrl = new URL("/payment", redirectBase);
     redirectUrl.searchParams.set("status", "pending");
