@@ -29,29 +29,26 @@ export function PayoutBanner({
   if (payoutMethod !== null || dismissed) return null;
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-r from-amber-900/30 via-amber-800/20 to-orange-900/20 p-4 shadow-lg animate-in fade-in slide-in-from-top-2 duration-500">
-      {/* Subtle glow */}
-      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-amber-400/5" />
-
+    <div className="relative overflow-hidden rounded-lg border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-5 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
       <div className="flex items-start gap-4">
         {/* Icon */}
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/15">
-          <AlertTriangle size={20} className="text-amber-400" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-100">
+          <AlertTriangle size={20} className="text-amber-600" />
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-amber-300">
+          <p className="text-sm font-bold text-amber-900">
             Payout method not set up
           </p>
-          <p className="mt-0.5 text-xs text-amber-400/80">
+          <p className="mt-0.5 text-sm text-amber-700">
             You&apos;re not set up to receive payouts yet. Add your bank account
             or UPI details so earnings from bookings reach you automatically.
           </p>
           <div className="mt-3">
             <Link
               href={payoutHref}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-500 px-4 py-2 text-xs font-bold text-white shadow hover:bg-amber-400 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-power-orange px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-orange-600 transition-colors"
             >
               {ctaLabel}
             </Link>

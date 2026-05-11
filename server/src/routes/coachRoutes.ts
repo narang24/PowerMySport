@@ -17,11 +17,23 @@ import {
 import {
   cancelMyCoachSubscriptionHandler,
   createOrUpdateMyCoachSubscriptionHandler,
-  createOverrideRequestHandler,
   getMyCoachSubscriptionHandler,
-  listMyOverrideRequestsHandler,
   listCoachPlansHandler,
 } from "../controllers/coachSubscriptionController";
+import {
+  createCoachPackageHandler,
+  getCoachPackagesHandler,
+  getCoachPublicPackagesHandler,
+  updateCoachPackageHandler,
+  deleteCoachPackageHandler,
+  subscribeToCoachPackageHandler,
+  getUserCoachSubscriptionsHandler,
+  cancelSubscriptionHandler,
+  getCoachActiveSubscriptionsHandler,
+  getCoachSubscriptionRevenueHandler,
+  initiateCoachSubscriptionPaymentHandler,
+  verifyCoachSubscriptionPaymentStatusHandler,
+} from "../controllers/coachSubscriptionPackageController";
 import { authMiddleware } from "../middleware/auth";
 import {
   coachSubscriptionCancelSchema,
@@ -109,20 +121,78 @@ router.post(
   validateRequest(coachSubscriptionCancelSchema),
   cancelMyCoachSubscriptionHandler,
 );
+// Override requests deprecated in new package model
+
+// NEW: Coach subscription packages (flexible coach-owned packages)
+// Create package (Coach only)
 router.post(
-  "/subscription/override-request",
+  "/subscription-packages",
   authMiddleware,
-  validateRequest(coachSubscriptionOverrideRequestSchema),
-  createOverrideRequestHandler,
+  createCoachPackageHandler,
+);
+
+// Get own packages (Coach only)
+router.get("/subscription-packages", authMiddleware, getCoachPackagesHandler);
+
+// Update package (Coach only)
+router.put(
+  "/subscription-packages/:packageId",
+  authMiddleware,
+  updateCoachPackageHandler,
+);
+
+// Delete package (Coach only)
+router.delete(
+  "/subscription-packages/:packageId",
+  authMiddleware,
+  deleteCoachPackageHandler,
+);
+
+// Get coach's active subscriptions (Coach only)
+router.get(
+  "/subscription-packages/active-subscriptions",
+  authMiddleware,
+  getCoachActiveSubscriptionsHandler,
+);
+
+// Get coach's revenue (Coach only)
+router.get(
+  "/subscription-packages/revenue",
+  authMiddleware,
+  getCoachSubscriptionRevenueHandler,
+);
+
+// Public endpoints for subscription management
+// Subscribe to a coach's package
+router.post("/subscriptions", authMiddleware, subscribeToCoachPackageHandler);
+
+// Get user's subscriptions
+router.get("/subscriptions", authMiddleware, getUserCoachSubscriptionsHandler);
+
+// Subscription payment flow
+router.post(
+  "/subscriptions/phonepe/initiate",
+  authMiddleware,
+  initiateCoachSubscriptionPaymentHandler,
 );
 router.get(
-  "/subscription/override-requests",
+  "/subscriptions/phonepe/status/:merchantOrderId",
   authMiddleware,
-  listMyOverrideRequestsHandler,
+  verifyCoachSubscriptionPaymentStatusHandler,
+);
+
+// Cancel subscription
+router.delete(
+  "/subscriptions/:subscriptionId",
+  authMiddleware,
+  cancelSubscriptionHandler,
 );
 
 // Check coach availability
 router.get("/availability/:coachId", getCoachAvailability);
+
+// Get coach's subscription packages (public)
+router.get("/:coachId/subscription-packages", getCoachPublicPackagesHandler);
 
 // Get coach by ID (public)
 router.get("/:coachId", getCoach);

@@ -158,7 +158,7 @@ export default function CoachLayout({
     ? navItems.filter(
         (item) => item.href === "/coach/verification" || item.external,
       )
-    : navItems;
+    : navItems.filter((item) => item.href !== "/coach/verification");
 
   if (
     isGateLoading &&

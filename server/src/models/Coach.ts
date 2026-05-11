@@ -4,6 +4,7 @@ import { IAvailability, IOwnVenueDetails, ServiceMode } from "../types";
 export type PayoutMethodType = "BANK_TRANSFER" | "UPI";
 
 export interface IPayoutMethod {
+  id?: string; // MongoDB ObjectId string for individual payout method
   type: PayoutMethodType;
   // Bank transfer fields
   accountHolderName?: string;
@@ -12,6 +13,8 @@ export interface IPayoutMethod {
   bankName?: string;
   // UPI fields
   upiId?: string;
+  /** Whether this is the primary/default method for payouts */
+  isDefault?: boolean;
   addedAt: Date;
   updatedAt: Date;
 }
@@ -47,7 +50,13 @@ export interface CoachDocument extends Document {
   verifiedAt?: Date | null;
   verifiedBy?: mongoose.Types.ObjectId | null;
   isVerified: boolean;
-  payoutMethod?: IPayoutMethod;
+  /**
+   * REQUIREMENT 3: Multiple payout methods support
+   * Array of payout methods (bank transfer, UPI)
+   * One method can be marked as isDefault=true for automatic payouts
+   * MIGRATION NOTE: Changed from single payoutMethod to payoutMethods array
+   */
+  payoutMethods?: IPayoutMethod[];
   rating: number;
   reviewCount: number;
   createdAt: Date;
@@ -326,19 +335,22 @@ const coachSchema = new Schema<CoachDocument>(
       type: Boolean,
       default: false,
     },
-    payoutMethod: {
-      type: {
-        type: String,
-        enum: ["BANK_TRANSFER", "UPI"],
+    payoutMethods: [
+      {
+        type: {
+          type: String,
+          enum: ["BANK_TRANSFER", "UPI"],
+        },
+        accountHolderName: { type: String, trim: true },
+        accountNumber: { type: String, trim: true },
+        ifscCode: { type: String, trim: true, uppercase: true },
+        bankName: { type: String, trim: true },
+        upiId: { type: String, trim: true },
+        isDefault: { type: Boolean, default: false },
+        addedAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date, default: Date.now },
       },
-      accountHolderName: { type: String, trim: true },
-      accountNumber: { type: String, trim: true },
-      ifscCode: { type: String, trim: true, uppercase: true },
-      bankName: { type: String, trim: true },
-      upiId: { type: String, trim: true },
-      addedAt: { type: Date },
-      updatedAt: { type: Date },
-    },
+    ],
   },
   {
     timestamps: true,

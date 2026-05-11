@@ -115,6 +115,10 @@ export type CoachVerificationStatus =
   | "REJECTED";
 
 export type CoachPlanBillingCycle = "MONTHLY" | "YEARLY";
+export type CoachSubscriptionPackageFrequency =
+  | "MONTHLY"
+  | "QUARTERLY"
+  | "YEARLY";
 export type CoachSubscriptionStatus =
   | "ACTIVE"
   | "PAST_DUE"
@@ -148,6 +152,7 @@ export interface CoachSubscription {
   coachId: string;
   userId: string;
   planId: string | CoachPlan;
+  packageId?: string | CoachSubscriptionPackage | null;
   status: CoachSubscriptionStatus;
   billingCycle: CoachPlanBillingCycle;
   currentPeriodStart: string;
@@ -175,6 +180,33 @@ export interface CoachSubscriptionOverrideRequest {
   reviewNote?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CoachSubscriptionPackage {
+  id?: string;
+  _id?: string;
+  coachId: string;
+  name: string;
+  description?: string;
+  frequency: CoachSubscriptionPackageFrequency;
+  price: number;
+  features: string[];
+  maxStudents?: number | null;
+  maxSessions?: number | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CoachSubscriptionPackageCreateInput {
+  name: string;
+  description?: string;
+  frequency: CoachSubscriptionPackageFrequency;
+  price: number;
+  features: string[];
+  maxStudents?: number | null;
+  maxSessions?: number | null;
+  isActive: boolean;
 }
 
 export interface CoachVerificationDocument {
@@ -335,18 +367,43 @@ export interface Booking {
 // ============================================
 // PAYOUT METHOD TYPES
 // ============================================
+
+/** Type of payout method */
 export type PayoutMethodType = "BANK_TRANSFER" | "UPI";
 
+/** Payout method configuration for coaches and venue listers */
 export interface IPayoutMethod {
+  /** MongoDB ObjectId string for individual payout method */
+  id?: string;
+
+  /** Type of payout method (bank transfer or UPI) */
   type: PayoutMethodType;
-  // Bank transfer fields
+
+  // ── Bank Transfer Fields ──────────────────────────────
+  /** Name of account holder as per bank records (required for BANK_TRANSFER) */
   accountHolderName?: string;
+
+  /** Bank account number (9-18 digits, required for BANK_TRANSFER) */
   accountNumber?: string;
+
+  /** IFSC code in format: 4 letters + 0 + 6 alphanumeric (required for BANK_TRANSFER) */
   ifscCode?: string;
+
+  /** Name of the bank (required for BANK_TRANSFER) */
   bankName?: string;
-  // UPI fields
+
+  // ── UPI Fields ────────────────────────────────────────
+  /** UPI ID in format: name@bankname (required for UPI) */
   upiId?: string;
+
+  /** Whether this is the primary/default method for payouts */
+  isDefault?: boolean;
+
+  // ── Metadata ──────────────────────────────────────────
+  /** ISO timestamp when payout method was first added */
   addedAt?: string;
+
+  /** ISO timestamp of the last update */
   updatedAt?: string;
 }
 

@@ -98,6 +98,22 @@ export interface UserDocument extends Document {
   suspendedAt?: Date;
   suspendedBy?: mongoose.Types.ObjectId;
   deactivatedAt?: Date;
+  /**
+   * REQUIREMENT 4: Refund payment methods for players
+   * Players can optionally add bank details for refund flexibility
+   * Default refund method returns to original card (no setup needed)
+   */
+  refundMethods?: Array<{
+    id?: string;
+    type: "ORIGINAL_CARD" | "BANK_ACCOUNT" | "STORE_CREDIT";
+    accountHolderName?: string;
+    accountNumber?: string;
+    ifscCode?: string;
+    bankName?: string;
+    isDefault?: boolean;
+    addedAt?: Date;
+    updatedAt?: Date;
+  }>;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(password: string): Promise<boolean>;
@@ -323,6 +339,22 @@ const userSchema = new Schema<UserDocument>(
       type: Date,
       default: null,
     },
+    refundMethods: [
+      {
+        type: {
+          type: String,
+          enum: ["ORIGINAL_CARD", "BANK_ACCOUNT", "STORE_CREDIT"],
+          default: "ORIGINAL_CARD",
+        },
+        accountHolderName: { type: String, trim: true },
+        accountNumber: { type: String, trim: true },
+        ifscCode: { type: String, trim: true, uppercase: true },
+        bankName: { type: String, trim: true },
+        isDefault: { type: Boolean, default: false },
+        addedAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date, default: Date.now },
+      },
+    ],
   },
   { timestamps: true },
 );

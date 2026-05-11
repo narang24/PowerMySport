@@ -1,5 +1,4 @@
 import mongoose, { Document, Schema } from "mongoose";
-import { CoachPlanBillingCycle } from "./CoachPlan";
 
 export type CoachSubscriptionStatus =
   | "ACTIVE"
@@ -11,9 +10,8 @@ export interface CoachSubscriptionDocument extends Document {
   id?: string;
   coachId: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
-  planId: mongoose.Types.ObjectId;
+  packageId: mongoose.Types.ObjectId; // References CoachSubscriptionPackage
   status: CoachSubscriptionStatus;
-  billingCycle: CoachPlanBillingCycle;
   currentPeriodStart: Date;
   currentPeriodEnd: Date;
   nextBillingDate: Date;
@@ -39,10 +37,10 @@ const coachSubscriptionSchema = new Schema<CoachSubscriptionDocument>(
       required: [true, "User ID is required"],
       index: true,
     },
-    planId: {
+    packageId: {
       type: Schema.Types.ObjectId,
-      ref: "CoachPlan",
-      required: [true, "Plan ID is required"],
+      ref: "CoachSubscriptionPackage",
+      required: [true, "Package ID is required"],
       index: true,
     },
     status: {
@@ -50,11 +48,6 @@ const coachSubscriptionSchema = new Schema<CoachSubscriptionDocument>(
       enum: ["ACTIVE", "PAST_DUE", "CANCELLED", "EXPIRED"],
       default: "ACTIVE",
       index: true,
-    },
-    billingCycle: {
-      type: String,
-      enum: ["MONTHLY", "YEARLY"],
-      required: [true, "Billing cycle is required"],
     },
     currentPeriodStart: {
       type: Date,

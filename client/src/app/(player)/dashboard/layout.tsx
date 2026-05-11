@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import {
   Bell,
   Calendar,
+  CreditCard,
   Home,
   LifeBuoy,
   Mail,
@@ -62,6 +63,12 @@ export default function DashboardLayout({
       href: "/dashboard/my-bookings",
       label: "My Bookings",
       icon: Calendar,
+      section: "Activity",
+    },
+    {
+      href: "/dashboard/subscriptions",
+      label: "My Subscriptions",
+      icon: CreditCard,
       section: "Activity",
     },
     {

@@ -178,7 +178,7 @@ export default function CoachBookingsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <PlayerPageHeader
         badge="Coach"
         title="My Bookings"
@@ -204,13 +204,13 @@ export default function CoachBookingsPage() {
         </Card>
       ) : (
         <div className="space-y-6">
-          <StaggerContainer className="grid gap-4 md:grid-cols-4">
+          <StaggerContainer className="grid gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StaggerItem className="h-full">
               <Card className="glass-panel premium-shadow hover:shadow-xl transition-all h-full">
                 <p className="mb-1 text-sm text-slate-600 dark:text-slate-400">
                   Total Bookings
                 </p>
-                <p className="text-3xl font-bold text-slate-900 dark:text-white">
+                <p className="text-2xl font-bold text-slate-900 sm:text-3xl dark:text-white">
                   {stats.total}
                 </p>
               </Card>
@@ -220,7 +220,7 @@ export default function CoachBookingsPage() {
                 <p className="mb-1 text-sm text-slate-600 dark:text-slate-400">
                   Confirmed
                 </p>
-                <p className="text-3xl font-bold text-green-600">
+                <p className="text-2xl font-bold text-green-600 sm:text-3xl">
                   {stats.confirmed}
                 </p>
               </Card>
@@ -230,7 +230,7 @@ export default function CoachBookingsPage() {
                 <p className="mb-1 text-sm text-slate-600 dark:text-slate-400">
                   Completed
                 </p>
-                <p className="text-3xl font-bold text-emerald-600">
+                <p className="text-2xl font-bold text-emerald-600 sm:text-3xl">
                   {stats.completed}
                 </p>
               </Card>
@@ -240,7 +240,7 @@ export default function CoachBookingsPage() {
                 <p className="mb-1 text-sm text-slate-600 dark:text-slate-400">
                   Tracked Earnings
                 </p>
-                <p className="text-3xl font-bold text-power-orange">
+                <p className="text-2xl font-bold text-power-orange sm:text-3xl">
                   ₹{stats.totalEarnings}
                 </p>
               </Card>
@@ -266,7 +266,7 @@ export default function CoachBookingsPage() {
                         </span>
                       </div>
 
-                      <div className="grid gap-4 md:grid-cols-2">
+                      <div className="grid gap-4 lg:grid-cols-2">
                         <div>
                           <p className="mb-1 text-sm text-slate-600">
                             Date & Time
@@ -360,11 +360,12 @@ export default function CoachBookingsPage() {
                       </div>
 
                       {booking.status === "PENDING_CONFIRMATION" && (
-                        <div className="mt-4 flex flex-wrap gap-2">
+                        <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap">
                           <Button
                             variant="primary"
                             onClick={() => handleApproveBooking(booking.id)}
                             disabled={approvingId === booking.id}
+                            className="w-full sm:w-auto"
                           >
                             {approvingId === booking.id
                               ? "Confirming..."
@@ -374,6 +375,7 @@ export default function CoachBookingsPage() {
                             variant="outline"
                             onClick={() => handleRejectBooking(booking.id)}
                             disabled={rejectingId === booking.id}
+                            className="w-full sm:w-auto"
                           >
                             {rejectingId === booking.id
                               ? "Rejecting..."
@@ -391,19 +393,19 @@ export default function CoachBookingsPage() {
           {totalPages > 1 && (
             <SlideUp delay={0.2} yOffset={10}>
               <Card className="glass-panel">
-                <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm text-slate-600">
                     Page {currentPage} of {totalPages} •{" "}
                     {allCoachBookings.length} bookings
                   </div>
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-2 gap-2 sm:flex">
                     <Button
                       variant="secondary"
                       onClick={() =>
                         setCurrentPage((page) => Math.max(1, page - 1))
                       }
                       disabled={currentPage === 1 || isLoading}
-                      className="flex items-center gap-2"
+                      className="flex items-center justify-center gap-2"
                     >
                       <ChevronLeft className="h-4 w-4" />
                       Previous
@@ -414,7 +416,7 @@ export default function CoachBookingsPage() {
                         setCurrentPage((page) => Math.min(totalPages, page + 1))
                       }
                       disabled={currentPage === totalPages || isLoading}
-                      className="flex items-center gap-2"
+                      className="flex items-center justify-center gap-2"
                     >
                       Next
                       <ChevronRight className="h-4 w-4" />

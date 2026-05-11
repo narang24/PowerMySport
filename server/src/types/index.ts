@@ -164,6 +164,10 @@ export interface DayHours {
   isOpen: boolean;
   openTime?: string; // Format: "HH:MM" (24-hour)
   closeTime?: string; // Format: "HH:MM" (24-hour)
+  slots?: Array<{
+    startTime: string; // Format: "HH:MM" (24-hour)
+    endTime: string; // Format: "HH:MM" (24-hour)
+  }>;
 }
 
 export interface OpeningHours {

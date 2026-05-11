@@ -1,8 +1,12 @@
 "use client";
 
 import { Button } from "@/modules/shared/ui/Button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 import { toast } from "@/lib/toast";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import type {
   AcademyPayoutFrequency,
   AcademyStep6Payload,
@@ -123,122 +127,121 @@ export default function Step6Payouts({
   };
 
   return (
-    <div className="space-y-6 rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-xs md:p-8">
+    <div className="space-y-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-slate-900 mb-2">
           Step 6: Payouts & Policies
         </h2>
         <p className="text-slate-600">
-          Final step - Set up your payment details
+          Final step - Set up your payment details and policies
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Payment method error */}
         {fieldErrors.paymentMethod && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <p className="text-red-600 text-sm">{fieldErrors.paymentMethod}</p>
+          <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg p-4">
+            <AlertCircle size={18} className="text-red-600 mt-0.5 shrink-0" />
+            <p className="text-red-700 text-sm">{fieldErrors.paymentMethod}</p>
           </div>
         )}
 
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-          <p className="text-amber-800 text-sm">
-            💡 Provide either a <strong>bank account</strong> or{" "}
+        <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <CheckCircle2 size={18} className="text-blue-600 mt-0.5 shrink-0" />
+          <p className="text-blue-900 text-sm">
+            Provide either a <strong>bank account</strong> or{" "}
             <strong>UPI ID</strong> (or both) for receiving payouts.
           </p>
         </div>
 
-        {/* Bank Account */}
-        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-          <h3 className="font-semibold text-slate-900 mb-4">Bank Account</h3>
+        {/* Bank Account Section */}
+        <fieldset className="rounded-lg bg-slate-50 p-6 border border-slate-200 space-y-4">
+          <legend className="text-base font-bold text-slate-900 mb-4">
+            Bank Account Details
+          </legend>
 
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-slate-900 mb-1">
-                Account Holder Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.bankAccountName}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    bankAccountName: e.target.value,
-                  }))
-                }
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange ${
-                  fieldErrors.bankAccountName
-                    ? "border-red-300 bg-red-50"
-                    : "border-slate-300 bg-white"
-                }`}
-                disabled={isSubmitting}
-              />
-              {fieldErrors.bankAccountName && (
-                <p className="text-red-600 text-xs mt-1">
-                  {fieldErrors.bankAccountName}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-900 mb-1">
-                Account Number <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.bankAccountNumber}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    bankAccountNumber: e.target.value.replace(/\D/g, ""),
-                  }))
-                }
-                placeholder="1234567890123456"
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange ${
-                  fieldErrors.bankAccountNumber
-                    ? "border-red-300 bg-red-50"
-                    : "border-slate-300 bg-white"
-                }`}
-                disabled={isSubmitting}
-              />
-              {fieldErrors.bankAccountNumber && (
-                <p className="text-red-600 text-xs mt-1">
-                  {fieldErrors.bankAccountNumber}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-900 mb-1">
-                IFSC Code <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.bankIfsc}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    bankIfsc: e.target.value.toUpperCase(),
-                  }))
-                }
-                placeholder="SBIN0001234"
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange ${
-                  fieldErrors.bankIfsc
-                    ? "border-red-300 bg-red-50"
-                    : "border-slate-300 bg-white"
-                }`}
-                disabled={isSubmitting}
-              />
-              {fieldErrors.bankIfsc && (
-                <p className="text-red-600 text-xs mt-1">
-                  {fieldErrors.bankIfsc}
-                </p>
-              )}
-            </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-900 mb-2">
+              Account Holder Name <span className="text-red-500">*</span>
+            </label>
+            <Input
+              type="text"
+              value={formData.bankAccountName}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  bankAccountName: e.target.value,
+                }))
+              }
+              placeholder="As per your bank records"
+              disabled={isSubmitting}
+              className={
+                fieldErrors.bankAccountName ? "border-red-300 bg-red-50" : ""
+              }
+            />
+            {fieldErrors.bankAccountName && (
+              <p className="text-red-600 text-xs mt-1">
+                {fieldErrors.bankAccountName}
+              </p>
+            )}
           </div>
-        </div>
 
-        {/* UPI (Optional) */}
+          <div>
+            <label className="block text-sm font-semibold text-slate-900 mb-2">
+              Account Number <span className="text-red-500">*</span>
+            </label>
+            <Input
+              type="text"
+              value={formData.bankAccountNumber}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  bankAccountNumber: e.target.value.replace(/\D/g, ""),
+                }))
+              }
+              placeholder="1234567890123456"
+              disabled={isSubmitting}
+              className={
+                fieldErrors.bankAccountNumber ? "border-red-300 bg-red-50" : ""
+              }
+            />
+            {fieldErrors.bankAccountNumber && (
+              <p className="text-red-600 text-xs mt-1">
+                {fieldErrors.bankAccountNumber}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-900 mb-2">
+              IFSC Code <span className="text-red-500">*</span>
+            </label>
+            <Input
+              type="text"
+              value={formData.bankIfsc}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  bankIfsc: e.target.value.toUpperCase(),
+                }))
+              }
+              placeholder="e.g. SBIN0001234"
+              maxLength={11}
+              disabled={isSubmitting}
+              className={fieldErrors.bankIfsc ? "border-red-300 bg-red-50" : ""}
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              Format: 4 letters + 0 + 6 alphanumeric
+            </p>
+            {fieldErrors.bankIfsc && (
+              <p className="text-red-600 text-xs mt-1">
+                {fieldErrors.bankIfsc}
+              </p>
+            )}
+          </div>
+        </fieldset>
+
+        {/* UPI Optional */}
         <div>
           <label className="block text-sm font-semibold text-slate-900 mb-2">
             UPI ID{" "}
@@ -246,7 +249,7 @@ export default function Step6Payouts({
               (optional if bank account provided)
             </span>
           </label>
-          <input
+          <Input
             type="text"
             value={formData.upiId}
             onChange={(e) => {
@@ -262,13 +265,12 @@ export default function Step6Payouts({
                 }));
             }}
             placeholder="username@upi"
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange ${
-              fieldErrors.upiId
-                ? "border-red-300 bg-red-50"
-                : "border-slate-300 bg-white"
-            }`}
             disabled={isSubmitting}
+            className={fieldErrors.upiId ? "border-red-300 bg-red-50" : ""}
           />
+          <p className="text-xs text-slate-500 mt-1">
+            Format: name@bankname (e.g., john@okaxis)
+          </p>
           {fieldErrors.upiId && (
             <p className="text-red-600 text-xs mt-1">{fieldErrors.upiId}</p>
           )}
@@ -287,86 +289,87 @@ export default function Step6Payouts({
                 payoutFrequency: e.target.value as AcademyPayoutFrequency,
               }))
             }
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange"
+            className="w-full h-10 px-3 rounded-md border border-slate-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-power-orange focus:ring-offset-2"
             disabled={isSubmitting}
           >
             <option value="weekly">Weekly</option>
-            <option value="biweekly">Bi-weekly</option>
+            <option value="biweekly">Bi-weekly (Every 2 weeks)</option>
             <option value="monthly">Monthly</option>
           </select>
         </div>
 
-        {/* Policies */}
-        <div>
-          <label className="block text-sm font-semibold text-slate-900 mb-2">
-            Cancellation Policy <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            value={formData.cancellationPolicy}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                cancellationPolicy: e.target.value,
-              }))
-            }
-            placeholder="Describe your cancellation policy (e.g., 24 hours before session)"
-            rows={3}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange ${
-              fieldErrors.cancellationPolicy
-                ? "border-red-300 bg-red-50"
-                : "border-slate-300 bg-white"
-            }`}
-            disabled={isSubmitting}
-          />
-          {fieldErrors.cancellationPolicy && (
-            <p className="text-red-600 text-xs mt-1">
-              {fieldErrors.cancellationPolicy}
-            </p>
-          )}
-        </div>
+        {/* Policies Section */}
+        <fieldset className="rounded-lg bg-slate-50 p-6 border border-slate-200 space-y-4">
+          <legend className="text-base font-bold text-slate-900 mb-4">
+            Policies
+          </legend>
 
-        <div>
-          <label className="block text-sm font-semibold text-slate-900 mb-2">
-            Refund Policy <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            value={formData.refundPolicy}
-            onChange={(e) =>
-              setFormData((prev) => ({
-                ...prev,
-                refundPolicy: e.target.value,
-              }))
-            }
-            placeholder="Describe your refund policy"
-            rows={3}
-            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-power-orange ${
-              fieldErrors.refundPolicy
-                ? "border-red-300 bg-red-50"
-                : "border-slate-300 bg-white"
-            }`}
-            disabled={isSubmitting}
-          />
-          {fieldErrors.refundPolicy && (
-            <p className="text-red-600 text-xs mt-1">
-              {fieldErrors.refundPolicy}
-            </p>
-          )}
-        </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-900 mb-2">
+              Cancellation Policy <span className="text-red-500">*</span>
+            </label>
+            <Textarea
+              value={formData.cancellationPolicy}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  cancellationPolicy: e.target.value,
+                }))
+              }
+              placeholder="Describe your cancellation policy (e.g., 24 hours before session)"
+              rows={3}
+              disabled={isSubmitting}
+              className={
+                fieldErrors.cancellationPolicy ? "border-red-300 bg-red-50" : ""
+              }
+            />
+            {fieldErrors.cancellationPolicy && (
+              <p className="text-red-600 text-xs mt-1">
+                {fieldErrors.cancellationPolicy}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-900 mb-2">
+              Refund Policy <span className="text-red-500">*</span>
+            </label>
+            <Textarea
+              value={formData.refundPolicy}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  refundPolicy: e.target.value,
+                }))
+              }
+              placeholder="Describe your refund policy"
+              rows={3}
+              disabled={isSubmitting}
+              className={
+                fieldErrors.refundPolicy ? "border-red-300 bg-red-50" : ""
+              }
+            />
+            {fieldErrors.refundPolicy && (
+              <p className="text-red-600 text-xs mt-1">
+                {fieldErrors.refundPolicy}
+              </p>
+            )}
+          </div>
+        </fieldset>
 
         {/* Terms Agreement */}
         <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
           <label className="flex items-start gap-3 cursor-pointer">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={formData.agreedToTerms}
-              onChange={(e) =>
+              onCheckedChange={(checked) =>
                 setFormData((prev) => ({
                   ...prev,
-                  agreedToTerms: e.target.checked,
+                  agreedToTerms: checked as boolean,
                 }))
               }
-              className="w-4 h-4 rounded mt-0.5 shrink-0"
               disabled={isSubmitting}
+              className="mt-1"
             />
             <span className="text-sm text-blue-900">
               I agree to PowerMySport Terms & Conditions and confirm all
@@ -380,6 +383,7 @@ export default function Step6Payouts({
           )}
         </div>
 
+        {/* Actions */}
         <div className="flex gap-3 pt-4">
           {onBack && (
             <Button
@@ -393,8 +397,9 @@ export default function Step6Payouts({
           )}
           <Button
             type="submit"
+            variant="primary"
             disabled={isSubmitting || loading}
-            className="flex-1"
+            fullWidth
           >
             {isSubmitting ? "Submitting..." : "Submit for Approval"}
           </Button>

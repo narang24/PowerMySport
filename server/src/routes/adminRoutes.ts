@@ -1,13 +1,6 @@
 import { Router } from "express";
 import { S3Service } from "../services/S3Service";
-import {
-  createCoachPlanAdminHandler,
-  listCoachPlansAdminHandler,
-  listCoachSubscriptionsAdminHandler,
-  listOverrideRequestsAdminHandler,
-  reviewOverrideRequestAdminHandler,
-  updateCoachPlanAdminHandler,
-} from "../controllers/coachSubscriptionController";
+import { listCoachSubscriptionsAdminHandler } from "../controllers/coachSubscriptionController";
 import {
   listPendingPayouts,
   markPayoutsAsPaid,
@@ -51,13 +44,11 @@ import {
 } from "../middleware/auth";
 import {
   adminChangePasswordSchema,
-  adminCreateCoachPlanSchema,
   adminCreateCoachSchema,
   adminCreateSchema,
   adminCreateVenueSchema,
   adminReviewCoachOverrideSchema,
   adminLoginSchema,
-  adminUpdateCoachPlanSchema,
   communityModerationActionSchema,
   promoCreateSchema,
 } from "../middleware/schemas";
@@ -236,30 +227,7 @@ router.post(
   submitCoachVerificationAdminHandler,
 );
 
-// Coach subscription plan management
-router.get(
-  "/coach-plans",
-  authMiddleware,
-  adminMiddleware,
-  requirePermission("coach-subscriptions:view"),
-  listCoachPlansAdminHandler,
-);
-router.post(
-  "/coach-plans",
-  authMiddleware,
-  adminMiddleware,
-  requirePermission("coach-subscriptions:create"),
-  validateRequest(adminCreateCoachPlanSchema),
-  createCoachPlanAdminHandler,
-);
-router.patch(
-  "/coach-plans/:planId",
-  authMiddleware,
-  adminMiddleware,
-  requirePermission("coach-subscriptions:manage"),
-  validateRequest(adminUpdateCoachPlanSchema),
-  updateCoachPlanAdminHandler,
-);
+// Admin coach-plans removed — coaches create packages now
 
 // Coach subscriptions operations
 router.get(
@@ -269,21 +237,7 @@ router.get(
   requirePermission("coach-subscriptions:view"),
   listCoachSubscriptionsAdminHandler,
 );
-router.get(
-  "/coach-subscription-overrides",
-  authMiddleware,
-  adminMiddleware,
-  requirePermission("coach-subscriptions:override-review"),
-  listOverrideRequestsAdminHandler,
-);
-router.patch(
-  "/coach-subscription-overrides/:requestId/review",
-  authMiddleware,
-  adminMiddleware,
-  requirePermission("coach-subscriptions:override-review"),
-  validateRequest(adminReviewCoachOverrideSchema),
-  reviewOverrideRequestAdminHandler,
-);
+// Coach subscription override admin endpoints removed (deprecated)
 
 // Refund & dispute handling
 router.post(

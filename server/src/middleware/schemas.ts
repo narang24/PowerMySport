@@ -146,168 +146,85 @@ const geoLocationSchema = z.object({
     ),
 });
 
+const timeStringSchema = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format");
+
+const openingSlotSchema = z.object({
+  startTime: timeStringSchema,
+  endTime: timeStringSchema,
+});
+
+const dayHoursSchema = z
+  .object({
+    isOpen: z.boolean(),
+    openTime: timeStringSchema.optional(),
+    closeTime: timeStringSchema.optional(),
+    slots: z.array(openingSlotSchema).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const normalizedSlots =
+      data.slots && data.slots.length > 0
+        ? data.slots
+        : data.openTime && data.closeTime
+          ? [{ startTime: data.openTime, endTime: data.closeTime }]
+          : [];
+
+    if (!data.isOpen) {
+      return;
+    }
+
+    if (normalizedSlots.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "At least one time slot is required when open",
+      });
+      return;
+    }
+
+    const toMinutes = (time: string) => {
+      const [h, m] = time.split(":").map(Number);
+      return (h || 0) * 60 + (m || 0);
+    };
+
+    const sortedSlots = [...normalizedSlots].sort(
+      (a, b) => toMinutes(a.startTime) - toMinutes(b.startTime),
+    );
+
+    for (let index = 0; index < sortedSlots.length; index += 1) {
+      const slot = sortedSlots[index];
+      if (!slot || toMinutes(slot.startTime) >= toMinutes(slot.endTime)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Each time slot must have start time before end time",
+        });
+        return;
+      }
+
+      if (index > 0) {
+        const previousSlot = sortedSlots[index - 1];
+        if (
+          previousSlot &&
+          toMinutes(slot.startTime) < toMinutes(previousSlot.endTime)
+        ) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Time slots in a day cannot overlap",
+          });
+          return;
+        }
+      }
+    }
+  });
+
 const openingHoursSchema = z.object({
-  monday: z
-    .object({
-      isOpen: z.boolean(),
-      openTime: z
-        .string()
-        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-        .optional(),
-      closeTime: z
-        .string()
-        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-        .optional(),
-    })
-    .refine(
-      (data) => {
-        if (data.isOpen) {
-          return (
-            data.openTime && data.closeTime && data.openTime < data.closeTime
-          );
-        }
-        return true;
-      },
-      { message: "Opening time must be before closing time when open" },
-    ),
-  tuesday: z
-    .object({
-      isOpen: z.boolean(),
-      openTime: z
-        .string()
-        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-        .optional(),
-      closeTime: z
-        .string()
-        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-        .optional(),
-    })
-    .refine(
-      (data) => {
-        if (data.isOpen) {
-          return (
-            data.openTime && data.closeTime && data.openTime < data.closeTime
-          );
-        }
-        return true;
-      },
-      { message: "Opening time must be before closing time when open" },
-    ),
-  wednesday: z
-    .object({
-      isOpen: z.boolean(),
-      openTime: z
-        .string()
-        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-        .optional(),
-      closeTime: z
-        .string()
-        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-        .optional(),
-    })
-    .refine(
-      (data) => {
-        if (data.isOpen) {
-          return (
-            data.openTime && data.closeTime && data.openTime < data.closeTime
-          );
-        }
-        return true;
-      },
-      { message: "Opening time must be before closing time when open" },
-    ),
-  thursday: z
-    .object({
-      isOpen: z.boolean(),
-      openTime: z
-        .string()
-        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-        .optional(),
-      closeTime: z
-        .string()
-        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-        .optional(),
-    })
-    .refine(
-      (data) => {
-        if (data.isOpen) {
-          return (
-            data.openTime && data.closeTime && data.openTime < data.closeTime
-          );
-        }
-        return true;
-      },
-      { message: "Opening time must be before closing time when open" },
-    ),
-  friday: z
-    .object({
-      isOpen: z.boolean(),
-      openTime: z
-        .string()
-        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-        .optional(),
-      closeTime: z
-        .string()
-        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-        .optional(),
-    })
-    .refine(
-      (data) => {
-        if (data.isOpen) {
-          return (
-            data.openTime && data.closeTime && data.openTime < data.closeTime
-          );
-        }
-        return true;
-      },
-      { message: "Opening time must be before closing time when open" },
-    ),
-  saturday: z
-    .object({
-      isOpen: z.boolean(),
-      openTime: z
-        .string()
-        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-        .optional(),
-      closeTime: z
-        .string()
-        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-        .optional(),
-    })
-    .refine(
-      (data) => {
-        if (data.isOpen) {
-          return (
-            data.openTime && data.closeTime && data.openTime < data.closeTime
-          );
-        }
-        return true;
-      },
-      { message: "Opening time must be before closing time when open" },
-    ),
-  sunday: z
-    .object({
-      isOpen: z.boolean(),
-      openTime: z
-        .string()
-        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-        .optional(),
-      closeTime: z
-        .string()
-        .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-        .optional(),
-    })
-    .refine(
-      (data) => {
-        if (data.isOpen) {
-          return (
-            data.openTime && data.closeTime && data.openTime < data.closeTime
-          );
-        }
-        return true;
-      },
-      { message: "Opening time must be before closing time when open" },
-    ),
+  monday: dayHoursSchema,
+  tuesday: dayHoursSchema,
+  wednesday: dayHoursSchema,
+  thursday: dayHoursSchema,
+  friday: dayHoursSchema,
+  saturday: dayHoursSchema,
+  sunday: dayHoursSchema,
 });
 
 export const venueSchema = z.object({
@@ -763,225 +680,7 @@ export const venueOnboardingStep2Schema = z
     sportPricing: z.record(z.string(), z.number().min(0)).optional(),
     amenities: z.array(z.string()).optional().default([]),
     address: z.string().min(5, "Address must be at least 5 characters"),
-    openingHours: z.object({
-      monday: z
-        .object({
-          isOpen: z.boolean(),
-          openTime: z
-            .string()
-            .regex(
-              /^([01]\d|2[0-3]):([0-5]\d)$/,
-              "Time must be in HH:MM format",
-            )
-            .optional(),
-          closeTime: z
-            .string()
-            .regex(
-              /^([01]\d|2[0-3]):([0-5]\d)$/,
-              "Time must be in HH:MM format",
-            )
-            .optional(),
-        })
-        .refine(
-          (data) => {
-            if (data.isOpen) {
-              return (
-                data.openTime &&
-                data.closeTime &&
-                data.openTime < data.closeTime
-              );
-            }
-            return true;
-          },
-          { message: "Opening time must be before closing time when open" },
-        ),
-      tuesday: z
-        .object({
-          isOpen: z.boolean(),
-          openTime: z
-            .string()
-            .regex(
-              /^([01]\d|2[0-3]):([0-5]\d)$/,
-              "Time must be in HH:MM format",
-            )
-            .optional(),
-          closeTime: z
-            .string()
-            .regex(
-              /^([01]\d|2[0-3]):([0-5]\d)$/,
-              "Time must be in HH:MM format",
-            )
-            .optional(),
-        })
-        .refine(
-          (data) => {
-            if (data.isOpen) {
-              return (
-                data.openTime &&
-                data.closeTime &&
-                data.openTime < data.closeTime
-              );
-            }
-            return true;
-          },
-          { message: "Opening time must be before closing time when open" },
-        ),
-      wednesday: z
-        .object({
-          isOpen: z.boolean(),
-          openTime: z
-            .string()
-            .regex(
-              /^([01]\d|2[0-3]):([0-5]\d)$/,
-              "Time must be in HH:MM format",
-            )
-            .optional(),
-          closeTime: z
-            .string()
-            .regex(
-              /^([01]\d|2[0-3]):([0-5]\d)$/,
-              "Time must be in HH:MM format",
-            )
-            .optional(),
-        })
-        .refine(
-          (data) => {
-            if (data.isOpen) {
-              return (
-                data.openTime &&
-                data.closeTime &&
-                data.openTime < data.closeTime
-              );
-            }
-            return true;
-          },
-          { message: "Opening time must be before closing time when open" },
-        ),
-      thursday: z
-        .object({
-          isOpen: z.boolean(),
-          openTime: z
-            .string()
-            .regex(
-              /^([01]\d|2[0-3]):([0-5]\d)$/,
-              "Time must be in HH:MM format",
-            )
-            .optional(),
-          closeTime: z
-            .string()
-            .regex(
-              /^([01]\d|2[0-3]):([0-5]\d)$/,
-              "Time must be in HH:MM format",
-            )
-            .optional(),
-        })
-        .refine(
-          (data) => {
-            if (data.isOpen) {
-              return (
-                data.openTime &&
-                data.closeTime &&
-                data.openTime < data.closeTime
-              );
-            }
-            return true;
-          },
-          { message: "Opening time must be before closing time when open" },
-        ),
-      friday: z
-        .object({
-          isOpen: z.boolean(),
-          openTime: z
-            .string()
-            .regex(
-              /^([01]\d|2[0-3]):([0-5]\d)$/,
-              "Time must be in HH:MM format",
-            )
-            .optional(),
-          closeTime: z
-            .string()
-            .regex(
-              /^([01]\d|2[0-3]):([0-5]\d)$/,
-              "Time must be in HH:MM format",
-            )
-            .optional(),
-        })
-        .refine(
-          (data) => {
-            if (data.isOpen) {
-              return (
-                data.openTime &&
-                data.closeTime &&
-                data.openTime < data.closeTime
-              );
-            }
-            return true;
-          },
-          { message: "Opening time must be before closing time when open" },
-        ),
-      saturday: z
-        .object({
-          isOpen: z.boolean(),
-          openTime: z
-            .string()
-            .regex(
-              /^([01]\d|2[0-3]):([0-5]\d)$/,
-              "Time must be in HH:MM format",
-            )
-            .optional(),
-          closeTime: z
-            .string()
-            .regex(
-              /^([01]\d|2[0-3]):([0-5]\d)$/,
-              "Time must be in HH:MM format",
-            )
-            .optional(),
-        })
-        .refine(
-          (data) => {
-            if (data.isOpen) {
-              return (
-                data.openTime &&
-                data.closeTime &&
-                data.openTime < data.closeTime
-              );
-            }
-            return true;
-          },
-          { message: "Opening time must be before closing time when open" },
-        ),
-      sunday: z
-        .object({
-          isOpen: z.boolean(),
-          openTime: z
-            .string()
-            .regex(
-              /^([01]\d|2[0-3]):([0-5]\d)$/,
-              "Time must be in HH:MM format",
-            )
-            .optional(),
-          closeTime: z
-            .string()
-            .regex(
-              /^([01]\d|2[0-3]):([0-5]\d)$/,
-              "Time must be in HH:MM format",
-            )
-            .optional(),
-        })
-        .refine(
-          (data) => {
-            if (data.isOpen) {
-              return (
-                data.openTime &&
-                data.closeTime &&
-                data.openTime < data.closeTime
-              );
-            }
-            return true;
-          },
-          { message: "Opening time must be before closing time when open" },
-        ),
-    }),
+    openingHours: openingHoursSchema,
     description: z
       .string()
       .max(500, "Description cannot exceed 500 characters")
@@ -1251,169 +950,7 @@ export const adminCreateVenueSchema = z.object({
         },
       ),
   }),
-  openingHours: z.object({
-    monday: z
-      .object({
-        isOpen: z.boolean(),
-        openTime: z
-          .string()
-          .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-          .optional(),
-        closeTime: z
-          .string()
-          .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-          .optional(),
-      })
-      .refine(
-        (data) => {
-          if (data.isOpen) {
-            return (
-              data.openTime && data.closeTime && data.openTime < data.closeTime
-            );
-          }
-          return true;
-        },
-        { message: "Opening time must be before closing time when open" },
-      ),
-    tuesday: z
-      .object({
-        isOpen: z.boolean(),
-        openTime: z
-          .string()
-          .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-          .optional(),
-        closeTime: z
-          .string()
-          .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-          .optional(),
-      })
-      .refine(
-        (data) => {
-          if (data.isOpen) {
-            return (
-              data.openTime && data.closeTime && data.openTime < data.closeTime
-            );
-          }
-          return true;
-        },
-        { message: "Opening time must be before closing time when open" },
-      ),
-    wednesday: z
-      .object({
-        isOpen: z.boolean(),
-        openTime: z
-          .string()
-          .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-          .optional(),
-        closeTime: z
-          .string()
-          .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-          .optional(),
-      })
-      .refine(
-        (data) => {
-          if (data.isOpen) {
-            return (
-              data.openTime && data.closeTime && data.openTime < data.closeTime
-            );
-          }
-          return true;
-        },
-        { message: "Opening time must be before closing time when open" },
-      ),
-    thursday: z
-      .object({
-        isOpen: z.boolean(),
-        openTime: z
-          .string()
-          .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-          .optional(),
-        closeTime: z
-          .string()
-          .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-          .optional(),
-      })
-      .refine(
-        (data) => {
-          if (data.isOpen) {
-            return (
-              data.openTime && data.closeTime && data.openTime < data.closeTime
-            );
-          }
-          return true;
-        },
-        { message: "Opening time must be before closing time when open" },
-      ),
-    friday: z
-      .object({
-        isOpen: z.boolean(),
-        openTime: z
-          .string()
-          .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-          .optional(),
-        closeTime: z
-          .string()
-          .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-          .optional(),
-      })
-      .refine(
-        (data) => {
-          if (data.isOpen) {
-            return (
-              data.openTime && data.closeTime && data.openTime < data.closeTime
-            );
-          }
-          return true;
-        },
-        { message: "Opening time must be before closing time when open" },
-      ),
-    saturday: z
-      .object({
-        isOpen: z.boolean(),
-        openTime: z
-          .string()
-          .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-          .optional(),
-        closeTime: z
-          .string()
-          .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-          .optional(),
-      })
-      .refine(
-        (data) => {
-          if (data.isOpen) {
-            return (
-              data.openTime && data.closeTime && data.openTime < data.closeTime
-            );
-          }
-          return true;
-        },
-        { message: "Opening time must be before closing time when open" },
-      ),
-    sunday: z
-      .object({
-        isOpen: z.boolean(),
-        openTime: z
-          .string()
-          .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-          .optional(),
-        closeTime: z
-          .string()
-          .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Time must be in HH:MM format")
-          .optional(),
-      })
-      .refine(
-        (data) => {
-          if (data.isOpen) {
-            return (
-              data.openTime && data.closeTime && data.openTime < data.closeTime
-            );
-          }
-          return true;
-        },
-        { message: "Opening time must be before closing time when open" },
-      ),
-  }),
+  openingHours: openingHoursSchema,
   allowExternalCoaches: z.boolean().optional().default(true),
   approvalStatus: z
     .enum(["PENDING", "APPROVED", "REJECTED", "REVIEW"])

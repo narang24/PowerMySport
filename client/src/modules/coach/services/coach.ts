@@ -5,6 +5,8 @@ import {
   CoachPlanBillingCycle,
   CoachSubscription,
   CoachSubscriptionOverrideRequest,
+  CoachSubscriptionPackage,
+  CoachSubscriptionPackageCreateInput,
   Coach,
   CoachVerificationDocument,
   IAvailability,
@@ -196,5 +198,157 @@ export const coachApi = {
       `/coaches/subscription/override-requests${query.toString() ? `?${query.toString()}` : ""}`,
     );
     return response.data;
+  },
+
+  // New: coach-owned subscription packages
+  listMyPackages: async (): Promise<
+    ApiResponse<{ packages: CoachSubscriptionPackage[] }>
+  > => {
+    const response = await axiosInstance.get("/coaches/subscription-packages");
+    return response.data;
+  },
+
+  createPackage: async (
+    payload: CoachSubscriptionPackageCreateInput,
+  ): Promise<ApiResponse<{ package: CoachSubscriptionPackage }>> => {
+    const response = await axiosInstance.post(
+      "/coaches/subscription-packages",
+      payload,
+    );
+    return response.data;
+  },
+
+  updatePackage: async (
+    packageId: string,
+    payload: Partial<CoachSubscriptionPackageCreateInput>,
+  ): Promise<ApiResponse<{ package: CoachSubscriptionPackage }>> => {
+    const response = await axiosInstance.put(
+      `/coaches/subscription-packages/${packageId}`,
+      payload,
+    );
+    return response.data;
+  },
+
+  deletePackage: async (packageId: string): Promise<ApiResponse<{}>> => {
+    const response = await axiosInstance.delete(
+      `/coaches/subscription-packages/${packageId}`,
+    );
+    return response.data;
+  },
+
+  getActiveSubscriptionsForCoach: async (): Promise<
+    ApiResponse<{ subscriptions: any[] }>
+  > => {
+    const response = await axiosInstance.get(
+      "/coaches/subscription-packages/active-subscriptions",
+    );
+    return response.data;
+  },
+
+  getCoachActiveSubscriptions: async (): Promise<
+    ApiResponse<{ subscriptions: any[] }>
+  > => {
+    const response = await axiosInstance.get(
+      "/coaches/subscription-packages/active-subscriptions",
+    );
+    return response.data;
+  },
+
+  getSubscriptionRevenue: async (params?: {
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<{ revenue: any }>> => {
+    const query = new URLSearchParams();
+    if (params?.startDate) query.append("startDate", params.startDate);
+    if (params?.endDate) query.append("endDate", params.endDate);
+    const response = await axiosInstance.get(
+      `/coaches/subscription-packages/revenue${query.toString() ? `?${query.toString()}` : ""}`,
+    );
+    return response.data;
+  },
+
+  // Public: get a coach's packages
+  getCoachPackages: async (
+    coachId: string,
+  ): Promise<ApiResponse<{ packages: CoachSubscriptionPackage[] }>> => {
+    const response = await axiosInstance.get(
+      `/coaches/${coachId}/subscription-packages`,
+    );
+    return response.data;
+  },
+
+  // New: subscribe to a package
+  subscribeToPackage: async (payload: {
+    coachId: string;
+    packageId: string;
+  }): Promise<ApiResponse<{ subscription: any }>> => {
+    const response = await axiosInstance.post(
+      "/coaches/subscriptions",
+      payload,
+    );
+    return response.data;
+  },
+
+  cancelCoachSubscription: async (
+    subscriptionId: string,
+  ): Promise<ApiResponse<{ subscription: CoachSubscription }>> => {
+    const response = await axiosInstance.delete(
+      `/coaches/subscriptions/${subscriptionId}`,
+    );
+    return response.data;
+  },
+
+  getMySubscriptions: async (params?: {
+    coachId?: string;
+  }): Promise<ApiResponse<{ subscriptions: CoachSubscription[] }>> => {
+    const query = new URLSearchParams();
+    if (params?.coachId) {
+      query.append("coachId", params.coachId);
+    }
+
+    const response = await axiosInstance.get(
+      `/coaches/subscriptions${query.toString() ? `?${query.toString()}` : ""}`,
+    );
+    return response.data;
+  },
+
+  initiateSubscriptionPayment: async (payload: {
+    coachId: string;
+    packageId: string;
+  }): Promise<{
+    redirectUrl: string;
+    merchantOrderId: string;
+    state?: string;
+    amountBreakdown?: {
+      baseAmount: number;
+      platformFee: number;
+      taxAmount: number;
+      total: number;
+    };
+  }> => {
+    const response = await axiosInstance.post(
+      "/coaches/subscriptions/phonepe/initiate",
+      payload,
+    );
+    return response.data.data;
+  },
+
+  verifySubscriptionPaymentStatus: async (
+    merchantOrderId: string,
+  ): Promise<{
+    state?: string;
+    merchantOrderId: string;
+    subscriptionId?: string | null;
+    amountBreakdown?: {
+      baseAmount: number;
+      platformFee: number;
+      taxAmount: number;
+      total: number;
+    };
+  }> => {
+    const response = await axiosInstance.get(
+      `/coaches/subscriptions/phonepe/status/${merchantOrderId}`,
+    );
+    return response.data.data;
   },
 };

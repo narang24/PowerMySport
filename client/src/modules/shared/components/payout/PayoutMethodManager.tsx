@@ -3,6 +3,8 @@
 import { toast } from "@/lib/toast";
 import { IPayoutMethod, PayoutMethodType } from "@/types";
 import { cn } from "@/utils/cn";
+import { Button } from "@/modules/shared/ui/Button";
+import { Input } from "@/components/ui/input";
 import {
   AlertTriangle,
   BadgeCheck,
@@ -17,6 +19,8 @@ import {
   Trash2,
   User,
   Wallet,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 
@@ -45,27 +49,22 @@ const maskAccountNumber = (num: string) =>
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function FieldRow({
-  icon: Icon,
   label,
   value,
   masked,
 }: {
-  icon: React.ElementType;
   label: string;
   value: string;
   masked?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-3 py-3 border-b border-white/5 last:border-0">
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 shrink-0">
-        <Icon size={15} className="text-power-orange" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-xs text-slate-500 uppercase tracking-wider">{label}</p>
-        <p className="text-sm font-medium text-slate-200 truncate">
-          {masked ? maskAccountNumber(value) : value}
-        </p>
-      </div>
+    <div className="flex items-center justify-between py-2">
+      <p className="text-xs text-slate-600 uppercase tracking-wider font-medium">
+        {label}
+      </p>
+      <p className="text-sm font-semibold text-slate-900 truncate text-right ml-3">
+        {masked ? maskAccountNumber(value) : value}
+      </p>
     </div>
   );
 }
@@ -74,10 +73,10 @@ function StatusBadge({ hasMethod }: { hasMethod: boolean }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
+        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold",
         hasMethod
-          ? "bg-emerald-500/15 text-emerald-400"
-          : "bg-amber-500/15 text-amber-400",
+          ? "bg-emerald-100 text-emerald-700"
+          : "bg-amber-100 text-amber-700",
       )}
     >
       {hasMethod ? (
@@ -88,7 +87,7 @@ function StatusBadge({ hasMethod }: { hasMethod: boolean }) {
       ) : (
         <>
           <AlertTriangle size={12} />
-          No payout method
+          Not configured
         </>
       )}
     </span>
@@ -292,14 +291,16 @@ export function PayoutMethodManager({
   return (
     <div className="space-y-6">
       {/* ── Header card ── */}
-      <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900 to-slate-800 p-6 shadow-xl">
+      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <Wallet size={18} className="text-power-orange" />
-              <h2 className="text-lg font-bold text-white">Payout Method</h2>
+            <div className="flex items-center gap-2 mb-2">
+              <Wallet size={20} className="text-power-orange" />
+              <h2 className="text-lg font-bold text-slate-900">
+                Payout Method
+              </h2>
             </div>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-slate-600">
               Where you&apos;d like to receive your earnings from bookings.
             </p>
           </div>
@@ -311,43 +312,44 @@ export function PayoutMethodManager({
           <div className="mt-6 space-y-1">
             {current.type === "BANK_TRANSFER" ? (
               <>
-                <div className="flex items-center gap-2 mb-3">
-                  <CreditCard size={15} className="text-power-orange" />
-                  <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                <div className="flex items-center gap-2 mb-4">
+                  <CreditCard size={16} className="text-power-orange" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                     Bank Transfer
                   </span>
                 </div>
-                <FieldRow
-                  icon={User}
-                  label="Account Holder"
-                  value={current.accountHolderName!}
-                />
-                <FieldRow
-                  icon={Hash}
-                  label="Account Number"
-                  value={current.accountNumber!}
-                  masked
-                />
-                <FieldRow
-                  icon={Building2}
-                  label="Bank"
-                  value={`${current.bankName} — ${current.ifscCode}`}
-                />
+                <div className="space-y-3 border-t border-slate-200 pt-4">
+                  <FieldRow
+                    label="Account Holder"
+                    value={current.accountHolderName!}
+                  />
+                  <FieldRow
+                    label="Account Number"
+                    value={current.accountNumber!}
+                    masked
+                  />
+                  <FieldRow
+                    label="Bank"
+                    value={`${current.bankName} — ${current.ifscCode}`}
+                  />
+                </div>
               </>
             ) : (
               <>
-                <div className="flex items-center gap-2 mb-3">
-                  <Smartphone size={15} className="text-power-orange" />
-                  <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+                <div className="flex items-center gap-2 mb-4">
+                  <Smartphone size={16} className="text-power-orange" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                     UPI
                   </span>
                 </div>
-                <FieldRow icon={Wallet} label="UPI ID" value={current.upiId!} />
+                <div className="space-y-3 border-t border-slate-200 pt-4">
+                  <FieldRow label="UPI ID" value={current.upiId!} />
+                </div>
               </>
             )}
 
             {current.updatedAt && (
-              <p className="pt-2 text-xs text-slate-600">
+              <p className="pt-4 text-xs text-slate-500 border-t border-slate-200 mt-4">
                 Last updated:{" "}
                 {new Date(current.updatedAt).toLocaleDateString("en-IN", {
                   day: "numeric",
@@ -359,27 +361,28 @@ export function PayoutMethodManager({
 
             {/* Actions */}
             <div className="flex flex-wrap gap-2 pt-4">
-              <button
+              <Button
                 onClick={() => setEditing(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-4 py-2 text-sm font-semibold text-white hover:bg-white/20 transition-colors"
+                variant="outline"
+                size="sm"
               >
-                <PencilLine size={14} />
+                <PencilLine size={16} />
                 Edit
-              </button>
+              </Button>
               <button
                 onClick={handleDelete}
                 disabled={deleting}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold transition-colors",
+                  "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors",
                   confirmDelete
                     ? "bg-red-600 text-white hover:bg-red-700"
-                    : "bg-white/5 text-red-400 hover:bg-red-500/20",
+                    : "text-red-600 hover:bg-red-50",
                 )}
               >
                 {deleting ? (
-                  <Loader2 size={14} className="animate-spin" />
+                  <Loader2 size={16} className="animate-spin" />
                 ) : (
-                  <Trash2 size={14} />
+                  <Trash2 size={16} />
                 )}
                 {confirmDelete ? "Confirm Remove" : "Remove"}
               </button>
@@ -390,60 +393,61 @@ export function PayoutMethodManager({
         {/* ── No method CTA ── */}
         {!current && !editing && (
           <div className="mt-6 text-center py-6">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10">
-              <Banknote size={26} className="text-amber-400" />
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-50">
+              <Banknote size={26} className="text-amber-600" />
             </div>
-            <p className="text-sm text-slate-400 mb-4">
+            <p className="text-sm text-slate-600 mb-4">
               You haven&apos;t added a payout method yet. Add one to start
-              receiving payments for your {ownerLabel} bookings.
+              receiving payments for your bookings.
             </p>
-            <button
+            <Button
               onClick={() => setEditing(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-power-orange px-6 py-2.5 text-sm font-bold text-white shadow-lg hover:bg-orange-600 transition-colors"
+              variant="primary"
+              size="md"
             >
-              <Wallet size={16} />
+              <Wallet size={18} />
               Add Payout Method
-            </button>
+            </Button>
           </div>
         )}
       </div>
 
       {/* ── Edit / Add form ── */}
       {editing && (
-        <div className="rounded-2xl border border-white/10 bg-slate-900 p-6 shadow-xl space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-white">
+        <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+            <h3 className="text-base font-bold text-slate-900">
               {current ? "Update Payout Method" : "Add Payout Method"}
             </h3>
             <button
               onClick={resetForm}
-              className="text-xs text-slate-500 hover:text-slate-300"
+              className="text-sm text-slate-500 hover:text-slate-700 font-medium"
             >
               Cancel
             </button>
           </div>
 
           {/* Tab selector */}
-          <div className="flex rounded-xl bg-slate-800 p-1 gap-1">
+          <div className="flex rounded-lg bg-slate-100 p-1 gap-1">
             {(["BANK_TRANSFER", "UPI"] as TabId[]).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
                 className={cn(
-                  "flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold transition-all",
+                  "flex-1 flex items-center justify-center gap-2 rounded-md py-2 text-sm font-semibold transition-all",
                   activeTab === tab
-                    ? "bg-power-orange text-white shadow"
-                    : "text-slate-400 hover:text-white",
+                    ? "bg-white text-power-orange shadow-sm border border-power-orange/20"
+                    : "text-slate-600 hover:text-slate-900",
                 )}
               >
                 {tab === "BANK_TRANSFER" ? (
                   <>
-                    <CreditCard size={15} />
+                    <CreditCard size={16} />
                     Bank Transfer
                   </>
                 ) : (
                   <>
-                    <Smartphone size={15} />
+                    <Smartphone size={16} />
                     UPI
                   </>
                 )}
@@ -454,42 +458,39 @@ export function PayoutMethodManager({
           {/* Bank Transfer Form */}
           {activeTab === "BANK_TRANSFER" && (
             <div className="space-y-4">
-              <FormField
+              <FormFieldGroup
                 label="Account Holder Name"
-                icon={User}
-                placeholder="As per your bank records"
                 value={accountHolderName}
                 onChange={setAccountHolderName}
+                placeholder="As per your bank records"
               />
-              <FormField
+              <FormFieldGroup
                 label="Account Number"
-                icon={Hash}
-                placeholder="Enter account number"
                 value={accountNumber}
                 onChange={setAccountNumber}
+                placeholder="Enter account number"
                 type="password"
               />
-              <FormField
+              <FormFieldGroup
                 label="Confirm Account Number"
-                icon={Hash}
-                placeholder="Re-enter account number"
                 value={confirmAccountNumber}
                 onChange={setConfirmAccountNumber}
+                placeholder="Re-enter account number"
+                type="password"
               />
-              <FormField
+              <FormFieldGroup
                 label="IFSC Code"
-                icon={Building2}
-                placeholder="e.g. SBIN0001234"
                 value={ifscCode}
                 onChange={(v) => setIfscCode(v.toUpperCase())}
+                placeholder="e.g. SBIN0001234"
                 maxLength={11}
+                hint="Format: 4 letters + 0 + 6 alphanumeric characters"
               />
-              <FormField
+              <FormFieldGroup
                 label="Bank Name"
-                icon={Building2}
-                placeholder="e.g. State Bank of India"
                 value={bankName}
                 onChange={setBankName}
+                placeholder="e.g. State Bank of India"
               />
             </div>
           )}
@@ -497,51 +498,50 @@ export function PayoutMethodManager({
           {/* UPI Form */}
           {activeTab === "UPI" && (
             <div className="space-y-4">
-              <FormField
+              <FormFieldGroup
                 label="UPI ID"
-                icon={Smartphone}
-                placeholder="yourname@okaxis"
                 value={upiId}
                 onChange={setUpiId}
+                placeholder="yourname@okaxis"
+                hint="Format: name@bankname (e.g., john@okaxis)"
               />
-              <div className="flex items-start gap-2 rounded-lg bg-blue-500/10 border border-blue-500/20 p-3 text-xs text-blue-300">
-                <Lock size={13} className="mt-0.5 shrink-0" />
+              <div className="flex items-start gap-2 rounded-lg bg-blue-50 border border-blue-200 p-4 text-sm text-blue-900">
+                <Lock size={16} className="mt-0.5 shrink-0 text-blue-600" />
                 <p>
-                  We only store your UPI ID to process payouts. We will never
-                  initiate unauthorised debits.
+                  We only store your UPI ID to process payouts. Your data is
+                  encrypted and we will never initiate unauthorized debits.
                 </p>
               </div>
             </div>
           )}
 
-          <div className="flex gap-3 pt-1">
-            <button
+          <div className="flex gap-3 pt-2">
+            <Button
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-power-orange py-3 text-sm font-bold text-white shadow-lg hover:bg-orange-600 disabled:opacity-60 transition-colors"
+              variant="primary"
+              fullWidth
+              size="lg"
             >
               {saving ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 size={18} className="animate-spin" />
                   Saving…
                 </>
               ) : (
                 <>
-                  <BadgeCheck size={16} />
+                  <BadgeCheck size={18} />
                   Save Payout Method
                 </>
               )}
-            </button>
-            <button
-              onClick={resetForm}
-              className="rounded-xl border border-white/10 px-5 py-3 text-sm font-semibold text-slate-400 hover:bg-white/5 transition-colors"
-            >
+            </Button>
+            <Button onClick={resetForm} variant="outline" size="lg">
               Cancel
-            </button>
+            </Button>
           </div>
 
-          <p className="text-center text-xs text-slate-600">
-            <Lock size={10} className="inline mr-1" />
+          <p className="text-center text-xs text-slate-500">
+            <Lock size={12} className="inline mr-1" />
             Your banking details are encrypted and stored securely
           </p>
         </div>
@@ -550,54 +550,59 @@ export function PayoutMethodManager({
   );
 }
 
-// ─── Internal FormField ───────────────────────────────────────────────────────
+// ─── Internal FormFieldGroup Component ────────────────────────────────────────
 
-function FormField({
-  label,
-  icon: Icon,
-  placeholder,
-  value,
-  onChange,
-  type = "text",
-  maxLength,
-}: {
+interface FormFieldGroupProps {
   label: string;
-  icon: React.ElementType;
-  placeholder: string;
   value: string;
   onChange: (v: string) => void;
+  placeholder: string;
   type?: "text" | "password";
   maxLength?: number;
-}) {
-  const [show, setShow] = useState(false);
+  hint?: string;
+}
+
+function FormFieldGroup({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  maxLength,
+  hint,
+}: FormFieldGroupProps) {
+  const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === "password";
-  const inputType = isPassword ? (show ? "text" : "password") : "text";
+  const inputType = isPassword ? (showPassword ? "text" : "password") : "text";
 
   return (
-    <div>
-      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+    <div className="space-y-1.5">
+      <label className="block text-sm font-semibold text-slate-700">
         {label}
       </label>
-      <div className="flex items-center rounded-xl border border-white/10 bg-slate-800 px-4 py-3 focus-within:border-power-orange/60 focus-within:ring-1 focus-within:ring-power-orange/30 transition-all">
-        <Icon size={15} className="mr-3 shrink-0 text-slate-500" />
-        <input
+      <div className="relative">
+        <Input
           type={inputType}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           maxLength={maxLength}
-          className="flex-1 bg-transparent text-sm text-white placeholder:text-slate-600 outline-none"
+          className={cn("pr-10", isPassword && "font-mono tracking-widest")}
         />
         {isPassword && (
           <button
             type="button"
-            onClick={() => setShow((s) => !s)}
-            className="ml-2 text-xs text-slate-500 hover:text-slate-300"
+            onClick={() => setShowPassword((s) => !s)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700 transition-colors"
+            tabIndex={-1}
           >
-            {show ? "Hide" : "Show"}
+            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         )}
       </div>
+      {hint && <p className="text-xs text-slate-500">{hint}</p>}
     </div>
   );
 }
+
+// ─── Main Component

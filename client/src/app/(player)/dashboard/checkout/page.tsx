@@ -337,7 +337,7 @@ function CheckoutPageContent() {
       label: isZeroCommission ? "Platform fee" : "Service fee",
       value: formatCurrency(serviceFee),
       hint: isZeroCommission
-        ? "Limited-time zero commission"
+        ? "Limited-time zero commission on coach and venue bookings"
         : "Platform support and protection",
     },
     {
@@ -820,11 +820,12 @@ function CheckoutPageContent() {
                       Limited-time offer
                     </p>
                     <p className="mt-2 font-title text-lg font-semibold text-slate-900">
-                      Zero commission on every booking
+                      Zero commission on coach and venue bookings
                     </p>
                     <p className="mt-1 text-sm text-slate-600">
                       We are waiving platform fees right now. You only pay the
-                      venue or coach rate plus taxes.
+                      venue or coach rate plus taxes. Subscription plans are
+                      charged separately.
                     </p>
                   </div>
                 </div>

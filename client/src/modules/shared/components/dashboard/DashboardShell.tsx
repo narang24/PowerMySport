@@ -154,7 +154,7 @@ export const DashboardShell = ({
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b border-white/60 bg-white/75 px-4 py-3 backdrop-blur-xl lg:hidden">
+      <header className="sticky top-0 z-40 border-b border-white/60 bg-white/80 px-4 py-3 backdrop-blur-xl lg:hidden">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">
@@ -166,7 +166,7 @@ export const DashboardShell = ({
           </div>
           <button
             onClick={() => setIsMobileMenuOpen(true)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/60 bg-white/80 text-slate-700"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/60 bg-white/90 text-slate-700"
             aria-label="Open dashboard menu"
           >
             <Menu size={18} />
@@ -181,7 +181,7 @@ export const DashboardShell = ({
             aria-label="Close dashboard menu"
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw] border-r border-white/60 bg-white/90 backdrop-blur-xl shadow-lg">
+          <div className="absolute left-0 top-0 h-full w-[88vw] max-w-sm border-r border-white/60 bg-white/95 backdrop-blur-xl shadow-lg">
             <div className="flex items-center justify-between border-b border-white/60 p-4">
               <div>
                 <p className="text-xs uppercase tracking-wide text-slate-500">
@@ -247,8 +247,8 @@ export const DashboardShell = ({
           </div>
         </aside>
 
-        <main className="flex-1 overflow-x-hidden">
-          <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-8 lg:px-8">
+        <main className="flex-1 overflow-x-hidden pb-[max(env(safe-area-inset-bottom),0px)]">
+          <div className="mx-auto w-full max-w-6xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
             {children}
           </div>
           {bottomNavItems && <BottomNavSpacer />}

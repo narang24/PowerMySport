@@ -40,17 +40,6 @@ export const isWithinOpeningHours = (
     };
   }
 
-  // Validate opening hours are set
-  if (!dayHours.openTime || !dayHours.closeTime) {
-    return {
-      isValid: false,
-      message: "Venue operating hours are not configured",
-    };
-  }
-
-  const venueOpen = dayHours.openTime;
-  const venueClose = dayHours.closeTime;
-
   // Convert times to comparable numbers (e.g., "09:30" -> 930)
   const toMinutes = (time: string): number => {
     const [hours, minutes] = time.split(":").map(Number);
@@ -59,21 +48,38 @@ export const isWithinOpeningHours = (
 
   const bookingStartMinutes = toMinutes(startTime);
   const bookingEndMinutes = toMinutes(endTime);
-  const venueOpenMinutes = toMinutes(venueOpen);
-  const venueCloseMinutes = toMinutes(venueClose);
 
-  // Check if booking falls within operating hours
-  if (bookingStartMinutes < venueOpenMinutes) {
+  const normalizedSlots =
+    dayHours.slots && dayHours.slots.length > 0
+      ? dayHours.slots
+      : dayHours.openTime && dayHours.closeTime
+        ? [{ startTime: dayHours.openTime, endTime: dayHours.closeTime }]
+        : [];
+
+  if (normalizedSlots.length === 0) {
     return {
       isValid: false,
-      message: `Venue opens at ${venueOpen}. Your booking starts at ${startTime}`,
+      message: "Venue operating hours are not configured",
     };
   }
 
-  if (bookingEndMinutes > venueCloseMinutes) {
+  const isWithinAnySlot = normalizedSlots.some((slot) => {
+    const slotStartMinutes = toMinutes(slot.startTime);
+    const slotEndMinutes = toMinutes(slot.endTime);
+    return (
+      bookingStartMinutes >= slotStartMinutes &&
+      bookingEndMinutes <= slotEndMinutes
+    );
+  });
+
+  if (!isWithinAnySlot) {
+    const formattedSlots = normalizedSlots
+      .map((slot) => `${slot.startTime}-${slot.endTime}`)
+      .join(", ");
+
     return {
       isValid: false,
-      message: `Venue closes at ${venueClose}. Your booking ends at ${endTime}`,
+      message: `Venue is available only during: ${formattedSlots}. Your booking is ${startTime}-${endTime}`,
     };
   }
 

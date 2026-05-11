@@ -34,10 +34,32 @@ export const payoutApi = {
     }
   },
 
-  /** Create or replace the coach's payout method */
+  /** Fetch all of the coach's payout methods */
+  getCoachPayoutMethods: async (): Promise<
+    ApiResponse<{ payoutMethods: IPayoutMethod[] }>
+  > => {
+    try {
+      const response = await axiosInstance.get(
+        "/payouts/coach/my-payout-methods",
+      );
+      return response.data;
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return {
+          success: true,
+          message: "Payout methods retrieved",
+          data: { payoutMethods: [] },
+        };
+      }
+
+      throw error;
+    }
+  },
+
+  /** Create or update the coach's payout method */
   upsertCoachPayoutMethod: async (
     payload: Omit<IPayoutMethod, "addedAt" | "updatedAt">,
-  ): Promise<ApiResponse<{ payoutMethod: IPayoutMethod }>> => {
+  ): Promise<ApiResponse<{ payoutMethods: IPayoutMethod[] }>> => {
     const response = await axiosInstance.put(
       "/payouts/coach/my-payout-method",
       payload,
@@ -45,12 +67,23 @@ export const payoutApi = {
     return response.data;
   },
 
-  /** Remove the coach's payout method */
-  deleteCoachPayoutMethod: async (): Promise<
-    ApiResponse<{ payoutMethod: null }>
-  > => {
-    const response = await axiosInstance.delete(
-      "/payouts/coach/my-payout-method",
+  /** Remove a specific coach's payout method by ID */
+  deleteCoachPayoutMethod: async (
+    methodId?: string,
+  ): Promise<ApiResponse<{ payoutMethods: IPayoutMethod[] }>> => {
+    const url = methodId
+      ? `/payouts/coach/my-payout-method/${methodId}`
+      : "/payouts/coach/my-payout-method";
+    const response = await axiosInstance.delete(url);
+    return response.data;
+  },
+
+  /** Set a specific payout method as default */
+  setCoachDefaultPayoutMethod: async (
+    methodId: string,
+  ): Promise<ApiResponse<{ payoutMethods: IPayoutMethod[] }>> => {
+    const response = await axiosInstance.put(
+      `/payouts/coach/my-payout-method/${methodId}/set-default`,
     );
     return response.data;
   },
@@ -79,10 +112,32 @@ export const payoutApi = {
     }
   },
 
-  /** Create or replace the venue-lister's payout method */
+  /** Fetch all of the venue's payout methods */
+  getVenuePayoutMethods: async (): Promise<
+    ApiResponse<{ payoutMethods: IPayoutMethod[] }>
+  > => {
+    try {
+      const response = await axiosInstance.get(
+        "/payouts/venue/my-payout-methods",
+      );
+      return response.data;
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return {
+          success: true,
+          message: "Payout methods retrieved",
+          data: { payoutMethods: [] },
+        };
+      }
+
+      throw error;
+    }
+  },
+
+  /** Create or update the venue's payout method */
   upsertVenuePayoutMethod: async (
     payload: Omit<IPayoutMethod, "addedAt" | "updatedAt">,
-  ): Promise<ApiResponse<{ payoutMethod: IPayoutMethod }>> => {
+  ): Promise<ApiResponse<{ payoutMethods: IPayoutMethod[] }>> => {
     const response = await axiosInstance.put(
       "/payouts/venue/my-payout-method",
       payload,
@@ -90,12 +145,23 @@ export const payoutApi = {
     return response.data;
   },
 
-  /** Remove the venue-lister's payout method */
-  deleteVenuePayoutMethod: async (): Promise<
-    ApiResponse<{ payoutMethod: null }>
-  > => {
-    const response = await axiosInstance.delete(
-      "/payouts/venue/my-payout-method",
+  /** Remove a specific venue's payout method by ID */
+  deleteVenuePayoutMethod: async (
+    methodId?: string,
+  ): Promise<ApiResponse<{ payoutMethods: IPayoutMethod[] }>> => {
+    const url = methodId
+      ? `/payouts/venue/my-payout-method/${methodId}`
+      : "/payouts/venue/my-payout-method";
+    const response = await axiosInstance.delete(url);
+    return response.data;
+  },
+
+  /** Set a specific payout method as default for all venues */
+  setVenueDefaultPayoutMethod: async (
+    methodId: string,
+  ): Promise<ApiResponse<{ payoutMethods: IPayoutMethod[] }>> => {
+    const response = await axiosInstance.put(
+      `/payouts/venue/my-payout-method/${methodId}/set-default`,
     );
     return response.data;
   },

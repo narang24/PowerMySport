@@ -228,7 +228,7 @@ const buildPayRequest = (payload: {
     .merchantOrderId(payload.merchantOrderId)
     .amount(payload.amount)
     .redirectUrl(payload.redirectUrl)
-    .expireAfter(3600);
+    .expireAfter(600); // 10 minutes QR code validity (reduced from 1 hour)
 
   if (payload.userPhone) {
     const prefillBuilder = (PrefillUserLoginDetails as any).builder?.();

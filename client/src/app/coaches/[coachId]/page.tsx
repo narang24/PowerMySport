@@ -4,6 +4,7 @@ import { toast } from "@/lib/toast";
 import { getCommunityAppUrl } from "@/lib/community/url";
 import { useAuthStore } from "@/modules/auth/store/authStore";
 import { bookingApi } from "@/modules/booking/services/booking";
+import { coachApi } from "@/modules/coach/services/coach";
 import { CommunityInsightsCard } from "@/modules/community/components/CommunityInsightsCard";
 import { buildCoachCommunityIntent } from "@/modules/community/utils/coachCommunityIntent";
 import { discoveryApi } from "@/modules/discovery/services/discovery";
@@ -57,6 +58,18 @@ const normalizeImageUrl = (value?: string) => {
   }
 
   return trimmed;
+};
+
+const formatInr = (value?: number) => {
+  if (typeof value !== "number") {
+    return "-";
+  }
+
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(value / 100);
 };
 
 const CoachImageWithFallback = ({
@@ -136,6 +149,11 @@ export default function CoachDetailsPage() {
     null,
   );
   const [reviewEligibilityReason, setReviewEligibilityReason] = useState("");
+  const [subscriptionPackages, setSubscriptionPackages] = useState<any[]>([]);
+  const [packagesLoading, setPackagesLoading] = useState(true);
+  const [subscribingPackageId, setSubscribingPackageId] = useState<
+    string | null
+  >(null);
   const communityIntent = buildCoachCommunityIntent({
     source: "coach_detail",
     selectedSport,
@@ -311,6 +329,29 @@ export default function CoachDetailsPage() {
     }
   };
 
+  const loadSubscriptionPackages = useCallback(async () => {
+    setPackagesLoading(true);
+    try {
+      const response = await coachApi.getCoachPackages(coachId);
+      if (response.success && response.data) {
+        setSubscriptionPackages(response.data.packages || []);
+      } else {
+        setSubscriptionPackages([]);
+      }
+    } catch (error) {
+      console.error("Failed to load subscription packages:", error);
+      setSubscriptionPackages([]);
+    } finally {
+      setPackagesLoading(false);
+    }
+  }, [coachId]);
+
+  useEffect(() => {
+    if (coachId) {
+      void loadSubscriptionPackages();
+    }
+  }, [coachId, loadSubscriptionPackages]);
+
   const loadReviewEligibility = async () => {
     try {
       const response = await reviewApi.getReviewEligibility({
@@ -374,6 +415,21 @@ export default function CoachDetailsPage() {
     } finally {
       setReviewSubmitting(false);
     }
+  };
+
+  const handleSubscribeToPackage = async (packageId: string) => {
+    if (!user) {
+      router.push(`/login?redirect=/coaches/${coachId}`);
+      return;
+    }
+
+    if (user.role !== "PLAYER") {
+      toast.error("Only player accounts can subscribe to packages");
+      return;
+    }
+
+    const params = new URLSearchParams({ coachId, packageId });
+    router.push(`/dashboard/subscription-checkout?${params.toString()}`);
   };
 
   const handleBooking = async () => {
@@ -587,6 +643,148 @@ export default function CoachDetailsPage() {
                 user && (user.role === "PLAYER" || user.role === "COACH"),
               )}
             />
+
+            <Card className="premium-shadow overflow-hidden rounded-3xl border border-slate-200/70 bg-white/92 p-0 backdrop-blur-sm">
+              <div className="bg-linear-to-br from-turf-green/5 to-slate-50 p-6 border-b border-slate-100">
+                <h2 className="text-xl font-bold text-slate-900">
+                  Subscription Packages
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Monthly, quarterly, and yearly packages published by this
+                  coach.
+                </p>
+              </div>
+              <div className="p-6">
+                {packagesLoading ? (
+                  <div className="flex items-center justify-center py-8 text-sm text-slate-500">
+                    Loading packages...
+                  </div>
+                ) : subscriptionPackages.length === 0 ? (
+                  <p className="text-sm text-slate-500">
+                    This coach has not published any subscription packages yet.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {subscriptionPackages.map((pkg) => {
+                      const packageId = String(pkg?._id || pkg?.id || "");
+                      const isBusy = subscribingPackageId === packageId;
+                      const frequencyLabel =
+                        pkg?.frequency === "YEARLY"
+                          ? "Yearly"
+                          : pkg?.frequency === "QUARTERLY"
+                            ? "Quarterly"
+                            : "Monthly";
+
+                      return (
+                        <div
+                          key={packageId || `${pkg?.name || "package"}`}
+                          className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-base font-semibold text-slate-900">
+                                {pkg?.name || "Subscription package"}
+                              </p>
+                              <p className="mt-1 text-sm font-semibold text-turf-green">
+                                {formatInr(pkg?.price)}
+                                <span className="text-slate-500">
+                                  / {frequencyLabel.toLowerCase()}
+                                </span>
+                              </p>
+                            </div>
+                            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                              Active
+                            </span>
+                          </div>
+
+                          {pkg?.description ? (
+                            <p className="mt-3 text-sm leading-6 text-slate-600">
+                              {pkg.description}
+                            </p>
+                          ) : null}
+
+                          <div className="mt-4 space-y-2">
+                            {(pkg?.features || []).length > 0 ? (
+                              <ul className="space-y-1 text-sm text-slate-700">
+                                {pkg.features.map(
+                                  (feature: string, index: number) => (
+                                    <li
+                                      key={`${feature}-${index}`}
+                                      className="flex gap-2"
+                                    >
+                                      <Check
+                                        size={16}
+                                        className="mt-0.5 text-turf-green shrink-0"
+                                      />
+                                      <span>{feature}</span>
+                                    </li>
+                                  ),
+                                )}
+                              </ul>
+                            ) : (
+                              <p className="text-sm text-slate-500">
+                                Coach has not listed package features yet.
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-600">
+                            {typeof pkg?.maxStudents === "number" ? (
+                              <span className="rounded-full bg-slate-100 px-3 py-1">
+                                Up to {pkg.maxStudents} students
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-slate-100 px-3 py-1">
+                                Student limit flexible
+                              </span>
+                            )}
+                            {typeof pkg?.maxSessions === "number" ? (
+                              <span className="rounded-full bg-slate-100 px-3 py-1">
+                                {pkg.maxSessions} sessions
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-slate-100 px-3 py-1">
+                                Session limit flexible
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-5">
+                            {user ? (
+                              user.role === "PLAYER" ? (
+                                <Button
+                                  variant="primary"
+                                  className="w-full bg-turf-green hover:bg-green-700"
+                                  onClick={() =>
+                                    handleSubscribeToPackage(packageId)
+                                  }
+                                  disabled={!packageId || isBusy}
+                                >
+                                  {isBusy ? "Activating..." : "Subscribe now"}
+                                </Button>
+                              ) : (
+                                <p className="text-sm text-slate-500">
+                                  Subscription packages are available for player
+                                  accounts.
+                                </p>
+                              )
+                            ) : (
+                              <Link
+                                href={`/login?redirect=/coaches/${coachId}`}
+                              >
+                                <Button variant="secondary" className="w-full">
+                                  Sign in to subscribe
+                                </Button>
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </Card>
 
             {/* Venue Images */}
             {venueImages.length > 0 && (

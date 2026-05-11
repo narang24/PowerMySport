@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "@/lib/toast";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PlayerPageHeader } from "@/modules/player/components/PlayerPageHeader";
 import { bookingApi } from "@/modules/booking/services/booking";
+import { coachApi } from "@/modules/coach/services/coach";
 import { friendService } from "@/modules/shared/services/friend";
 import { FadeIn } from "@/modules/shared/ui/motion/FadeIn";
 import { SlideUp } from "@/modules/shared/ui/motion/SlideUp";
@@ -31,7 +33,7 @@ import {
   StaggerItem,
 } from "@/modules/shared/ui/motion/StaggerContainer";
 import { motion } from "framer-motion";
-import type { Booking } from "@/types";
+import type { Booking, CoachSubscription } from "@/types";
 
 interface UpcomingBooking {
   id: string;
@@ -49,8 +51,14 @@ export default function DashboardPage() {
   const [upcomingBookings, setUpcomingBookings] = useState<UpcomingBooking[]>(
     [],
   );
+  const [activeSubscriptions, setActiveSubscriptions] = useState<
+    CoachSubscription[]
+  >([]);
   const [pendingFriendRequests, setPendingFriendRequests] = useState(0);
   const [pendingInvitations, setPendingInvitations] = useState(0);
+  const [cancellingSubscriptionId, setCancellingSubscriptionId] = useState<
+    string | null
+  >(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -61,13 +69,17 @@ export default function DashboardPage() {
     try {
       setLoading(true);
 
-      const [bookingsResult, friendCountResult, invitationCountResult] =
-        await Promise.allSettled([
-          bookingApi.getMyBookings({ page: 1, limit: 3 }),
-          friendService.getPendingRequestsCount(),
-          bookingApi.getPendingInvitationsCount(),
-        ]);
-
+      const [
+        bookingsResult,
+        subscriptionsResult,
+        friendCountResult,
+        invitationCountResult,
+      ] = await Promise.allSettled([
+        bookingApi.getMyBookings({ page: 1, limit: 3 }),
+        coachApi.getMySubscriptions(),
+        friendService.getPendingRequestsCount(),
+        bookingApi.getPendingInvitationsCount(),
+      ]);
       if (bookingsResult.status === "fulfilled") {
         const payload = bookingsResult.value;
         const bookings = Array.isArray(payload.data)
@@ -92,6 +104,12 @@ export default function DashboardPage() {
         setUpcomingBookings(upcoming);
       }
 
+      if (subscriptionsResult?.status === "fulfilled") {
+        setActiveSubscriptions(
+          subscriptionsResult.value.data?.subscriptions || [],
+        );
+      }
+
       if (friendCountResult.status === "fulfilled") {
         setPendingFriendRequests(friendCountResult.value.count || 0);
       }
@@ -106,6 +124,32 @@ export default function DashboardPage() {
     }
   };
 
+  const handleCancelSubscription = async (subscriptionId: string) => {
+    if (!window.confirm("Cancel this subscription?")) {
+      return;
+    }
+
+    setCancellingSubscriptionId(subscriptionId);
+    try {
+      const response = await coachApi.cancelCoachSubscription(subscriptionId);
+      if (!response.success) {
+        throw new Error(response.message || "Failed to cancel subscription");
+      }
+
+      toast.success("Subscription cancelled");
+      await loadDashboardData();
+    } catch (error) {
+      console.error("Failed to cancel subscription:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to cancel subscription",
+      );
+    } finally {
+      setCancellingSubscriptionId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-100">
@@ -113,6 +157,10 @@ export default function DashboardPage() {
       </div>
     );
   }
+
+  const liveSubscriptions = activeSubscriptions.filter((subscription) =>
+    ["ACTIVE", "PAST_DUE"].includes(subscription.status),
+  );
 
   return (
     <div className="space-y-6">
@@ -208,6 +256,129 @@ export default function DashboardPage() {
           </Card>
         </StaggerItem>
       </StaggerContainer>
+
+      {liveSubscriptions.length > 0 && (
+        <SlideUp delay={0.15} yOffset={18}>
+          <Card className="shop-surface premium-shadow">
+            <CardHeader>
+              <CardTitle className="text-slate-900">
+                Active Subscriptions
+              </CardTitle>
+              <CardDescription className="text-slate-500">
+                Plans you purchased from coaches and their expiry dates.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {liveSubscriptions.slice(0, 3).map((subscription) => {
+                const subscriptionId = subscription.id || subscription._id;
+                const packageData = subscription.packageId as
+                  | { name?: string; price?: number }
+                  | string
+                  | null
+                  | undefined;
+                const packageReference = subscription.packageId as
+                  | { _id?: string; id?: string }
+                  | string
+                  | null
+                  | undefined;
+                const packageName =
+                  typeof packageData === "string"
+                    ? "Subscription package"
+                    : packageData?.name || "Subscription package";
+                const packageId =
+                  typeof packageReference === "string"
+                    ? packageReference
+                    : packageReference?._id || packageReference?.id;
+                const coachData = subscription.coachId as
+                  | { userId?: { name?: string } | string; sports?: string[] }
+                  | string
+                  | null
+                  | undefined;
+                const coachReference = subscription.coachId as
+                  | { _id?: string; id?: string }
+                  | string
+                  | null
+                  | undefined;
+                const coachId =
+                  typeof coachReference === "string"
+                    ? coachReference
+                    : coachReference?._id || coachReference?.id;
+                const coachName =
+                  typeof coachData === "string"
+                    ? "Coach"
+                    : typeof coachData?.userId === "object" &&
+                        coachData.userId?.name
+                      ? coachData.userId.name
+                      : coachData?.sports?.[0]
+                        ? `${coachData.sports[0]} Coach`
+                        : "Coach";
+
+                return (
+                  <div
+                    key={subscription.id || subscription._id}
+                    className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white/80 p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="font-semibold text-slate-900">
+                        {packageName}
+                      </p>
+                      <p className="text-sm text-slate-500">
+                        {coachName} • Expires{" "}
+                        {subscription.currentPeriodEnd
+                          ? new Date(
+                              subscription.currentPeriodEnd,
+                            ).toLocaleDateString("en-IN", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })
+                          : "soon"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{subscription.status}</Badge>
+                      {coachId && packageId ? (
+                        <Button
+                          variant="outline"
+                          className="text-xs"
+                          onClick={() =>
+                            router.push(
+                              `/dashboard/subscription-checkout?coachId=${encodeURIComponent(coachId)}&packageId=${encodeURIComponent(packageId)}`,
+                            )
+                          }
+                        >
+                          Renew
+                        </Button>
+                      ) : null}
+                      {subscriptionId ? (
+                        <Button
+                          variant="outline"
+                          className="text-xs"
+                          disabled={cancellingSubscriptionId === subscriptionId}
+                          onClick={() =>
+                            void handleCancelSubscription(subscriptionId)
+                          }
+                        >
+                          {cancellingSubscriptionId === subscriptionId
+                            ? "Cancelling..."
+                            : "Cancel"}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="flex justify-end">
+                <Link href="/dashboard/subscriptions">
+                  <Button variant="outline" className="text-slate-800">
+                    Manage all subscriptions
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </SlideUp>
+      )}
 
       {/* Upcoming Bookings List */}
       <SlideUp delay={0.2} yOffset={20}>

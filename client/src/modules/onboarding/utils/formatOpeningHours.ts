@@ -23,8 +23,20 @@ export function formatOpeningHours(openingHours: any): string {
     days.forEach((day) => {
       const dayHours = openingHours[day];
       if (dayHours?.isOpen) {
+        const slots = Array.isArray(dayHours.slots)
+          ? dayHours.slots
+          : dayHours.openTime && dayHours.closeTime
+            ? [{ startTime: dayHours.openTime, endTime: dayHours.closeTime }]
+            : [];
+        const slotLabel =
+          slots.length > 0
+            ? slots
+                .map((slot: any) => `${slot.startTime}-${slot.endTime}`)
+                .join(", ")
+            : "N/A";
+
         openDays.push(
-          `${day.charAt(0).toUpperCase() + day.slice(1)}: ${dayHours.openTime || "N/A"} - ${dayHours.closeTime || "N/A"}`,
+          `${day.charAt(0).toUpperCase() + day.slice(1)}: ${slotLabel}`,
         );
       } else {
         closedDays.push(day.charAt(0).toUpperCase() + day.slice(1));

@@ -2,6 +2,8 @@
 
 import { Footer } from "@/components/layout/Footer";
 import { Navigation } from "@/components/layout/Navigation";
+import { authApi } from "@/modules/auth/services/auth";
+import { toast } from "@/lib/toast";
 import { getCommunityAppUrl } from "@/lib/community/url";
 import { CommunityInsightsCard } from "@/modules/community/components/CommunityInsightsCard";
 import { Button } from "@/modules/shared/ui/Button";
@@ -10,7 +12,9 @@ import { CheckCircle, Clock, XCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { bookingApi } from "@/modules/booking/services/booking";
-import { Booking } from "@/types";
+import { CoachSubscription, CoachSubscriptionPackage, Booking } from "@/types";
+import { coachApi } from "@/modules/coach/services/coach";
+import { formatCurrency } from "@/utils/format";
 
 function PaymentPageContent() {
   const router = useRouter();
@@ -18,15 +22,24 @@ function PaymentPageContent() {
   const status = searchParams.get("status") || "pending";
   const bookingId = searchParams.get("bookingId") || "";
   const merchantOrderId = searchParams.get("merchantOrderId") || "";
+  const coachId = searchParams.get("coachId") || "";
+  const packageId = searchParams.get("packageId") || "";
   const type = searchParams.get("type") || "venue";
+  const isSubscriptionPayment = type === "subscription";
   const isMockPayment =
     searchParams.get("mode") === "mock" ||
     searchParams.get("mock") === "true" ||
     searchParams.get("mockPayment") === "true";
 
   const [booking, setBooking] = useState<Booking | null>(null);
-  const [loading, setLoading] = useState(!!bookingId);
+  const [coach, setCoach] = useState<any | null>(null);
+  const [subscriptionPackage, setSubscriptionPackage] =
+    useState<CoachSubscriptionPackage | null>(null);
+  const [loading, setLoading] = useState(!!bookingId || isSubscriptionPayment);
   const [resolvedStatus, setResolvedStatus] = useState(status);
+  const [subscriptionActivated, setSubscriptionActivated] = useState(false);
+  const [subscriptionActivationLoading, setSubscriptionActivationLoading] =
+    useState(false);
   const communityUrl = getCommunityAppUrl({
     path: "q",
     searchParams: {
@@ -39,6 +52,47 @@ function PaymentPageContent() {
 
   useEffect(() => {
     const loadBooking = async () => {
+      if (isSubscriptionPayment) {
+        if (!coachId || !packageId) {
+          setLoading(false);
+          return;
+        }
+
+        try {
+          const [coachResponse, packagesResponse, profileResponse] =
+            await Promise.all([
+              coachApi.getCoachById(coachId),
+              coachApi.getCoachPackages(coachId),
+              authApi.getProfile().catch(() => null),
+            ]);
+
+          if (coachResponse.success && coachResponse.data) {
+            setCoach(coachResponse.data);
+          }
+
+          if (packagesResponse.success && packagesResponse.data) {
+            const selectedPackage = packagesResponse.data.packages.find(
+              (item) => (item._id || item.id) === packageId,
+            );
+            setSubscriptionPackage(selectedPackage || null);
+          }
+
+          if (profileResponse?.success && profileResponse.data) {
+            if (profileResponse.data.role !== "PLAYER") {
+              toast.error("Only player accounts can purchase subscriptions.");
+              router.replace("/dashboard");
+              return;
+            }
+          }
+        } catch (error) {
+          console.error("Failed to load subscription details:", error);
+          toast.error("Unable to load subscription details");
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
+
       if (!bookingId) return;
       try {
         const response = await bookingApi.getBooking(bookingId);
@@ -53,7 +107,11 @@ function PaymentPageContent() {
     };
 
     loadBooking();
-  }, [bookingId]);
+  }, [bookingId, coachId, isSubscriptionPayment, packageId, router]);
+
+  // Compute derived state early, before any effects that use it
+  const isSuccess = resolvedStatus === "success";
+  const isCancel = resolvedStatus === "cancel";
 
   useEffect(() => {
     setResolvedStatus(status);
@@ -61,6 +119,10 @@ function PaymentPageContent() {
 
   useEffect(() => {
     if (status !== "pending" || !merchantOrderId) {
+      return;
+    }
+
+    if (isSubscriptionPayment) {
       return;
     }
 
@@ -103,8 +165,121 @@ function PaymentPageContent() {
     };
   }, [merchantOrderId, status]);
 
-  const isSuccess = resolvedStatus === "success";
-  const isCancel = resolvedStatus === "cancel";
+  useEffect(() => {
+    if (!isSubscriptionPayment || status !== "pending" || !merchantOrderId) {
+      return;
+    }
+
+    let isActive = true;
+    let attempts = 0;
+    const maxAttempts = 12;
+    const pollIntervalMs = 5000;
+    let pollTimer: ReturnType<typeof setInterval> | null = null;
+
+    const verifyPayment = async () => {
+      try {
+        attempts += 1;
+        const result =
+          await coachApi.verifySubscriptionPaymentStatus(merchantOrderId);
+        if (!isActive) return;
+
+        if (result?.state === "COMPLETED") {
+          setResolvedStatus("success");
+          if (pollTimer) clearInterval(pollTimer);
+        } else if (result?.state === "FAILED") {
+          setResolvedStatus("cancel");
+          if (pollTimer) clearInterval(pollTimer);
+        } else if (attempts >= maxAttempts && pollTimer) {
+          clearInterval(pollTimer);
+        }
+      } catch (error) {
+        console.error("Failed to verify subscription payment:", error);
+        if (attempts >= maxAttempts && pollTimer) {
+          clearInterval(pollTimer);
+        }
+      }
+    };
+
+    verifyPayment();
+    pollTimer = setInterval(verifyPayment, pollIntervalMs);
+
+    return () => {
+      isActive = false;
+      if (pollTimer) clearInterval(pollTimer);
+    };
+  }, [merchantOrderId, status, isSubscriptionPayment]);
+
+  useEffect(() => {
+    if (!isSubscriptionPayment || !isSuccess || !coachId || !packageId) {
+      return;
+    }
+
+    if (subscriptionActivated || subscriptionActivationLoading) {
+      return;
+    }
+
+    const activateSubscription = async () => {
+      setSubscriptionActivationLoading(true);
+
+      try {
+        const existingSubscriptions = await coachApi.getMySubscriptions({
+          coachId,
+        });
+        const alreadyActive =
+          existingSubscriptions.success &&
+          existingSubscriptions.data?.subscriptions?.some(
+            (subscription: CoachSubscription) => {
+              const currentPackage = subscription.packageId as
+                | CoachSubscriptionPackage
+                | string
+                | undefined;
+              const currentPackageId =
+                typeof currentPackage === "string"
+                  ? currentPackage
+                  : currentPackage?._id || currentPackage?.id;
+
+              return (
+                currentPackageId === packageId &&
+                subscription.status === "ACTIVE"
+              );
+            },
+          );
+
+        if (!alreadyActive) {
+          const response = await coachApi.subscribeToPackage({
+            coachId,
+            packageId,
+          });
+
+          if (!response.success) {
+            throw new Error(
+              response.message || "Failed to activate subscription",
+            );
+          }
+        }
+
+        setSubscriptionActivated(true);
+      } catch (error) {
+        console.error("Failed to activate subscription:", error);
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Payment was successful, but subscription activation failed.",
+        );
+      } finally {
+        setSubscriptionActivationLoading(false);
+      }
+    };
+
+    void activateSubscription();
+  }, [
+    coachId,
+    isSuccess,
+    isSubscriptionPayment,
+    packageId,
+    subscriptionActivated,
+    subscriptionActivationLoading,
+  ]);
 
   const title = isSuccess
     ? "Payment successful"
@@ -127,6 +302,156 @@ function PaymentPageContent() {
   ) : (
     <Clock className="text-power-orange" size={44} />
   );
+
+  const subscriptionCharges = (() => {
+    const basePaise = Math.round(subscriptionPackage?.price || 0);
+    const platformFeeRate = Number(
+      process.env.NEXT_PUBLIC_SUBSCRIPTION_PLATFORM_FEE_RATE ??
+        process.env.NEXT_PUBLIC_SERVICE_FEE_RATE ??
+        0,
+    );
+    const taxRate = Number(
+      process.env.NEXT_PUBLIC_SUBSCRIPTION_TAX_RATE ??
+        process.env.NEXT_PUBLIC_TAX_RATE ??
+        0.05,
+    );
+    const safePlatformFeeRate = Number.isFinite(platformFeeRate)
+      ? Math.max(0, platformFeeRate)
+      : 0;
+    const safeTaxRate = Number.isFinite(taxRate) ? Math.max(0, taxRate) : 0;
+    const platformFeePaise = Math.round(basePaise * safePlatformFeeRate);
+    const taxPaise =
+      platformFeePaise > 0 ? Math.round(platformFeePaise * safeTaxRate) : 0;
+
+    return {
+      basePaise,
+      platformFeePaise,
+      taxPaise,
+      totalPaise: basePaise + platformFeePaise + taxPaise,
+    };
+  })();
+
+  if (isSubscriptionPayment) {
+    const coachName =
+      coach && typeof coach.userId === "object" && coach.userId?.name
+        ? coach.userId.name
+        : coach?.sports?.[0]
+          ? `${coach.sports[0]} Coach`
+          : "Coach";
+
+    return (
+      <div className="min-h-screen bg-[linear-gradient(180deg,#eef4ff_0%,#f5f8ff_48%,#fff8ee_100%)] flex flex-col">
+        <Navigation sticky />
+        <main className="flex-1 py-10">
+          <div className="mx-auto max-w-2xl px-4 sm:px-6 lg:px-8">
+            <Card className="space-y-5 rounded-3xl border border-slate-200/70 bg-white/95 p-6 shadow-sm backdrop-blur-sm sm:p-8">
+              <div className="flex justify-center">{icon}</div>
+              <div className="text-center">
+                <h2 className="font-title text-2xl font-semibold text-slate-900">
+                  {isSuccess
+                    ? subscriptionActivated || subscriptionActivationLoading
+                      ? "Subscription activating"
+                      : "Subscription successful"
+                    : isCancel
+                      ? "Payment canceled"
+                      : "Processing payment"}
+                </h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  {isSuccess
+                    ? subscriptionActivated
+                      ? "Your subscription is now active and will remain valid until expiry."
+                      : "We are confirming your payment before activating the subscription."
+                    : isCancel
+                      ? "No charge was made. You can try again whenever you are ready."
+                      : "We are confirming your payment. You can safely leave this page."}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left space-y-3">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Coach
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {coachName}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Package
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-900">
+                    {subscriptionPackage?.name || "Selected package"}
+                  </p>
+                  <p className="text-sm text-slate-600">
+                    {subscriptionPackage?.description ||
+                      "Your selected subscription package."}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm">
+                  <span className="text-slate-600">Plan amount</span>
+                  <span className="font-semibold text-slate-900">
+                    {subscriptionPackage
+                      ? formatCurrency(subscriptionCharges.basePaise / 100)
+                      : "-"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm">
+                  <span className="text-slate-600">Platform fee</span>
+                  <span className="font-semibold text-slate-900">
+                    {subscriptionPackage
+                      ? formatCurrency(
+                          subscriptionCharges.platformFeePaise / 100,
+                        )
+                      : "-"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm">
+                  <span className="text-slate-600">Taxes</span>
+                  <span className="font-semibold text-slate-900">
+                    {subscriptionPackage
+                      ? formatCurrency(subscriptionCharges.taxPaise / 100)
+                      : "-"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl bg-white px-4 py-3 text-sm">
+                  <span className="text-slate-600">Total charged</span>
+                  <span className="font-semibold text-slate-900">
+                    {subscriptionPackage
+                      ? formatCurrency(subscriptionCharges.totalPaise / 100)
+                      : "-"}
+                  </span>
+                </div>
+                {isMockPayment && (
+                  <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-600">
+                    Mock payment mode
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Button
+                  variant="primary"
+                  className="w-full"
+                  onClick={() => router.push("/dashboard")}
+                >
+                  Go to dashboard
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => router.push(`/coaches/${coachId}`)}
+                >
+                  Back to coach
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#eef4ff_0%,#f5f8ff_48%,#fff8ee_100%)] flex flex-col">

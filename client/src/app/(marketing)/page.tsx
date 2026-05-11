@@ -105,7 +105,7 @@ export default function HomePage() {
     {
       title: "Zero commission launch",
       description:
-        "0% platform commission for a limited time. Pay only the venue or coach rate plus taxes.",
+        "0% platform commission on coach and venue bookings for a limited time. Subscription purchases are charged separately.",
       icon: <TicketPercent className="h-10 w-10" />,
     },
     {
@@ -217,7 +217,7 @@ export default function HomePage() {
         variant="home"
         title="One Stop Solution For All Your Sporting Needs"
         subtitle="Zero Commission Launch"
-        description="Book venues and coaches with 0% platform commission for a limited time. Discover, book, and manage your entire sporting routine from one streamlined platform."
+        description="Book venues and coaches with 0% platform commission for a limited time. Subscription purchases have separate platform fee and tax charges."
         primaryCTA={{
           label: user ? "Go to Dashboard" : "Start Booking Now",
           href: getDashboardLink(),
@@ -247,11 +247,12 @@ export default function HomePage() {
                   Limited-time zero commission
                 </p>
                 <h2 className="font-title mt-3 text-3xl font-bold text-slate-900 sm:text-4xl">
-                  0% platform commission on every booking
+                  0% platform commission on coach and venue bookings
                 </h2>
                 <p className="mt-3 text-base text-slate-700 sm:text-lg">
-                  Pay only the venue or coach rate plus taxes. No extra platform
-                  fees added during our launch window.
+                  Pay only the venue or coach rate plus taxes on bookings.
+                  Subscription plans are billed separately with platform fees
+                  and applicable taxes.
                 </p>
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                   <Link href={getDashboardLink()} className="w-full sm:w-auto">
@@ -275,7 +276,7 @@ export default function HomePage() {
                     ₹0
                   </p>
                   <p className="mt-1 text-xs text-slate-500">
-                    Automatically applied
+                    On coach and venue bookings
                   </p>
                 </div>
                 <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm">

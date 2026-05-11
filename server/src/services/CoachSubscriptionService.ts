@@ -1,33 +1,31 @@
 import mongoose from "mongoose";
 import { Coach } from "../models/Coach";
 import {
-  CoachPlan,
-  CoachPlanBillingCycle,
-  CoachPlanDocument,
-} from "../models/CoachPlan";
-import {
   CoachSubscription,
   CoachSubscriptionDocument,
 } from "../models/CoachSubscription";
-import {
-  CoachSubscriptionOverrideRequest,
-  CoachSubscriptionOverrideRequestDocument,
-  CoachSubscriptionOverrideStatus,
-} from "../models/CoachSubscriptionOverrideRequest";
+import { CoachSubscriptionPackage } from "../models/CoachSubscriptionPackage";
+import { SubscriptionFrequency } from "../models/CoachSubscriptionPackage";
 
 const DEFAULT_GRACE_DAYS = 7;
 
 const addBillingPeriod = (
   startDate: Date,
-  billingCycle: CoachPlanBillingCycle,
+  frequency: SubscriptionFrequency,
 ): Date => {
   const next = new Date(startDate);
-  if (billingCycle === "YEARLY") {
-    next.setFullYear(next.getFullYear() + 1);
-    return next;
+  switch (frequency) {
+    case "YEARLY":
+      next.setFullYear(next.getFullYear() + 1);
+      break;
+    case "QUARTERLY":
+      next.setMonth(next.getMonth() + 3);
+      break;
+    case "MONTHLY":
+    default:
+      next.setMonth(next.getMonth() + 1);
+      break;
   }
-
-  next.setMonth(next.getMonth() + 1);
   return next;
 };
 
@@ -60,72 +58,33 @@ const syncCoachSubscriptionSummary = async (params: {
 
 export const listCoachPlans = async (options?: {
   isActive?: boolean;
-}): Promise<CoachPlanDocument[]> => {
-  const filters: Record<string, unknown> = {};
-
-  if (typeof options?.isActive === "boolean") {
-    filters.isActive = options.isActive;
-  }
-
-  return CoachPlan.find(filters).sort({ isActive: -1, createdAt: -1 });
+}): Promise<any[]> => {
+  // Legacy method - kept for backward compatibility
+  // New system uses CoachSubscriptionPackage instead
+  return [];
 };
 
-export const createCoachPlan = async (payload: {
-  code: string;
-  name: string;
-  description?: string;
-  pricing: {
-    monthly?: number;
-    yearly?: number;
-  };
-  features?: string[];
-  isActive?: boolean;
-  supportsOverrides?: boolean;
-}): Promise<CoachPlanDocument> => {
-  if (!payload.pricing.monthly && !payload.pricing.yearly) {
-    throw new Error("At least one pricing option is required");
-  }
-
-  const code = payload.code.trim().toUpperCase();
-  const existingPlan = await CoachPlan.findOne({ code });
-  if (existingPlan) {
-    throw new Error("Coach plan with this code already exists");
-  }
-
-  return CoachPlan.create({
-    ...payload,
-    code,
-    features: payload.features || [],
-  });
+export const createCoachPlan = async (payload: any): Promise<any> => {
+  // Legacy method - kept for backward compatibility
+  // New system uses CoachSubscriptionPackage instead
+  throw new Error(
+    "Coach plans are deprecated. Use CoachSubscriptionPackage instead",
+  );
 };
 
 export const updateCoachPlan = async (
   planId: string,
-  payload: Partial<{
-    name: string;
-    description: string;
-    pricing: {
-      monthly?: number;
-      yearly?: number;
-    };
-    features: string[];
-    isActive: boolean;
-    supportsOverrides: boolean;
-  }>,
-): Promise<CoachPlanDocument | null> => {
-  const updatePayload = {
-    ...payload,
-  };
-
-  return CoachPlan.findByIdAndUpdate(planId, updatePayload, {
-    new: true,
-    runValidators: true,
-  });
+  payload: any,
+): Promise<any> => {
+  // Legacy method - kept for backward compatibility
+  throw new Error(
+    "Coach plans are deprecated. Use CoachSubscriptionPackage instead",
+  );
 };
 
 export const getMyCoachSubscription = async (
   userId: string,
-): Promise<CoachSubscriptionDocument | null> => {
+): Promise<(CoachSubscriptionDocument & { package?: any }) | null> => {
   const coach = await Coach.findOne({ userId }).select("_id");
   if (!coach) {
     throw new Error("Coach profile not found");
@@ -133,107 +92,159 @@ export const getMyCoachSubscription = async (
 
   return CoachSubscription.findOne({ coachId: coach._id })
     .sort({ createdAt: -1 })
-    .populate("planId");
+    .populate("packageId");
 };
 
-export const createOrUpdateCoachSubscription = async (params: {
+/**
+ * New method: Subscribe user to a coach's subscription package
+ */
+export const subscribeToCoachPackage = async (params: {
   userId: string;
-  planId: string;
-  billingCycle: CoachPlanBillingCycle;
+  coachId: string;
+  packageId: string;
 }): Promise<CoachSubscriptionDocument> => {
-  const coach = await Coach.findOne({ userId: params.userId }).select("_id");
-  if (!coach) {
-    throw new Error("Coach profile not found");
+  const packageDoc = await CoachSubscriptionPackage.findById(
+    toObjectId(params.packageId),
+  );
+
+  if (!packageDoc || !packageDoc.isActive) {
+    throw new Error("Selected package is not available");
   }
 
-  const plan = await CoachPlan.findById(params.planId);
-  if (!plan || !plan.isActive) {
-    throw new Error("Selected plan is not available");
-  }
-
-  const monthlySelected = params.billingCycle === "MONTHLY";
-  if (monthlySelected && !plan.pricing.monthly) {
-    throw new Error("Selected plan does not support monthly billing");
-  }
-
-  if (!monthlySelected && !plan.pricing.yearly) {
-    throw new Error("Selected plan does not support yearly billing");
+  if (packageDoc.coachId.toString() !== params.coachId) {
+    throw new Error("Package does not belong to this coach");
   }
 
   const now = new Date();
-  const periodEnd = addBillingPeriod(now, params.billingCycle);
+  const periodEnd = addBillingPeriod(now, packageDoc.frequency);
 
+  // Check for existing active subscription from this user to this coach
   const existingActive = await CoachSubscription.findOne({
-    coachId: coach._id,
+    coachId: toObjectId(params.coachId),
+    userId: toObjectId(params.userId),
     status: { $in: ["ACTIVE", "PAST_DUE"] },
   }).sort({ createdAt: -1 });
+
+  if (
+    existingActive &&
+    existingActive.packageId.toString() === params.packageId &&
+    existingActive.status === "ACTIVE"
+  ) {
+    const renewalStart =
+      existingActive.currentPeriodEnd > now
+        ? existingActive.currentPeriodEnd
+        : now;
+
+    existingActive.currentPeriodStart =
+      existingActive.currentPeriodStart || now;
+    existingActive.currentPeriodEnd = addBillingPeriod(
+      renewalStart,
+      packageDoc.frequency,
+    );
+    existingActive.nextBillingDate = existingActive.currentPeriodEnd;
+    existingActive.autoRenew = true;
+    existingActive.status = "ACTIVE";
+
+    await existingActive.save();
+
+    await syncCoachSubscriptionSummary({
+      coachId: toObjectId(params.coachId),
+      subscriptionId: existingActive._id,
+      subscriptionStatus: "ACTIVE",
+      subscriptionExpiresAt: existingActive.currentPeriodEnd,
+    });
+    return existingActive;
+  }
 
   if (existingActive) {
     existingActive.status = "CANCELLED";
     existingActive.autoRenew = false;
     existingActive.cancelledAt = now;
-    existingActive.cancellationReason = "Plan changed";
+    existingActive.cancellationReason = "Switched to different package";
     await existingActive.save();
   }
 
   const subscription = await CoachSubscription.create({
-    coachId: coach._id,
+    coachId: toObjectId(params.coachId),
     userId: toObjectId(params.userId),
-    planId: plan._id,
+    packageId: packageDoc._id,
     status: "ACTIVE",
-    billingCycle: params.billingCycle,
     currentPeriodStart: now,
     currentPeriodEnd: periodEnd,
     nextBillingDate: periodEnd,
     autoRenew: true,
   });
 
-  await syncCoachSubscriptionSummary({
-    coachId: coach._id,
-    subscriptionId: subscription._id,
-    subscriptionStatus: "ACTIVE",
-    subscriptionExpiresAt: periodEnd,
-  });
-
   const populated = await CoachSubscription.findById(subscription._id).populate(
-    "planId",
+    "packageId",
   );
 
   if (!populated) {
-    throw new Error("Failed to create coach subscription");
+    throw new Error("Failed to create subscription");
   }
+
+  await syncCoachSubscriptionSummary({
+    coachId: toObjectId(params.coachId),
+    subscriptionId: populated._id,
+    subscriptionStatus: "ACTIVE",
+    subscriptionExpiresAt: populated.currentPeriodEnd,
+  });
 
   return populated;
 };
 
-export const cancelCoachSubscriptionByUser = async (params: {
+/**
+ * Get user's subscriptions to a specific coach
+ */
+export const getUserCoachSubscriptions = async (params: {
   userId: string;
-  reason?: string;
-}): Promise<CoachSubscriptionDocument> => {
-  const coach = await Coach.findOne({ userId: params.userId }).select("_id");
-  if (!coach) {
-    throw new Error("Coach profile not found");
+  coachId?: string;
+  status?: string;
+}): Promise<CoachSubscriptionDocument[]> => {
+  const query: Record<string, any> = {
+    userId: toObjectId(params.userId),
+  };
+
+  if (params.coachId) {
+    query.coachId = toObjectId(params.coachId);
   }
 
-  const subscription = await CoachSubscription.findOne({
-    coachId: coach._id,
-    status: { $in: ["ACTIVE", "PAST_DUE"] },
-  }).sort({ createdAt: -1 });
+  if (params.status) {
+    query.status = params.status;
+  }
+
+  return CoachSubscription.find(query)
+    .populate("packageId")
+    .populate("coachId", "bio sports rating reviewCount")
+    .sort({ createdAt: -1 });
+};
+
+export const cancelCoachSubscriptionByUser = async (params: {
+  subscriptionId: string;
+  reason?: string;
+}): Promise<CoachSubscriptionDocument> => {
+  const subscription = await CoachSubscription.findById(
+    toObjectId(params.subscriptionId),
+  );
 
   if (!subscription) {
-    throw new Error("No active subscription found");
+    throw new Error("Subscription not found");
+  }
+
+  if (subscription.status === "CANCELLED") {
+    throw new Error("Subscription is already cancelled");
   }
 
   subscription.status = "CANCELLED";
   subscription.autoRenew = false;
   subscription.cancelledAt = new Date();
   subscription.cancellationReason =
-    params.reason?.trim() || "Cancelled by coach";
+    params.reason?.trim() || "Cancelled by user";
   await subscription.save();
 
   await syncCoachSubscriptionSummary({
-    coachId: coach._id,
-    subscriptionId: subscription._id,
+    coachId: subscription.coachId,
+    subscriptionId: null,
     subscriptionStatus: "CANCELLED",
     subscriptionExpiresAt: subscription.currentPeriodEnd,
   });
@@ -241,8 +252,41 @@ export const cancelCoachSubscriptionByUser = async (params: {
   return subscription;
 };
 
+/**
+ * Cancel all active subscriptions from a user to a coach
+ */
+export const cancelAllUserCoachSubscriptions = async (params: {
+  userId: string;
+  coachId: string;
+  reason?: string;
+}): Promise<CoachSubscriptionDocument[]> => {
+  const subscriptions = await CoachSubscription.updateMany(
+    {
+      userId: toObjectId(params.userId),
+      coachId: toObjectId(params.coachId),
+      status: { $in: ["ACTIVE", "PAST_DUE"] },
+    },
+    {
+      status: "CANCELLED",
+      autoRenew: false,
+      cancelledAt: new Date(),
+      cancellationReason: params.reason?.trim() || "Cancelled by user",
+    },
+  );
+
+  return CoachSubscription.find({
+    userId: toObjectId(params.userId),
+    coachId: toObjectId(params.coachId),
+    status: "CANCELLED",
+  })
+    .sort({ updatedAt: -1 })
+    .limit(subscriptions.modifiedCount);
+};
+
 export const markPastDueSubscription = async (subscriptionId: string) => {
-  const subscription = await CoachSubscription.findById(subscriptionId);
+  const subscription = await CoachSubscription.findById(
+    toObjectId(subscriptionId),
+  );
   if (!subscription) {
     throw new Error("Subscription not found");
   }
@@ -268,9 +312,57 @@ export const markPastDueSubscription = async (subscriptionId: string) => {
   return subscription;
 };
 
+export const cleanupExpiredCoachSubscriptions = async (): Promise<number> => {
+  const now = new Date();
+  const expired = await CoachSubscription.find({
+    status: { $in: ["ACTIVE", "PAST_DUE"] },
+    $or: [
+      { status: "ACTIVE", currentPeriodEnd: { $lte: now } },
+      { status: "PAST_DUE", gracePeriodEndsAt: { $lte: now } },
+    ],
+  });
+
+  if (expired.length === 0) {
+    return 0;
+  }
+
+  const coachIds = new Set<string>();
+
+  for (const subscription of expired) {
+    subscription.status = "EXPIRED";
+    subscription.autoRenew = false;
+    if (!subscription.cancelledAt) {
+      subscription.cancelledAt = now;
+    }
+    subscription.cancellationReason =
+      subscription.cancellationReason || "Subscription expired";
+    await subscription.save();
+    coachIds.add(subscription.coachId.toString());
+  }
+
+  for (const coachId of coachIds) {
+    const activeSubscription = await CoachSubscription.findOne({
+      coachId: toObjectId(coachId),
+      status: "ACTIVE",
+    })
+      .sort({ currentPeriodEnd: -1 })
+      .lean();
+
+    await syncCoachSubscriptionSummary({
+      coachId: toObjectId(coachId),
+      subscriptionId: activeSubscription?._id ?? null,
+      subscriptionStatus: activeSubscription ? "ACTIVE" : "EXPIRED",
+      subscriptionExpiresAt: activeSubscription?.currentPeriodEnd ?? null,
+    });
+  }
+
+  return expired.length;
+};
+
 export const listCoachSubscriptionsForAdmin = async (filters?: {
   status?: string;
-  planId?: string;
+  coachId?: string;
+  userId?: string;
   page?: number;
   limit?: number;
 }) => {
@@ -281,14 +373,18 @@ export const listCoachSubscriptionsForAdmin = async (filters?: {
   if (filters?.status) {
     query.status = filters.status;
   }
-  if (filters?.planId) {
-    query.planId = filters.planId;
+  if (filters?.coachId) {
+    query.coachId = toObjectId(filters.coachId);
+  }
+  if (filters?.userId) {
+    query.userId = toObjectId(filters.userId);
   }
 
   const [subscriptions, total] = await Promise.all([
     CoachSubscription.find(query)
-      .populate("planId", "code name pricing")
+      .populate("packageId")
       .populate("coachId", "userId sports verificationStatus")
+      .populate("userId", "name email")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit),
@@ -306,150 +402,70 @@ export const listCoachSubscriptionsForAdmin = async (filters?: {
   };
 };
 
-export const createCoachSubscriptionOverrideRequest = async (params: {
-  userId: string;
-  requestedPlanId?: string;
-  note: string;
-}): Promise<CoachSubscriptionOverrideRequestDocument> => {
-  const coach = await Coach.findOne({ userId: params.userId }).select(
-    "_id activeSubscriptionId",
+/**
+ * Get active subscriptions for a coach
+ */
+export const getCoachActiveSubscriptions = async (coachId: string) => {
+  return CoachSubscription.find({
+    coachId: toObjectId(coachId),
+    status: "ACTIVE",
+  })
+    .populate("userId", "name email")
+    .populate("packageId")
+    .sort({ createdAt: -1 });
+};
+
+/**
+ * Get subscription revenue for a coach
+ */
+export const getCoachSubscriptionRevenue = async (params: {
+  coachId: string;
+  startDate?: Date;
+  endDate?: Date;
+}): Promise<{
+  total: number;
+  count: number;
+  byFrequency: Record<string, number>;
+}> => {
+  const query: Record<string, any> = {
+    coachId: toObjectId(params.coachId),
+    status: "ACTIVE",
+  };
+
+  if (params.startDate || params.endDate) {
+    query.createdAt = {};
+    if (params.startDate) {
+      query.createdAt.$gte = params.startDate;
+    }
+    if (params.endDate) {
+      query.createdAt.$lte = params.endDate;
+    }
+  }
+
+  const subscriptions = await CoachSubscription.find(query).populate(
+    "packageId",
+    "price frequency",
   );
 
-  if (!coach) {
-    throw new Error("Coach profile not found");
-  }
-
-  const activeRequest = await CoachSubscriptionOverrideRequest.findOne({
-    coachId: coach._id,
-    status: "PENDING",
-  });
-
-  if (activeRequest) {
-    throw new Error("A pending override request already exists");
-  }
-
-  let currentPlanId: mongoose.Types.ObjectId | null = null;
-  if (coach.activeSubscriptionId) {
-    const subscription = await CoachSubscription.findById(
-      coach.activeSubscriptionId,
-    ).select("planId");
-    currentPlanId = subscription?.planId || null;
-  }
-
-  const requestedPlanObjectId = params.requestedPlanId
-    ? toObjectId(params.requestedPlanId)
-    : null;
-
-  return CoachSubscriptionOverrideRequest.create({
-    coachId: coach._id,
-    userId: toObjectId(params.userId),
-    currentPlanId,
-    requestedPlanId: requestedPlanObjectId,
-    note: params.note.trim(),
-    status: "PENDING",
-  });
-};
-
-export const listOverrideRequestsForCoach = async (params: {
-  userId: string;
-  status?: CoachSubscriptionOverrideStatus;
-  page?: number;
-  limit?: number;
-}) => {
-  const coach = await Coach.findOne({ userId: params.userId }).select("_id");
-  if (!coach) {
-    throw new Error("Coach profile not found");
-  }
-
-  const page = Math.max(1, Number(params.page) || 1);
-  const limit = Math.min(100, Math.max(1, Number(params.limit) || 20));
-
-  const query: Record<string, unknown> = {
-    coachId: coach._id,
+  let total = 0;
+  const byFrequency: Record<string, number> = {
+    MONTHLY: 0,
+    QUARTERLY: 0,
+    YEARLY: 0,
   };
 
-  if (params.status) {
-    query.status = params.status;
+  for (const sub of subscriptions) {
+    const pkg = sub.packageId as any;
+    if (pkg && pkg.price) {
+      total += pkg.price;
+      byFrequency[pkg.frequency] =
+        (byFrequency[pkg.frequency] || 0) + pkg.price;
+    }
   }
-
-  const [requests, total] = await Promise.all([
-    CoachSubscriptionOverrideRequest.find(query)
-      .populate("currentPlanId", "code name")
-      .populate("requestedPlanId", "code name")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit),
-    CoachSubscriptionOverrideRequest.countDocuments(query),
-  ]);
 
   return {
-    requests,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
+    total,
+    count: subscriptions.length,
+    byFrequency,
   };
-};
-
-export const listOverrideRequestsForAdmin = async (filters?: {
-  status?: CoachSubscriptionOverrideStatus;
-  page?: number;
-  limit?: number;
-}) => {
-  const page = Math.max(1, Number(filters?.page) || 1);
-  const limit = Math.min(100, Math.max(1, Number(filters?.limit) || 20));
-  const query: Record<string, unknown> = {};
-
-  if (filters?.status) {
-    query.status = filters.status;
-  }
-
-  const [requests, total] = await Promise.all([
-    CoachSubscriptionOverrideRequest.find(query)
-      .populate("coachId", "userId sports verificationStatus")
-      .populate("currentPlanId", "code name")
-      .populate("requestedPlanId", "code name")
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit),
-    CoachSubscriptionOverrideRequest.countDocuments(query),
-  ]);
-
-  return {
-    requests,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
-  };
-};
-
-export const reviewOverrideRequest = async (params: {
-  requestId: string;
-  reviewerId: string;
-  status: Exclude<CoachSubscriptionOverrideStatus, "PENDING">;
-  reviewNote?: string;
-}) => {
-  const request = await CoachSubscriptionOverrideRequest.findById(
-    params.requestId,
-  );
-  if (!request) {
-    throw new Error("Override request not found");
-  }
-
-  if (request.status !== "PENDING") {
-    throw new Error("Override request has already been reviewed");
-  }
-
-  request.status = params.status;
-  request.reviewedBy = toObjectId(params.reviewerId);
-  request.reviewedAt = new Date();
-  request.reviewNote = params.reviewNote?.trim() || "";
-  await request.save();
-
-  return request;
 };

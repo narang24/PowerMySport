@@ -1,9 +1,15 @@
 import React from "react";
 
+export interface DaySlot {
+  startTime: string;
+  endTime: string;
+}
+
 export interface DayHours {
   isOpen: boolean;
   openTime?: string;
   closeTime?: string;
+  slots?: DaySlot[];
 }
 
 export interface OpeningHours {
@@ -32,48 +38,165 @@ const DAYS = [
 ] as const;
 
 export const getDefaultOpeningHours = (): OpeningHours => ({
-  monday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
-  tuesday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
-  wednesday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
-  thursday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
-  friday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
-  saturday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
-  sunday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
+  monday: {
+    isOpen: true,
+    openTime: "09:00",
+    closeTime: "21:00",
+    slots: [{ startTime: "09:00", endTime: "21:00" }],
+  },
+  tuesday: {
+    isOpen: true,
+    openTime: "09:00",
+    closeTime: "21:00",
+    slots: [{ startTime: "09:00", endTime: "21:00" }],
+  },
+  wednesday: {
+    isOpen: true,
+    openTime: "09:00",
+    closeTime: "21:00",
+    slots: [{ startTime: "09:00", endTime: "21:00" }],
+  },
+  thursday: {
+    isOpen: true,
+    openTime: "09:00",
+    closeTime: "21:00",
+    slots: [{ startTime: "09:00", endTime: "21:00" }],
+  },
+  friday: {
+    isOpen: true,
+    openTime: "09:00",
+    closeTime: "21:00",
+    slots: [{ startTime: "09:00", endTime: "21:00" }],
+  },
+  saturday: {
+    isOpen: true,
+    openTime: "09:00",
+    closeTime: "21:00",
+    slots: [{ startTime: "09:00", endTime: "21:00" }],
+  },
+  sunday: {
+    isOpen: true,
+    openTime: "09:00",
+    closeTime: "21:00",
+    slots: [{ startTime: "09:00", endTime: "21:00" }],
+  },
 });
+
+const sortSlots = (slots: DaySlot[]): DaySlot[] => {
+  return [...slots].sort((a, b) => a.startTime.localeCompare(b.startTime));
+};
+
+const normalizeDayHours = (dayHours: DayHours): DayHours => {
+  const derivedSlots =
+    dayHours.slots && dayHours.slots.length > 0
+      ? dayHours.slots
+      : dayHours.openTime && dayHours.closeTime
+        ? [{ startTime: dayHours.openTime, endTime: dayHours.closeTime }]
+        : dayHours.isOpen
+          ? [{ startTime: "09:00", endTime: "21:00" }]
+          : [];
+
+  const sortedSlots = sortSlots(derivedSlots);
+  const firstSlot = sortedSlots[0];
+  const lastSlot = sortedSlots[sortedSlots.length - 1];
+
+  return {
+    ...dayHours,
+    slots: sortedSlots,
+    openTime: firstSlot?.startTime,
+    closeTime: lastSlot?.endTime,
+  };
+};
 
 export default function OpeningHoursInput({
   value,
   onChange,
 }: OpeningHoursInputProps) {
   const handleDayToggle = (day: keyof OpeningHours) => {
+    const current = normalizeDayHours(value[day]);
+    const isOpening = !current.isOpen;
+
     onChange({
       ...value,
       [day]: {
-        ...value[day],
-        isOpen: !value[day].isOpen,
+        ...current,
+        isOpen: isOpening,
+        slots:
+          current.slots && current.slots.length > 0
+            ? current.slots
+            : [{ startTime: "09:00", endTime: "21:00" }],
       },
     });
   };
 
-  const handleTimeChange = (
+  const handleSlotTimeChange = (
     day: keyof OpeningHours,
-    field: "openTime" | "closeTime",
+    slotIndex: number,
+    field: keyof DaySlot,
     time: string,
   ) => {
+    const current = normalizeDayHours(value[day]);
+    const nextSlots = (current.slots || []).map((slot, index) =>
+      index === slotIndex ? { ...slot, [field]: time } : slot,
+    );
+
+    const normalized = normalizeDayHours({
+      ...current,
+      slots: nextSlots,
+    });
+
     onChange({
       ...value,
       [day]: {
-        ...value[day],
-        [field]: time,
+        ...normalized,
       },
+    });
+  };
+
+  const addSlot = (day: keyof OpeningHours) => {
+    const current = normalizeDayHours(value[day]);
+    const nextSlots = [...(current.slots || [])];
+    const lastSlot = nextSlots[nextSlots.length - 1];
+
+    nextSlots.push({
+      startTime: lastSlot?.endTime || "09:00",
+      endTime: lastSlot?.endTime || "10:00",
+    });
+
+    onChange({
+      ...value,
+      [day]: normalizeDayHours({
+        ...current,
+        isOpen: true,
+        slots: nextSlots,
+      }),
+    });
+  };
+
+  const removeSlot = (day: keyof OpeningHours, slotIndex: number) => {
+    const current = normalizeDayHours(value[day]);
+    const nextSlots = (current.slots || []).filter((_, i) => i !== slotIndex);
+
+    onChange({
+      ...value,
+      [day]: normalizeDayHours({
+        ...current,
+        slots:
+          nextSlots.length > 0
+            ? nextSlots
+            : [{ startTime: "09:00", endTime: "21:00" }],
+      }),
     });
   };
 
   const copyToAllDays = () => {
-    const mondayHours = value.monday;
+    const mondayHours = normalizeDayHours(value.monday);
     const newHours: OpeningHours = {} as OpeningHours;
     DAYS.forEach(({ key }) => {
-      newHours[key] = { ...mondayHours };
+      newHours[key] = {
+        ...mondayHours,
+        slots: [...(mondayHours.slots || [])],
+      };
     });
     onChange(newHours);
   };
@@ -95,43 +218,81 @@ export default function OpeningHoursInput({
 
       <div className="space-y-3">
         {DAYS.map(({ key, label }) => {
-          const dayHours = value[key];
+          const dayHours = normalizeDayHours(value[key]);
           return (
             <div
               key={key}
-              className="flex items-center gap-4 p-3 bg-slate-50 border border-slate-200 rounded-lg justify-between"
+              className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3"
             >
-              <div className="flex items-center gap-2 w-32">
-                <input
-                  type="checkbox"
-                  checked={dayHours.isOpen}
-                  onChange={() => handleDayToggle(key)}
-                  className="w-4 h-4 accent-power-orange rounded"
-                />
-                <span className="text-sm font-medium text-slate-700">
-                  {label}
-                </span>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={dayHours.isOpen}
+                    onChange={() => handleDayToggle(key)}
+                    className="h-4 w-4 rounded accent-power-orange"
+                  />
+                  <span className="text-sm font-medium text-slate-700">
+                    {label}
+                  </span>
+                </div>
+
+                {dayHours.isOpen && (
+                  <button
+                    type="button"
+                    onClick={() => addSlot(key)}
+                    className="text-sm font-semibold text-power-orange hover:text-orange-600"
+                  >
+                    Add slot
+                  </button>
+                )}
               </div>
 
               {dayHours.isOpen ? (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="time"
-                    value={dayHours.openTime || "09:00"}
-                    onChange={(e) =>
-                      handleTimeChange(key, "openTime", e.target.value)
-                    }
-                    className="px-3 py-1.5 border border-slate-300 rounded-md text-sm text-slate-900 focus:ring-2 focus:ring-power-orange focus:border-transparent"
-                  />
-                  <span className="text-slate-500 text-sm">to</span>
-                  <input
-                    type="time"
-                    value={dayHours.closeTime || "21:00"}
-                    onChange={(e) =>
-                      handleTimeChange(key, "closeTime", e.target.value)
-                    }
-                    className="px-3 py-1.5 border border-slate-300 rounded-md text-sm text-slate-900 focus:ring-2 focus:ring-power-orange focus:border-transparent"
-                  />
+                <div className="space-y-2">
+                  {(dayHours.slots || []).map((slot, slotIndex) => (
+                    <div
+                      key={`${key}-${slotIndex}`}
+                      className="flex items-center gap-2"
+                    >
+                      <input
+                        type="time"
+                        value={slot.startTime}
+                        onChange={(e) =>
+                          handleSlotTimeChange(
+                            key,
+                            slotIndex,
+                            "startTime",
+                            e.target.value,
+                          )
+                        }
+                        className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-power-orange"
+                      />
+                      <span className="text-sm text-slate-500">to</span>
+                      <input
+                        type="time"
+                        value={slot.endTime}
+                        onChange={(e) =>
+                          handleSlotTimeChange(
+                            key,
+                            slotIndex,
+                            "endTime",
+                            e.target.value,
+                          )
+                        }
+                        className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-900 focus:border-transparent focus:ring-2 focus:ring-power-orange"
+                      />
+                      {(dayHours.slots || []).length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeSlot(key, slotIndex)}
+                          className="text-sm font-medium text-red-600 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <span className="text-sm text-slate-500 italic">Closed</span>

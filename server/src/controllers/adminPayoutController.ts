@@ -1,9 +1,19 @@
 import { Request, Response } from "express";
 import { Booking } from "../models/Booking";
-import { Coach } from "../models/Coach";
+import { Coach, IPayoutMethod } from "../models/Coach";
 import { Venue } from "../models/Venue";
 import { User } from "../models/User";
 import mongoose from "mongoose";
+
+const getPrimaryPayoutMethod = (
+  payoutMethods?: IPayoutMethod[],
+): IPayoutMethod | null => {
+  if (!payoutMethods || payoutMethods.length === 0) {
+    return null;
+  }
+
+  return payoutMethods.find((method) => method.isDefault) ?? payoutMethods[0] ?? null;
+};
 
 /**
  * Admin: Get all pending payouts grouped by vendor
@@ -55,13 +65,21 @@ export const listPendingPayouts = async (
       pendingPayouts.map(async (payout) => {
         const user = await User.findById(payout.vendorId).select("name email phone").lean();
         
-        let payoutMethod = null;
+        let payoutMethod: IPayoutMethod | null = null;
         if (payout.vendorRole === "COACH") {
-          const coach = await Coach.findOne({ userId: payout.vendorId }).select("payoutMethod").lean();
-          if (coach && coach.payoutMethod) payoutMethod = coach.payoutMethod;
+          const coach = await Coach.findOne({ userId: payout.vendorId })
+            .select("payoutMethods")
+            .lean();
+          payoutMethod = getPrimaryPayoutMethod(
+            coach?.payoutMethods as IPayoutMethod[] | undefined,
+          );
         } else if (payout.vendorRole === "VENUE_LISTER") {
-          const venue = await Venue.findOne({ ownerId: payout.vendorId }).select("payoutMethod").lean();
-          if (venue && venue.payoutMethod) payoutMethod = venue.payoutMethod;
+          const venue = await Venue.findOne({ ownerId: payout.vendorId })
+            .select("payoutMethods")
+            .lean();
+          payoutMethod = getPrimaryPayoutMethod(
+            venue?.payoutMethods as IPayoutMethod[] | undefined,
+          );
         }
 
         return {

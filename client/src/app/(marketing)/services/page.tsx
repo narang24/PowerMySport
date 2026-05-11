@@ -101,7 +101,7 @@ export default function ServicesPage() {
     {
       title: "Automated Revenue Tracking",
       description:
-        "Monitor earnings in real-time with detailed reports. Get paid automatically after each coaching session with transparent payout tracking and launch-period zero commission.",
+        "Monitor earnings in real-time with detailed reports. Get paid automatically after each coaching session with transparent payout tracking and launch-period zero commission on coach bookings.",
     },
   ];
 

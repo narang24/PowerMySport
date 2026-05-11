@@ -1710,19 +1710,12 @@ export const checkInBookingByCode = async (
     );
   }
 
-  // Check-in code expiration: 24 hours after booking end time
-  const endTimeParts = booking.endTime.split(":").map(Number);
-  const endHour = endTimeParts[0];
-  const endMin = endTimeParts[1];
-  const bookingEndTime = new Date(booking.date);
-  bookingEndTime.setHours(endHour || 0, endMin || 0, 0, 0);
-  const codeExpiryTime = new Date(
-    bookingEndTime.getTime() + 24 * 60 * 60 * 1000,
-  );
+  // Check-in code expiration: 15 minutes after booking start time
+  const codeExpiryTime = new Date(bookingDateTime.getTime() + 15 * 60 * 1000);
 
   if (now > codeExpiryTime) {
     throw new Error(
-      "Check-in code has expired. This booking is no longer active.",
+      "Check-in code has expired. Check-in is allowed only till 15 minutes after booking start time.",
     );
   }
 

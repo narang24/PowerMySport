@@ -222,6 +222,10 @@ export default function TermsOfServicePage() {
               <li>
                 Coaches: Commission percentage is disclosed in your agreement
               </li>
+              <li>
+                Any zero-commission offer applies only to coach/venue bookings
+                and does not apply to subscription plan purchases
+              </li>
               <li>Payment processing fees may apply</li>
               <li>Commission structure may be updated with notice</li>
             </ul>

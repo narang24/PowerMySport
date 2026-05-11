@@ -1317,14 +1317,14 @@ export default function CoachVerificationPage() {
   const guidance = getStatusGuidance(status);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <Card className="bg-white">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">
               Coach Verification
             </p>
-            <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+            <h1 className="text-xl font-bold text-slate-900 sm:text-3xl">
               Complete Your Verification
             </h1>
             <p className="mt-1 text-sm text-slate-600">
@@ -1375,7 +1375,7 @@ export default function CoachVerificationPage() {
       </Card>
 
       <Card className="bg-white">
-        <div className="mb-6 grid grid-cols-3 gap-2">
+        <div className="mb-6 grid grid-cols-3 gap-2 sm:gap-3">
           {[1, 2, 3].map((current) => (
             <div
               key={current}
@@ -1396,7 +1396,7 @@ export default function CoachVerificationPage() {
               <label className="mb-2 block text-sm font-semibold text-slate-900">
                 Profile Picture <span className="text-red-600">*</span>
               </label>
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                 <ProfilePictureUpload
                   currentPhotoUrl={user?.photoUrl}
                   onUploadSuccess={(updatedUser) => {
@@ -1504,6 +1504,7 @@ export default function CoachVerificationPage() {
                 variant="primary"
                 onClick={handleStepOneContinue}
                 disabled={isLockedByReview || saving || !isStep1Complete}
+                className="w-full sm:w-auto"
               >
                 Continue to Sports
               </Button>
@@ -1879,11 +1880,12 @@ export default function CoachVerificationPage() {
               </div>
             )}
 
-            <div className="flex justify-between">
+            <div className="grid gap-2 sm:flex sm:items-center sm:justify-between">
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => navigateToStep(1, false)}
+                className="w-full sm:w-auto"
               >
                 Back
               </Button>
@@ -1892,6 +1894,7 @@ export default function CoachVerificationPage() {
                 variant="primary"
                 onClick={handleStepTwoContinue}
                 disabled={saving || isLockedByReview || !isStep2Complete}
+                className="w-full sm:w-auto"
               >
                 {saving ? "Saving..." : "Continue to Final Step"}
               </Button>
@@ -1903,7 +1906,7 @@ export default function CoachVerificationPage() {
           <div className="space-y-5">
             {serviceMode === "OWN_VENUE" && (
               <div className="space-y-3 rounded-lg border border-slate-200 p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-sm font-semibold text-slate-900">
                     Venue Images (Required for OWN_VENUE)
                   </p>
@@ -2002,7 +2005,7 @@ export default function CoachVerificationPage() {
             )}
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm font-semibold text-slate-900">
                   Verification Documents (Optional)
                 </p>
@@ -2016,6 +2019,7 @@ export default function CoachVerificationPage() {
                       { type: "CERTIFICATION", url: "", fileName: "" },
                     ])
                   }
+                  className="w-full sm:w-auto"
                 >
                   Add Document
                 </Button>
@@ -2073,8 +2077,8 @@ export default function CoachVerificationPage() {
                       </div>
                     </div>
 
-                    <div className="flex gap-2">
-                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    <div className="grid gap-2 sm:flex">
+                      <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 sm:w-auto">
                         <Upload size={14} />
                         {uploadingDocIndex === index
                           ? "Uploading..."
@@ -2115,11 +2119,12 @@ export default function CoachVerificationPage() {
               ))}
             </div>
 
-            <div className="flex justify-between">
+            <div className="grid gap-2 sm:flex sm:items-center sm:justify-between">
               <Button
                 type="button"
                 variant="secondary"
                 onClick={() => navigateToStep(2, false)}
+                className="w-full sm:w-auto"
               >
                 Back
               </Button>
@@ -2133,6 +2138,7 @@ export default function CoachVerificationPage() {
                   isUploadingVenueImage
                 }
                 onClick={handleSubmitVerification}
+                className="w-full sm:w-auto"
               >
                 {saving ? "Submitting..." : "Submit for Verification"}
               </Button>

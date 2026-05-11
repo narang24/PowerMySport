@@ -30,6 +30,8 @@ import reviewRoutes from "./routes/reviewRoutes";
 import ecommerceRoutes from "./routes/ecommerceRoutes";
 import academyOnboardingRoutes from "./routes/academyOnboardingRoutes";
 import payoutRoutes from "./routes/payoutRoutes";
+import payoutMethodsRoutes from "./routes/payoutMethodsRoutes";
+import refundMethodRoutes from "./routes/refundMethodRoutes";
 
 export const app: Express = express();
 
@@ -136,6 +138,8 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/support-tickets", supportTicketRoutes);
 app.use("/api/v1", ecommerceRoutes);
 app.use("/api/payouts", payoutRoutes);
+app.use("/api/payout-methods", payoutMethodsRoutes);
+app.use("/api/refund-methods", refundMethodRoutes);
 
 app.get("/api/health", (req, res) => {
   res.status(200).json({

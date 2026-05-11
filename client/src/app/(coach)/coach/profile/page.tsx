@@ -936,11 +936,11 @@ export default function CoachProfilePage() {
       : (coachProfile?.availability?.length ?? 0);
 
   return (
-    <div className="space-y-8 pb-8">
+    <div className="space-y-6 pb-8 sm:space-y-8">
       <Card className="overflow-hidden border border-slate-200 bg-white shadow-sm">
-        <div className="bg-linear-to-r from-slate-50 to-white px-6 py-6 md:px-8">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="bg-linear-to-r from-slate-50 to-white px-4 py-5 sm:px-6 md:px-8">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
               <ProfilePictureUpload
                 currentPhotoUrl={user?.photoUrl}
                 onUploadSuccess={(updatedUser) => {
@@ -1031,10 +1031,10 @@ export default function CoachProfilePage() {
       </Card>
 
       {coachProfile ? (
-        <div className="grid gap-6 xl:grid-cols-12 xl:items-start">
+        <div className="grid gap-5 xl:grid-cols-12 xl:items-start">
           <div className="space-y-6 xl:col-span-8">
             <Card className="border border-slate-200 bg-white shadow-sm">
-              <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-lg font-semibold text-slate-900">
                   About You
                 </h3>
@@ -1044,6 +1044,7 @@ export default function CoachProfilePage() {
                     variant="secondary"
                     size="sm"
                     onClick={handleEditAboutClick}
+                    className="w-full sm:w-auto"
                   >
                     Edit About
                   </Button>
@@ -1060,12 +1061,13 @@ export default function CoachProfilePage() {
                     className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-power-orange focus:outline-none"
                     placeholder="Tell players about your experience and coaching style"
                   />
-                  <div className="flex gap-2">
+                  <div className="grid gap-2 sm:flex">
                     <Button
                       type="button"
                       size="sm"
                       onClick={handleSaveAbout}
                       loading={isSavingAbout}
+                      className="w-full sm:w-auto"
                     >
                       Save
                     </Button>
@@ -1075,6 +1077,7 @@ export default function CoachProfilePage() {
                       variant="outline"
                       onClick={() => setIsEditingAbout(false)}
                       disabled={isSavingAbout}
+                      className="w-full sm:w-auto"
                     >
                       Cancel
                     </Button>
@@ -1088,7 +1091,7 @@ export default function CoachProfilePage() {
             </Card>
 
             <Card className="border border-slate-200 bg-white shadow-sm">
-              <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-lg font-semibold text-slate-900">
                   Coaching Details
                 </h3>
@@ -1098,6 +1101,7 @@ export default function CoachProfilePage() {
                     variant="secondary"
                     size="sm"
                     onClick={handleEditCoachingClick}
+                    className="w-full sm:w-auto"
                   >
                     Edit Details
                   </Button>
@@ -1321,12 +1325,13 @@ export default function CoachProfilePage() {
                     </div>
                   )}
 
-                  <div className="flex gap-2">
+                  <div className="grid gap-2 sm:flex">
                     <Button
                       type="button"
                       size="sm"
                       onClick={handleSaveCoachingDetails}
                       loading={isSavingCoaching}
+                      className="w-full sm:w-auto"
                     >
                       Save
                     </Button>
@@ -1336,6 +1341,7 @@ export default function CoachProfilePage() {
                       variant="outline"
                       onClick={() => setIsEditingCoaching(false)}
                       disabled={isSavingCoaching}
+                      className="w-full sm:w-auto"
                     >
                       Cancel
                     </Button>
@@ -1455,7 +1461,7 @@ export default function CoachProfilePage() {
                           )}
 
                           <div>
-                            <div className="mb-2 flex items-center justify-between gap-3">
+                            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                               <p className="text-xs uppercase tracking-wide text-slate-500">
                                 Venue Images
                               </p>
@@ -1469,7 +1475,7 @@ export default function CoachProfilePage() {
                                   Update Images
                                 </Button>
                               ) : (
-                                <div className="flex gap-2">
+                                <div className="grid gap-2 sm:flex sm:flex-wrap">
                                   <input
                                     ref={venueImageInputRef}
                                     type="file"
@@ -1606,14 +1612,14 @@ export default function CoachProfilePage() {
             </Card>
 
             <Card className="border border-slate-200 bg-white shadow-sm">
-              <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-3 sm:flex-row sm:items-center sm:justify-between">
                 <h3 className="text-lg font-semibold text-slate-900">
                   Availability / Time Slots
                 </h3>
                 <Button
                   type="button"
                   variant="secondary"
-                  className="flex items-center gap-2"
+                  className="flex w-full items-center justify-center gap-2 sm:w-auto"
                   onClick={addTimeSlot}
                   disabled={!activeSportTab}
                 >
@@ -1728,13 +1734,13 @@ export default function CoachProfilePage() {
                 )}
               </div>
 
-              <div className="mt-4 flex items-center justify-end">
+              <div className="mt-4 flex justify-end">
                 <Button
                   type="button"
                   variant="primary"
                   onClick={handleSaveAvailability}
                   disabled={savingAvailability || !coachProfile}
-                  className="flex items-center gap-2"
+                  className="flex w-full items-center justify-center gap-2 sm:w-auto"
                 >
                   <Clock3 size={16} />
                   {savingAvailability ? "Saving..." : "Save Time Slots"}

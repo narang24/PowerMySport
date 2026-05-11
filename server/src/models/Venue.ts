@@ -44,7 +44,12 @@ export interface VenueDocument extends Document {
   reviewCount: number;
   hasCoaches: boolean;
   venueCoaches: VenueCoach[];
-  payoutMethod?: IPayoutMethod;
+  /**
+   * REQUIREMENT 3: Multiple payout methods support (same as Coach)
+   * Array of payout methods for venue listers
+   * MIGRATION NOTE: Changed from single payoutMethod to payoutMethods array
+   */
+  payoutMethods?: IPayoutMethod[];
   createdAt: Date;
   updatedAt: Date;
 
@@ -152,46 +157,144 @@ const venueSchema = new Schema<VenueDocument>(
           isOpen: { type: Boolean, default: true },
           openTime: { type: String, default: "09:00" },
           closeTime: { type: String, default: "21:00" },
+          slots: {
+            type: [
+              {
+                startTime: { type: String, required: true },
+                endTime: { type: String, required: true },
+              },
+            ],
+            default: [{ startTime: "09:00", endTime: "21:00" }],
+          },
         },
         tuesday: {
           isOpen: { type: Boolean, default: true },
           openTime: { type: String, default: "09:00" },
           closeTime: { type: String, default: "21:00" },
+          slots: {
+            type: [
+              {
+                startTime: { type: String, required: true },
+                endTime: { type: String, required: true },
+              },
+            ],
+            default: [{ startTime: "09:00", endTime: "21:00" }],
+          },
         },
         wednesday: {
           isOpen: { type: Boolean, default: true },
           openTime: { type: String, default: "09:00" },
           closeTime: { type: String, default: "21:00" },
+          slots: {
+            type: [
+              {
+                startTime: { type: String, required: true },
+                endTime: { type: String, required: true },
+              },
+            ],
+            default: [{ startTime: "09:00", endTime: "21:00" }],
+          },
         },
         thursday: {
           isOpen: { type: Boolean, default: true },
           openTime: { type: String, default: "09:00" },
           closeTime: { type: String, default: "21:00" },
+          slots: {
+            type: [
+              {
+                startTime: { type: String, required: true },
+                endTime: { type: String, required: true },
+              },
+            ],
+            default: [{ startTime: "09:00", endTime: "21:00" }],
+          },
         },
         friday: {
           isOpen: { type: Boolean, default: true },
           openTime: { type: String, default: "09:00" },
           closeTime: { type: String, default: "21:00" },
+          slots: {
+            type: [
+              {
+                startTime: { type: String, required: true },
+                endTime: { type: String, required: true },
+              },
+            ],
+            default: [{ startTime: "09:00", endTime: "21:00" }],
+          },
         },
         saturday: {
           isOpen: { type: Boolean, default: true },
           openTime: { type: String, default: "09:00" },
           closeTime: { type: String, default: "21:00" },
+          slots: {
+            type: [
+              {
+                startTime: { type: String, required: true },
+                endTime: { type: String, required: true },
+              },
+            ],
+            default: [{ startTime: "09:00", endTime: "21:00" }],
+          },
         },
         sunday: {
           isOpen: { type: Boolean, default: true },
           openTime: { type: String, default: "09:00" },
           closeTime: { type: String, default: "21:00" },
+          slots: {
+            type: [
+              {
+                startTime: { type: String, required: true },
+                endTime: { type: String, required: true },
+              },
+            ],
+            default: [{ startTime: "09:00", endTime: "21:00" }],
+          },
         },
       },
       default: {
-        monday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
-        tuesday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
-        wednesday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
-        thursday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
-        friday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
-        saturday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
-        sunday: { isOpen: true, openTime: "09:00", closeTime: "21:00" },
+        monday: {
+          isOpen: true,
+          openTime: "09:00",
+          closeTime: "21:00",
+          slots: [{ startTime: "09:00", endTime: "21:00" }],
+        },
+        tuesday: {
+          isOpen: true,
+          openTime: "09:00",
+          closeTime: "21:00",
+          slots: [{ startTime: "09:00", endTime: "21:00" }],
+        },
+        wednesday: {
+          isOpen: true,
+          openTime: "09:00",
+          closeTime: "21:00",
+          slots: [{ startTime: "09:00", endTime: "21:00" }],
+        },
+        thursday: {
+          isOpen: true,
+          openTime: "09:00",
+          closeTime: "21:00",
+          slots: [{ startTime: "09:00", endTime: "21:00" }],
+        },
+        friday: {
+          isOpen: true,
+          openTime: "09:00",
+          closeTime: "21:00",
+          slots: [{ startTime: "09:00", endTime: "21:00" }],
+        },
+        saturday: {
+          isOpen: true,
+          openTime: "09:00",
+          closeTime: "21:00",
+          slots: [{ startTime: "09:00", endTime: "21:00" }],
+        },
+        sunday: {
+          isOpen: true,
+          openTime: "09:00",
+          closeTime: "21:00",
+          slots: [{ startTime: "09:00", endTime: "21:00" }],
+        },
       },
     },
     description: {
@@ -316,19 +419,22 @@ const venueSchema = new Schema<VenueDocument>(
       default: 0,
       min: 0,
     },
-    payoutMethod: {
-      type: {
-        type: String,
-        enum: ["BANK_TRANSFER", "UPI"],
+    payoutMethods: [
+      {
+        type: {
+          type: String,
+          enum: ["BANK_TRANSFER", "UPI"],
+        },
+        accountHolderName: { type: String, trim: true },
+        accountNumber: { type: String, trim: true },
+        ifscCode: { type: String, trim: true, uppercase: true },
+        bankName: { type: String, trim: true },
+        upiId: { type: String, trim: true },
+        isDefault: { type: Boolean, default: false },
+        addedAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date, default: Date.now },
       },
-      accountHolderName: { type: String, trim: true },
-      accountNumber: { type: String, trim: true },
-      ifscCode: { type: String, trim: true, uppercase: true },
-      bankName: { type: String, trim: true },
-      upiId: { type: String, trim: true },
-      addedAt: { type: Date },
-      updatedAt: { type: Date },
-    },
+    ],
   },
   { timestamps: true },
 );
