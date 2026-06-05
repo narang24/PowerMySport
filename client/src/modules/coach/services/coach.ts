@@ -292,9 +292,16 @@ export const coachApi = {
 
   cancelCoachSubscription: async (
     subscriptionId: string,
+    reason?: string,
   ): Promise<ApiResponse<{ subscription: CoachSubscription }>> => {
     const response = await axiosInstance.delete(
       `/coaches/subscriptions/${subscriptionId}`,
+      {
+        data: {
+          subscriptionId,
+          reason,
+        },
+      },
     );
     return response.data;
   },

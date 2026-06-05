@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import React, { useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ModalProps {
   isOpen: boolean;
@@ -39,10 +40,8 @@ export const Modal: React.FC<ModalProps> = ({
 
     if (isOpen) {
       document.addEventListener("keydown", handleEscape);
-      // Store currently focused element
       previousFocusRef.current = document.activeElement as HTMLElement;
 
-      // Focus the modal
       setTimeout(() => {
         modalRef.current?.focus();
       }, 0);
@@ -50,7 +49,6 @@ export const Modal: React.FC<ModalProps> = ({
 
     return () => {
       document.removeEventListener("keydown", handleEscape);
-      // Restore focus when modal closes
       if (!isOpen && previousFocusRef.current) {
         previousFocusRef.current.focus();
       }
@@ -81,56 +79,71 @@ export const Modal: React.FC<ModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          {/* Backdrop smoothly fades in/out */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={onClose}
+            aria-hidden="true"
+          />
 
-      {/* Modal */}
-      <div
-        ref={modalRef}
-        tabIndex={-1}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={title ? "modal-title" : undefined}
-        onKeyDown={handleKeyDown}
-        className={`relative z-10 w-full rounded-lg bg-white shadow-xl ${sizeClasses[size]}`}
-      >
-        {/* Header */}
-        {(title || closeButton) && (
-          <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-            {title && (
-              <h2 id="modal-title" className="text-lg font-bold text-slate-900">
-                {title}
-              </h2>
+          {/* Modal scales and slides up */}
+          <motion.div
+            ref={modalRef}
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+            transition={{ type: "spring", duration: 0.4, bounce: 0.3 }}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={title ? "modal-title" : undefined}
+            onKeyDown={handleKeyDown}
+            className={`relative z-10 w-full rounded-2xl bg-white shadow-2xl ${sizeClasses[size]}`}
+          >
+            {/* Header */}
+            {(title || closeButton) && (
+              <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+                {title && (
+                  <h2
+                    id="modal-title"
+                    className="text-lg font-semibold text-slate-900 tracking-tight"
+                  >
+                    {title}
+                  </h2>
+                )}
+                {!title && <div />}
+                {closeButton && (
+                  <button
+                    onClick={onClose}
+                    className="rounded-full p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                    aria-label="Close modal"
+                  >
+                    <X size={18} strokeWidth={2.5} />
+                  </button>
+                )}
+              </div>
             )}
-            {!title && <div />}
-            {closeButton && (
-              <button
-                onClick={onClose}
-                className="rounded-lg p-1 hover:bg-slate-100"
-                aria-label="Close modal"
-              >
-                <X size={20} className="text-slate-500" />
-              </button>
+
+            {/* Body */}
+            <div className="p-6">{children}</div>
+
+            {/* Footer */}
+            {footer && (
+              <div className="border-t border-slate-100 bg-slate-50/50 rounded-b-2xl px-6 py-4">
+                {footer}
+              </div>
             )}
-          </div>
-        )}
-
-        {/* Body */}
-        <div className="px-6 py-4">{children}</div>
-
-        {/* Footer */}
-        {footer && (
-          <div className="border-t border-slate-200 px-6 py-4">{footer}</div>
-        )}
-      </div>
-    </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
   );
 };
