@@ -12,7 +12,7 @@ import { CheckCircle, Clock, XCircle } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { bookingApi } from "@/modules/booking/services/booking";
-import { CoachSubscription, CoachSubscriptionPackage, Booking } from "@/types";
+import { CoachSubscriptionPackage, Booking } from "@/types";
 import { coachApi } from "@/modules/coach/services/coach";
 import { formatCurrency } from "@/utils/format";
 
@@ -37,9 +37,6 @@ function PaymentPageContent() {
     useState<CoachSubscriptionPackage | null>(null);
   const [loading, setLoading] = useState(!!bookingId || isSubscriptionPayment);
   const [resolvedStatus, setResolvedStatus] = useState(status);
-  const [subscriptionActivated, setSubscriptionActivated] = useState(false);
-  const [subscriptionActivationLoading, setSubscriptionActivationLoading] =
-    useState(false);
   const communityUrl = getCommunityAppUrl({
     path: "q",
     searchParams: {
@@ -209,78 +206,6 @@ function PaymentPageContent() {
     };
   }, [merchantOrderId, status, isSubscriptionPayment]);
 
-  useEffect(() => {
-    if (!isSubscriptionPayment || !isSuccess || !coachId || !packageId) {
-      return;
-    }
-
-    if (subscriptionActivated || subscriptionActivationLoading) {
-      return;
-    }
-
-    const activateSubscription = async () => {
-      setSubscriptionActivationLoading(true);
-
-      try {
-        const existingSubscriptions = await coachApi.getMySubscriptions({
-          coachId,
-        });
-        const alreadyActive =
-          existingSubscriptions.success &&
-          existingSubscriptions.data?.subscriptions?.some(
-            (subscription: CoachSubscription) => {
-              const currentPackage = subscription.packageId as
-                | CoachSubscriptionPackage
-                | string
-                | undefined;
-              const currentPackageId =
-                typeof currentPackage === "string"
-                  ? currentPackage
-                  : currentPackage?._id || currentPackage?.id;
-
-              return (
-                currentPackageId === packageId &&
-                subscription.status === "ACTIVE"
-              );
-            },
-          );
-
-        if (!alreadyActive) {
-          const response = await coachApi.subscribeToPackage({
-            coachId,
-            packageId,
-          });
-
-          if (!response.success) {
-            throw new Error(
-              response.message || "Failed to activate subscription",
-            );
-          }
-        }
-
-        setSubscriptionActivated(true);
-      } catch (error) {
-        console.error("Failed to activate subscription:", error);
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Payment was successful, but subscription activation failed.",
-        );
-      } finally {
-        setSubscriptionActivationLoading(false);
-      }
-    };
-
-    void activateSubscription();
-  }, [
-    coachId,
-    isSuccess,
-    isSubscriptionPayment,
-    packageId,
-    subscriptionActivated,
-    subscriptionActivationLoading,
-  ]);
-
   const title = isSuccess
     ? "Payment successful"
     : isCancel
@@ -349,18 +274,14 @@ function PaymentPageContent() {
               <div className="text-center">
                 <h2 className="font-title text-2xl font-semibold text-slate-900">
                   {isSuccess
-                    ? subscriptionActivated || subscriptionActivationLoading
-                      ? "Subscription activating"
-                      : "Subscription successful"
+                    ? "Payment successful"
                     : isCancel
                       ? "Payment canceled"
                       : "Processing payment"}
                 </h2>
                 <p className="mt-2 text-sm text-slate-600">
                   {isSuccess
-                    ? subscriptionActivated
-                      ? "Your subscription is now active and will remain valid until expiry."
-                      : "We are confirming your payment before activating the subscription."
+                    ? "Payment is confirmed. Subscription activation follows webhook verification and may take a short moment."
                     : isCancel
                       ? "No charge was made. You can try again whenever you are ready."
                       : "We are confirming your payment. You can safely leave this page."}

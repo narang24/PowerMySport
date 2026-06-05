@@ -24,6 +24,8 @@ import {
 import { CoachSubscriptionPackage } from "../models/CoachSubscriptionPackage";
 import { User } from "../models/User";
 import { CoachSubscriptionPaymentTransaction } from "../models/CoachSubscriptionPayment";
+import { CoachSubscription } from "../models/CoachSubscription";
+import { reconcileCoachSubscriptionPaymentByIdentifiers } from "../services/CoachSubscriptionPaymentService";
 
 const SUBSCRIPTION_PLATFORM_FEE_RATE = Number(
   process.env.SUBSCRIPTION_PLATFORM_FEE_RATE ??
@@ -376,17 +378,81 @@ export const subscribeToCoachPackageHandler = async (
       return;
     }
 
-    const { coachId, packageId } = req.body as {
+    const { coachId, packageId, merchantOrderId } = req.body as {
       coachId?: string;
       packageId?: string;
+      merchantOrderId?: string;
     };
 
-    if (typeof coachId !== "string" || typeof packageId !== "string") {
+    if (
+      typeof coachId !== "string" ||
+      typeof packageId !== "string" ||
+      typeof merchantOrderId !== "string"
+    ) {
       res.status(400).json({
         success: false,
-        message: "Coach ID and Package ID are required",
+        message: "Coach ID, Package ID and merchantOrderId are required",
       });
       return;
+    }
+
+    const transaction = await CoachSubscriptionPaymentTransaction.findOne({
+      merchantOrderId,
+    });
+
+    if (!transaction) {
+      res.status(404).json({
+        success: false,
+        message: "Payment transaction not found",
+      });
+      return;
+    }
+
+    if (transaction.userId.toString() !== req.user.id) {
+      res.status(403).json({
+        success: false,
+        message: "You are not authorized to use this payment",
+      });
+      return;
+    }
+
+    if (
+      transaction.coachId.toString() !== coachId ||
+      transaction.packageId.toString() !== packageId
+    ) {
+      res.status(400).json({
+        success: false,
+        message: "Payment does not match the selected coach/package",
+      });
+      return;
+    }
+
+    if (transaction.status !== "COMPLETED") {
+      res.status(409).json({
+        success: false,
+        message:
+          "Payment is not verified yet. Subscription will activate after webhook confirmation.",
+      });
+      return;
+    }
+
+    if (transaction.linkedSubscriptionId) {
+      const existing = await CoachSubscription.findById(
+        transaction.linkedSubscriptionId,
+      )
+        .populate("packageId")
+        .populate("coachId", "bio sports rating reviewCount");
+
+      if (existing) {
+        res.status(200).json({
+          success: true,
+          message: "Subscription already active",
+          data: {
+            subscription: existing,
+          },
+        });
+        return;
+      }
     }
 
     const subscription = await subscribeToCoachPackage({
@@ -395,9 +461,12 @@ export const subscribeToCoachPackageHandler = async (
       packageId,
     });
 
+    transaction.linkedSubscriptionId = subscription._id;
+    await transaction.save();
+
     res.status(201).json({
       success: true,
-      message: "Subscription created successfully",
+      message: "Subscription activated successfully",
       data: {
         subscription,
       },
@@ -437,12 +506,17 @@ export const getUserCoachSubscriptionsHandler = async (
     }
 
     const subscriptions = await getUserCoachSubscriptions(query);
+    const normalizedSubscriptions = Array.isArray(subscriptions)
+      ? subscriptions
+      : subscriptions
+        ? [subscriptions]
+        : [];
 
     res.status(200).json({
       success: true,
       message: "User subscriptions retrieved successfully",
       data: {
-        subscriptions,
+        subscriptions: normalizedSubscriptions,
       },
     });
   } catch (error) {
@@ -489,6 +563,8 @@ export const cancelSubscriptionHandler = async (
     const subscription = await cancelCoachSubscriptionByUser({
       subscriptionId,
       reason,
+      userId: req.user.id,
+      userRole: req.user.role,
     });
 
     res.status(200).json({
@@ -844,24 +920,19 @@ export const verifyCoachSubscriptionPaymentStatusHandler = async (
 
     const status = await getPhonePeOrderStatus(merchantOrderIdParam);
     transaction.lastStatusPayload = status.raw;
-    transaction.state = status.state || transaction.state || "PENDING";
-
-    if (status.state === "COMPLETED") {
-      transaction.status = "COMPLETED";
-
-      if (!transaction.linkedSubscriptionId) {
-        const subscription = await subscribeToCoachPackage({
-          userId: req.user.id,
-          coachId: transaction.coachId.toString(),
-          packageId: transaction.packageId.toString(),
-        });
-        transaction.linkedSubscriptionId = subscription._id;
-      }
-    } else if (status.state === "FAILED") {
-      transaction.status = "FAILED";
-    }
-
     await transaction.save();
+
+    const reconciled = await reconcileCoachSubscriptionPaymentByIdentifiers({
+      merchantOrderId: merchantOrderIdParam,
+      state: status.state,
+      callbackPayload: status.raw as Record<string, unknown>,
+      allowActivation: false,
+    });
+
+    const effectiveTransaction = reconciled || transaction;
+    const activationPending =
+      effectiveTransaction.status === "COMPLETED" &&
+      !effectiveTransaction.linkedSubscriptionId;
 
     res.status(200).json({
       success: true,
@@ -869,12 +940,13 @@ export const verifyCoachSubscriptionPaymentStatusHandler = async (
       data: {
         state: status.state,
         merchantOrderId: merchantOrderIdParam,
-        subscriptionId: transaction.linkedSubscriptionId || null,
+        subscriptionId: effectiveTransaction.linkedSubscriptionId || null,
+        activationPending,
         amountBreakdown: {
-          baseAmount: transaction.baseAmount,
-          platformFee: transaction.platformFeeAmount,
-          taxAmount: transaction.taxAmount,
-          total: transaction.amount,
+          baseAmount: effectiveTransaction.baseAmount,
+          platformFee: effectiveTransaction.platformFeeAmount,
+          taxAmount: effectiveTransaction.taxAmount,
+          total: effectiveTransaction.amount,
         },
       },
     });

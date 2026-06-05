@@ -281,6 +281,7 @@ export const coachApi = {
   subscribeToPackage: async (payload: {
     coachId: string;
     packageId: string;
+    merchantOrderId: string;
   }): Promise<ApiResponse<{ subscription: any }>> => {
     const response = await axiosInstance.post(
       "/coaches/subscriptions",

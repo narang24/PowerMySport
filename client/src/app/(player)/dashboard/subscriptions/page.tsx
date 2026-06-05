@@ -48,7 +48,12 @@ export default function SubscriptionsPage() {
     try {
       setLoading(true);
       const response = await coachApi.getMySubscriptions();
-      setSubscriptions(response.data?.subscriptions || []);
+      const nextSubscriptions = Array.isArray(response.data?.subscriptions)
+        ? response.data.subscriptions
+        : response.data?.subscriptions
+          ? [response.data.subscriptions as CoachSubscription]
+          : [];
+      setSubscriptions(nextSubscriptions);
     } catch (error) {
       console.error("Failed to load subscriptions:", error);
       toast.error("Failed to load your subscriptions");

@@ -130,10 +130,43 @@ export const cancelMyCoachSubscriptionHandler = async (
   res: Response,
 ): Promise<void> => {
   try {
-    if (!req.user?.id || req.user.role !== "COACH") {
-      res.status(403).json({
+    if (!req.user?.id || !req.user.role) {
+      res.status(401).json({
         success: false,
-        message: "Coach role required",
+        message: "Authentication required",
+      });
+      return;
+    }
+
+    const bodySubscriptionId =
+      typeof req.body?.subscriptionId === "string"
+        ? req.body.subscriptionId
+        : undefined;
+
+    if (bodySubscriptionId) {
+      const cancelled = await cancelCoachSubscriptionByUser({
+        subscriptionId: bodySubscriptionId,
+        reason:
+          typeof req.body?.reason === "string" ? req.body.reason : undefined,
+        userId: req.user.id,
+        userRole: req.user.role,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Coach subscription cancelled successfully",
+        data: {
+          subscription: cancelled,
+        },
+      });
+      return;
+    }
+
+    if (req.user.role !== "COACH") {
+      res.status(400).json({
+        success: false,
+        message:
+          "subscriptionId is required for non-coach accounts on this endpoint",
       });
       return;
     }
@@ -173,6 +206,8 @@ export const cancelMyCoachSubscriptionHandler = async (
       subscriptionId: sub._id.toString(),
       reason:
         typeof req.body?.reason === "string" ? req.body.reason : undefined,
+      userId: req.user.id,
+      userRole: req.user.role,
     });
 
     res.status(200).json({

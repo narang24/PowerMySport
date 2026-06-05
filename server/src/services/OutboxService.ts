@@ -1,6 +1,7 @@
 import OutboxMessage from "../models/OutboxMessage";
 import { NotificationService } from "./NotificationService";
 import PaymentWebhookEvent from "../models/PaymentWebhookEvent";
+import { reconcileCoachSubscriptionPaymentFromWebhookPayload } from "./CoachSubscriptionPaymentService";
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_ATTEMPTS = 6;
@@ -81,13 +82,23 @@ export const startOutboxWorker = () => {
             await event.save();
 
             try {
-              // TODO: Implement real payment verification and order updates here.
-              // Placeholder: mark event as DONE
+              await reconcileCoachSubscriptionPaymentFromWebhookPayload(
+                event.payload,
+              );
+
               event.status = "DONE";
               event.processedAt = new Date();
+              event.lastError = null;
               await event.save();
               console.info("[outbox][payment] processed", { eventId });
             } catch (procErr) {
+              event.status = "FAILED";
+              event.lastError =
+                (procErr as any)?.stack ||
+                (procErr as any)?.message ||
+                String(procErr);
+              await event.save().catch(() => undefined);
+
               console.error("[outbox][payment] processing failed", {
                 eventId,
                 error: (procErr as any)?.stack || String(procErr),

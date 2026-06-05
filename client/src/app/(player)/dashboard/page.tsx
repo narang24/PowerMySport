@@ -105,9 +105,13 @@ export default function DashboardPage() {
       }
 
       if (subscriptionsResult?.status === "fulfilled") {
-        setActiveSubscriptions(
-          subscriptionsResult.value.data?.subscriptions || [],
-        );
+        const subscriptionData = subscriptionsResult.value.data?.subscriptions;
+        const normalizedSubscriptions = Array.isArray(subscriptionData)
+          ? subscriptionData
+          : subscriptionData
+            ? [subscriptionData as CoachSubscription]
+            : [];
+        setActiveSubscriptions(normalizedSubscriptions);
       }
 
       if (friendCountResult.status === "fulfilled") {

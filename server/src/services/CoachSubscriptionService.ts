@@ -222,6 +222,8 @@ export const getUserCoachSubscriptions = async (params: {
 export const cancelCoachSubscriptionByUser = async (params: {
   subscriptionId: string;
   reason?: string;
+  userId?: string;
+  userRole?: string;
 }): Promise<CoachSubscriptionDocument> => {
   const subscription = await CoachSubscription.findById(
     toObjectId(params.subscriptionId),
@@ -233,6 +235,23 @@ export const cancelCoachSubscriptionByUser = async (params: {
 
   if (subscription.status === "CANCELLED") {
     throw new Error("Subscription is already cancelled");
+  }
+
+  if (params.userId) {
+    const userRole = typeof params.userRole === "string" ? params.userRole : "";
+
+    if (userRole === "PLAYER") {
+      if (subscription.userId.toString() !== params.userId) {
+        throw new Error("You are not authorized to cancel this subscription");
+      }
+    } else if (userRole === "COACH") {
+      const coach = await Coach.findOne({ userId: params.userId }).select(
+        "_id",
+      );
+      if (!coach || coach._id.toString() !== subscription.coachId.toString()) {
+        throw new Error("You are not authorized to cancel this subscription");
+      }
+    }
   }
 
   subscription.status = "CANCELLED";

@@ -577,6 +577,7 @@ export const coachSubscriptionCreateSchema = z.object({
 });
 
 export const coachSubscriptionCancelSchema = z.object({
+  subscriptionId: z.string().trim().min(1).optional(),
   reason: z.string().trim().max(300).optional(),
 });
 
