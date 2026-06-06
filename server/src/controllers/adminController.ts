@@ -1045,28 +1045,114 @@ export const handleDispute = async (
   try {
     const bookingId = (req.params as Record<string, unknown>)
       .bookingId as string;
-    const { disputeType, resolution, evidence } = req.body;
+    const { disputeType, resolution, evidence, reason } = req.body as {
+      disputeType: "NO_SHOW" | "POOR_QUALITY" | "PAYMENT_ISSUE" | "OTHER";
+      resolution: "FULL_REFUND" | "PARTIAL_REFUND" | "NO_REFUND";
+      evidence?: string;
+      reason?: string;
+    };
 
-    // TODO: Implement actual dispute handling when payment gateway is integrated
-    // Current implementation is a stub for route structure
+    if (!bookingId || !mongoose.Types.ObjectId.isValid(bookingId)) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid booking ID",
+      });
+      return;
+    }
 
-    res.status(501).json({
-      success: false,
-      message:
-        "Dispute handling not implemented yet - payment gateway required",
+    if (!disputeType || !resolution) {
+      res.status(400).json({
+        success: false,
+        message: "disputeType and resolution are required",
+      });
+      return;
+    }
+
+    const validDisputeTypes = ["NO_SHOW", "POOR_QUALITY", "PAYMENT_ISSUE", "OTHER"];
+    const validResolutions = ["FULL_REFUND", "PARTIAL_REFUND", "NO_REFUND"];
+
+    if (!validDisputeTypes.includes(disputeType)) {
+      res.status(400).json({
+        success: false,
+        message: `Invalid disputeType. Must be one of: ${validDisputeTypes.join(", ")}`,
+      });
+      return;
+    }
+
+    if (!validResolutions.includes(resolution)) {
+      res.status(400).json({
+        success: false,
+        message: `Invalid resolution. Must be one of: ${validResolutions.join(", ")}`,
+      });
+      return;
+    }
+
+    const disputeReason = reason?.trim() ||
+      `Dispute resolved: ${disputeType.replace(/_/g, " ").toLowerCase()} — ${resolution.replace(/_/g, " ").toLowerCase()}`;
+
+    // Determine refund percentage based on resolution
+    let refundResult: { refundAmount: number; refundPercentage: number; refundStatus: string } | null = null;
+
+    if (resolution === "FULL_REFUND") {
+      refundResult = await processBookingRefund(bookingId, 100, disputeReason);
+    } else if (resolution === "PARTIAL_REFUND") {
+      refundResult = await processBookingRefund(bookingId, 50, disputeReason);
+    }
+    // For NO_REFUND: no payment action needed, just log the decision
+
+    // Send notification to player
+    try {
+      const { Booking } = await import("../models/Booking");
+      const booking = await Booking.findById(bookingId);
+      if (booking?.userId) {
+        const notifMessages: Record<string, string> = {
+          FULL_REFUND: `Your dispute for booking has been resolved. A full refund of ₹${refundResult?.refundAmount ?? 0} is being processed.`,
+          PARTIAL_REFUND: `Your dispute for booking has been resolved. A partial refund of ₹${refundResult?.refundAmount ?? 0} is being processed.`,
+          NO_REFUND: `Your dispute for booking has been reviewed. After careful consideration, a refund could not be issued for this case. Please contact support if you have questions.`,
+        };
+
+        await NotificationService.send({
+          userId: booking.userId.toString(),
+          type: "PAYMENT_REFUND",
+          title: "Dispute Resolved",
+          message: notifMessages[resolution] ?? `Your dispute for booking has been reviewed. Resolution: ${resolution.replace(/_/g, " ").toLowerCase()}.`,
+          data: {
+            bookingId,
+            disputeType,
+            resolution,
+            refundAmount: refundResult?.refundAmount ?? 0,
+            resolvedAt: new Date().toISOString(),
+          },
+        });
+      }
+    } catch (notifError) {
+      console.error("[handleDispute] Failed to send dispute notification:", notifError);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Dispute resolved successfully",
       data: {
         bookingId,
-        disputeType, // 'NO_SHOW' | 'POOR_QUALITY' | 'PAYMENT_ISSUE' | 'OTHER'
-        resolution, // 'FULL_REFUND' | 'PARTIAL_REFUND' | 'NO_REFUND'
-        evidence,
-        note: "This endpoint will be functional after payment gateway integration",
+        disputeType,
+        resolution,
+        evidence: evidence || null,
+        reason: disputeReason,
+        refundAmount: refundResult?.refundAmount ?? 0,
+        refundPercentage: refundResult?.refundPercentage ?? 0,
+        refundStatus: refundResult?.refundStatus ?? "NOT_APPLICABLE",
+        resolvedAt: new Date().toISOString(),
       },
     });
   } catch (error) {
-    res.status(500).json({
+    const statusCode = isPhonePeGatewayError(error) ? error.statusCode : 500;
+    res.status(statusCode).json({
       success: false,
       message:
         error instanceof Error ? error.message : "Failed to handle dispute",
+      ...(isPhonePeGatewayError(error)
+        ? { data: { code: error.code, retryable: error.retryable } }
+        : {}),
     });
   }
 };

@@ -14,6 +14,8 @@ import {
 } from "../types/ecommerce";
 import { v4 as uuidv4 } from "uuid";
 import { validatePromoCode } from "../services/PromoCodeService";
+import { NotificationService } from "../services/NotificationService";
+import { PaymentTransaction as PaymentTransactionModel } from "../models/Ecommerce";
 
 const getParam = (value: unknown): string | null =>
   typeof value === "string" && value.trim().length > 0 ? value : null;
@@ -30,7 +32,7 @@ export class EcommerceController {
     this.cartService = new CartService();
     this.orderService = new OrderService();
     this.productService = new ProductService();
-    this.paymentService = new PaymentService(PaymentGateway.RAZORPAY);
+    this.paymentService = new PaymentService(PaymentGateway.PHONEPE);
   }
 
   /**
@@ -420,7 +422,7 @@ export class EcommerceController {
         userId,
         shippingAddress,
         paymentMethod,
-        PaymentGateway.RAZORPAY,
+        PaymentGateway.PHONEPE,
       );
 
       // Initiate payment
@@ -430,7 +432,7 @@ export class EcommerceController {
         order.totalAmount,
         "INR",
         idempotencyKey,
-        PaymentGateway.RAZORPAY,
+        PaymentGateway.PHONEPE,
         {
           name: shippingAddress.fullName,
           email: shippingAddress.email,
@@ -455,10 +457,10 @@ export class EcommerceController {
             createdAt: order.createdAt,
           },
           paymentConfig: {
-            razorpayOrderId: paymentTx.gatewayOrderId,
+            phonepeOrderId: paymentTx.gatewayOrderId,
             amount: order.totalAmount,
             currency: "INR",
-            key: process.env.RAZORPAY_KEY_ID,
+            key: process.env.PHONEPE_CLIENT_ID,
             description: `Order ${order.orderNumber} - PowerMySport`,
             prefill: {
               name: shippingAddress.fullName,
@@ -486,7 +488,7 @@ export class EcommerceController {
   async verifyPayment(req: Request, res: Response): Promise<void> {
     try {
       const orderId = getParam((req.params as Record<string, unknown>).orderId);
-      const { razorpay_payment_id, razorpay_order_id, razorpay_signature } =
+      const { phonepe_payment_id, phonepe_order_id, phonepe_signature } =
         req.body;
 
       if (!orderId) {
@@ -500,7 +502,7 @@ export class EcommerceController {
         return;
       }
 
-      if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+      if (!phonepe_payment_id || !phonepe_order_id || !phonepe_signature) {
         res.status(400).json({
           ok: false,
           error: {
@@ -514,19 +516,33 @@ export class EcommerceController {
       // Verify payment
       const paymentTx = await this.paymentService.verifyAndConfirmPayment(
         orderId,
-        razorpay_payment_id,
-        razorpay_order_id,
-        razorpay_signature,
+        phonepe_payment_id,
+        phonepe_order_id,
+        phonepe_signature,
       );
 
       // Confirm order payment
       const order = await this.orderService.confirmPayment(
         orderId,
-        razorpay_payment_id,
-        razorpay_order_id,
+        phonepe_payment_id,
+        phonepe_order_id,
       );
 
-      // TODO: Emit notification via NotificationService
+      // Emit payment confirmed notification to the user
+      NotificationService.send({
+        userId: order.userId.toString(),
+        type: "PAYMENT_CONFIRMED",
+        title: "Payment Confirmed",
+        message: `Your payment for order ${order.orderNumber} has been confirmed. We are processing your order.`,
+        data: {
+          orderId: order._id.toString(),
+          orderNumber: order.orderNumber,
+          totalAmount: order.totalAmount,
+          confirmedAt: new Date().toISOString(),
+        },
+      }).catch((err: Error) =>
+        console.error("[EcommerceController] Failed to send payment notification:", err),
+      );
 
       res.json({
         ok: true,
@@ -976,8 +992,23 @@ export class AdminEcommerceController {
         return;
       }
 
-      // TODO: Get paymentId from order
-      const paymentId = "mock_payment_id";
+      // Get paymentId from the payment transaction linked to this order
+      const paymentTransaction = await PaymentTransactionModel.findOne({
+        orderId: orderId,
+      }).sort({ createdAt: -1 });
+
+      if (!paymentTransaction?.gatewayPaymentId) {
+        res.status(400).json({
+          ok: false,
+          error: {
+            code: "PAYMENT_NOT_FOUND",
+            message: "No captured payment transaction found for this order",
+          },
+        });
+        return;
+      }
+
+      const paymentId = paymentTransaction.gatewayPaymentId;
 
       const refundId = await this.refundService.initiateRefund(
         orderId,

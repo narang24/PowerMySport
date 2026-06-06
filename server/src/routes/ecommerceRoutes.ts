@@ -210,11 +210,11 @@ router.post(
 // ============ WEBHOOK ROUTES ============
 
 /**
- * POST /api/v1/webhooks/razorpay
- * Razorpay webhook - NO AUTH required
+ * POST /api/v1/webhooks/phonepe
+ * PhonePe webhook - NO AUTH required
  */
-router.post("/webhooks/razorpay", (req: Request, res: Response) => {
-  webhookController.handleRazorpayWebhook(req, res);
+router.post("/webhooks/phonepe", (req: Request, res: Response) => {
+  webhookController.handlePhonePeWebhook(req, res);
 });
 
 export default router;

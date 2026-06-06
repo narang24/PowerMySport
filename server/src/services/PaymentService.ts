@@ -37,28 +37,28 @@ export interface IPaymentGatewayService {
   getPaymentStatus(paymentId: string): Promise<PaymentStatus>;
 }
 
-// ============ RAZORPAY PAYMENT GATEWAY ============
+// ============ PHONEPE PAYMENT GATEWAY ============
 
-export class RazorpayGatewayService implements IPaymentGatewayService {
-  private keyId: string;
-  private keySecret: string;
-  private baseUrl = "https://api.razorpay.com/v1";
+export class PhonePeGatewayService implements IPaymentGatewayService {
+  private clientId: string;
+  private clientSecret: string;
+  private baseUrl = "https://api.phonepe.com/apis/hermes";
 
   constructor() {
-    this.keyId = process.env.RAZORPAY_KEY_ID || "";
-    this.keySecret = process.env.RAZORPAY_KEY_SECRET || "";
+    this.clientId = process.env.PHONEPE_CLIENT_ID || "";
+    this.clientSecret = process.env.PHONEPE_CLIENT_SECRET || "";
   }
 
   private validateCredentials() {
-    if (!this.keyId || !this.keySecret) {
+    if (!this.clientId || !this.clientSecret) {
       throw new Error(
-        "Razorpay credentials not configured (RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET required)",
+        "PhonePe credentials not configured (PHONEPE_CLIENT_ID and PHONEPE_CLIENT_SECRET required)",
       );
     }
   }
 
   /**
-   * Create order in Razorpay
+   * Create order in PhonePe
    */
   async createOrder(
     orderId: string,
@@ -72,7 +72,7 @@ export class RazorpayGatewayService implements IPaymentGatewayService {
     },
   ): Promise<any> {
     this.validateCredentials();
-    // This is a mock implementation - in production, call Razorpay API
+    // This is a mock implementation - in production, call PhonePe API
     // For now, return a mock response
     const mockOrderId = `order_${Date.now()}`;
 
@@ -104,7 +104,7 @@ export class RazorpayGatewayService implements IPaymentGatewayService {
   ): boolean {
     const message = `${orderId}|${paymentId}`;
     const expectedSignature = crypto
-      .createHmac("sha256", this.keySecret)
+      .createHmac("sha256", this.clientSecret)
       .update(message)
       .digest("hex");
 
@@ -125,7 +125,7 @@ export class RazorpayGatewayService implements IPaymentGatewayService {
       throw new Error("Invalid payment signature");
     }
 
-    // In production: call Razorpay API to verify payment status
+    // In production: call PhonePe API to verify payment status
     // For MVP, signature verification is sufficient
     return true;
   }
@@ -139,8 +139,8 @@ export class RazorpayGatewayService implements IPaymentGatewayService {
     reason: string,
   ): Promise<string> {
     this.validateCredentials();
-    // Mock implementation - in production, call Razorpay refund API
-    // https://api.razorpay.com/v1/payments/{paymentId}/refund
+    // Mock implementation - in production, call PhonePe refund API
+    // https://api.phonepe.com/apis/hermes/v2/refund
     const mockRefundId = `rfnd_${Date.now()}`;
 
     return mockRefundId;
@@ -150,7 +150,7 @@ export class RazorpayGatewayService implements IPaymentGatewayService {
    * Get payment status
    */
   async getPaymentStatus(paymentId: string): Promise<PaymentStatus> {
-    // Mock implementation - in production, call Razorpay API
+    // Mock implementation - in production, call PhonePe API
     return PaymentStatus.CAPTURED;
   }
 }
@@ -228,14 +228,21 @@ export class StripeGatewayService implements IPaymentGatewayService {
 export class PaymentService {
   private gatewayService: IPaymentGatewayService;
 
-  constructor(gateway: PaymentGateway = PaymentGateway.RAZORPAY) {
-    if (gateway === PaymentGateway.RAZORPAY) {
-      this.gatewayService = new RazorpayGatewayService();
+  constructor(gateway: PaymentGateway = PaymentGateway.PHONEPE) {
+    if (gateway === PaymentGateway.PHONEPE) {
+      this.gatewayService = new PhonePeGatewayService();
     } else if (gateway === PaymentGateway.STRIPE) {
       this.gatewayService = new StripeGatewayService();
     } else {
       throw new Error(`Unsupported payment gateway: ${gateway}`);
     }
+  }
+
+  /**
+   * Expose the underlying gateway service for advanced operations (e.g., reconciliation)
+   */
+  getGatewayService(): IPaymentGatewayService {
+    return this.gatewayService;
   }
 
   /**
@@ -295,13 +302,13 @@ export class PaymentService {
   async verifyAndConfirmPayment(
     orderId: string,
     paymentId: string,
-    razorpayOrderId: string,
+    phonepeOrderId: string,
     signature: string,
   ): Promise<PaymentTransactionDocument> {
     // Verify with payment gateway
     const isValid = await this.gatewayService.verifyPayment(
       paymentId,
-      razorpayOrderId,
+      phonepeOrderId,
       signature,
     );
 
@@ -313,7 +320,7 @@ export class PaymentService {
     const transaction = await PaymentTransactionModel.findOneAndUpdate(
       {
         orderId: new mongoose.Types.ObjectId(orderId),
-        gatewayOrderId: razorpayOrderId,
+        gatewayOrderId: phonepeOrderId,
       },
       {
         gatewayPaymentId: paymentId,
@@ -434,8 +441,8 @@ export class RefundService {
   private paymentService: PaymentService;
 
   constructor() {
-    // Use Razorpay as default gateway for refunds
-    this.paymentService = new PaymentService(PaymentGateway.RAZORPAY);
+    // Use PhonePe as default gateway for refunds
+    this.paymentService = new PaymentService(PaymentGateway.PHONEPE);
   }
 
   /**
@@ -467,7 +474,7 @@ export class RefundService {
     }
 
     // Call payment gateway to initiate refund
-    const refundId = await new RazorpayGatewayService().initiateRefund(
+    const refundId = await new PhonePeGatewayService().initiateRefund(
       paymentId,
       refundAmount,
       reason,
@@ -495,6 +502,14 @@ export class RefundService {
 
     order.paymentStatus = PaymentStatus.REFUNDED;
     await order.save();
+  }
+
+  /**
+   * Query the payment gateway for the current refund/payment status
+   * Used by WebhookRecoveryService.reconcileOrderRefund for discrepancy detection
+   */
+  async getGatewayRefundStatus(paymentId: string): Promise<PaymentStatus> {
+    return new PhonePeGatewayService().getPaymentStatus(paymentId);
   }
 
   /**

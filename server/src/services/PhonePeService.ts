@@ -344,7 +344,7 @@ const buildRefundRequest = (payload: {
   builder
     .merchantRefundId(payload.merchantRefundId)
     .originalMerchantOrderId(payload.originalMerchantOrderId)
-    .amount(payload.amount);
+    .amount(Math.round(payload.amount * 100));
 
   return builder.build();
 };

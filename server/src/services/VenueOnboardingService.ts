@@ -727,9 +727,71 @@ export const rejectVenue = async (
     );
   }
 
-  // TODO: Send rejection email to venue owner
-  // const owner = await User.findById(venue.ownerId);
-  // await emailService.sendVenueRejectedEmail(owner?.email, reason);
+  // Send rejection email to venue owner
+  try {
+    const ownerEmail = venue.ownerEmail ||
+      (venue.ownerId ? (await User.findById(venue.ownerId))?.email : undefined);
+
+    if (ownerEmail) {
+      const rejectionEmailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .header h1 { margin: 0; font-size: 28px; }
+            .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-radius: 0 0 10px 10px; }
+            .reason-box { background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin: 20px 0; border-radius: 5px; }
+            .info-box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 20px 0; border-radius: 5px; }
+            .cta-button { display: inline-block; background: #3b82f6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
+            .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Venue Application Update</h1>
+            <p>Your submission requires attention</p>
+          </div>
+          <div class="content">
+            <p>Hi ${venue.ownerName},</p>
+            <p>Thank you for submitting your venue <strong>"${venue.name}"</strong> on PowerMySport. After careful review, we were unable to approve your application at this time.</p>
+            <div class="reason-box">
+              <strong>❌ Reason for Rejection:</strong>
+              <p>${reason}</p>
+            </div>
+            <div class="info-box">
+              <strong>💡 What you can do:</strong>
+              <p>You are welcome to address the concerns mentioned above and re-submit your venue application. Our team is here to help you get listed successfully.</p>
+            </div>
+            <p style="text-align: center;">
+              <a href="${process.env.FRONTEND_URL || 'https://powermysport.com'}/list-your-venue" class="cta-button">Re-apply Now →</a>
+            </p>
+            <div class="info-box">
+              <strong>📞 Need Help?</strong>
+              <p>If you have questions about this decision, please contact our support team at teams@powermysport.com</p>
+            </div>
+            <p>Best regards,<br/><strong>PowerMySport Team</strong></p>
+            <div class="footer">
+              <p>You received this email because you submitted a venue application on PowerMySport. © 2024 PowerMySport. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      await sendEmail({
+        to: ownerEmail,
+        subject: `Update on Your Venue Application — "${venue.name}"`,
+        html: rejectionEmailHtml,
+      });
+
+      console.log(`✅ Rejection email sent to ${ownerEmail}`);
+    }
+  } catch (emailError) {
+    console.error('❌ Failed to send venue rejection email:', emailError);
+    // Don't throw — rejection status was already saved
+  }
 
   return venue;
 };
@@ -773,11 +835,68 @@ export const markVenueForReview = async (
     );
   }
 
-  // TODO: Send review notification email to venue owner
-  // if (notes) {
-  //   const owner = await User.findById(venue.ownerId);
-  //   await emailService.sendVenueReviewEmail(owner?.email, notes);
-  // }
+  // Send review notification email to venue owner
+  try {
+    const ownerEmail = venue.ownerEmail ||
+      (venue.ownerId ? (await User.findById(venue.ownerId))?.email : undefined);
+
+    if (ownerEmail) {
+      const reviewEmailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .header h1 { margin: 0; font-size: 28px; }
+            .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-radius: 0 0 10px 10px; }
+            .notes-box { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 5px; }
+            .info-box { background: #ecfdf5; border-left: 4px solid #10b981; padding: 15px; margin: 20px 0; border-radius: 5px; }
+            .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #6b7280; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>🔍 Venue Under Review</h1>
+            <p>We're looking at your submission</p>
+          </div>
+          <div class="content">
+            <p>Hi ${venue.ownerName},</p>
+            <p>Your venue <strong>"${venue.name}"</strong> is currently under active review by our team. We'll get back to you shortly with a decision.</p>
+            ${notes ? `
+            <div class="notes-box">
+              <strong>📋 Reviewer Notes:</strong>
+              <p>${notes}</p>
+            </div>` : ''}
+            <div class="info-box">
+              <strong>⏱️ What happens next?</strong>
+              <p>Our review team will carefully evaluate all submitted documents and images. This process typically takes 2-3 business days. You will receive an email once a decision has been made.</p>
+            </div>
+            <div class="info-box">
+              <strong>📞 Need Help?</strong>
+              <p>If you have questions or want to provide additional information, contact us at teams@powermysport.com</p>
+            </div>
+            <p>Best regards,<br/><strong>PowerMySport Team</strong></p>
+            <div class="footer">
+              <p>You received this email because your venue application is under review on PowerMySport. © 2024 PowerMySport. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      await sendEmail({
+        to: ownerEmail,
+        subject: `Your Venue "${venue.name}" Is Under Review`,
+        html: reviewEmailHtml,
+      });
+
+      console.log(`✅ Review notification email sent to ${ownerEmail}`);
+    }
+  } catch (emailError) {
+    console.error('❌ Failed to send venue review notification email:', emailError);
+    // Don't throw — review status was already saved
+  }
 
   return venue;
 };

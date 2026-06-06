@@ -212,6 +212,14 @@ function NotificationsPageContent() {
       return { label: "Open friends", href: "/dashboard/friends" };
     }
     if (notification.category === "PAYMENT") {
+      // Ecommerce order notifications (PAYMENT_CONFIRMED, PAYMENT_REFUND)
+      if (typeof data.orderId === "string" && data.orderId) {
+        return { label: "View order", href: `/dashboard/orders/${data.orderId}` };
+      }
+      // Booking payment notifications
+      if (typeof data.bookingId === "string" && data.bookingId) {
+        return { label: "View booking", href: `/dashboard/my-bookings?id=${data.bookingId}` };
+      }
       return { label: "Open payments", href: "/dashboard/my-bookings" };
     }
     if (notification.category === "REVIEW") {

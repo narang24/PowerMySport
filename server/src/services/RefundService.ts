@@ -16,6 +16,7 @@ import {
   PhonePeRefundStatusResult,
 } from "./PhonePeService";
 import { NotificationService } from "./NotificationService";
+import { sendEmail } from "../utils/email";
 
 export type RefundMethod = "ORIGINAL_CARD" | "BANK_TRANSFER" | "STORE_CREDIT";
 
@@ -177,8 +178,75 @@ async function initiateBankTransferRefund(
   };
   await transaction.save();
 
-  // TODO: Send notification to finance team for manual processing
-  // notifyFinanceTeam(bankTransferId, bankDetails, amount);
+  // Send notification to finance team for manual processing
+  try {
+    await sendEmail({
+      to: process.env.EMAIL_FROM || "teams@powermysport.com",
+      subject: `[Action Required] Bank Transfer Refund — ${bankTransferId}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; padding: 20px 30px; border-radius: 10px 10px 0 0; }
+            .header h2 { margin: 0; }
+            .content { background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-radius: 0 0 10px 10px; }
+            .detail-table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+            .detail-table td { padding: 8px 12px; border: 1px solid #e5e7eb; }
+            .detail-table td:first-child { font-weight: bold; background: #f3f4f6; width: 40%; }
+            .alert { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 4px; margin-top: 16px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2>💳 Manual Bank Transfer Refund Required</h2>
+          </div>
+          <div class="content">
+            <p>A bank transfer refund has been initiated and requires manual processing by the finance team.</p>
+            <table class="detail-table">
+              <tr><td>Refund ID</td><td>${bankTransferId}</td></tr>
+              <tr><td>Amount</td><td>₹${amount}</td></tr>
+              <tr><td>Transaction ID</td><td>${transaction._id.toString()}</td></tr>
+              <tr><td>Account Holder</td><td>${bankDetails.accountHolderName}</td></tr>
+              <tr><td>Account Number</td><td>${bankDetails.accountNumber}</td></tr>
+              <tr><td>IFSC Code</td><td>${bankDetails.ifscCode}</td></tr>
+              ${bankDetails.bankName ? `<tr><td>Bank Name</td><td>${bankDetails.bankName}</td></tr>` : ""}
+              <tr><td>Initiated At</td><td>${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} IST</td></tr>
+            </table>
+            <div class="alert">
+              ⚠️ Please complete this bank transfer within 2-3 business days and update the refund status in the admin dashboard.
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+    console.log(`✅ Finance team notified for bank transfer refund ${bankTransferId}`);
+  } catch (emailError) {
+    console.error("❌ Failed to send finance team notification:", emailError);
+    // Don't throw — refund record was already created
+  }
+
+  // Notify the player that their refund is being processed
+  try {
+    if (transaction.userId) {
+      await NotificationService.send({
+        userId: transaction.userId.toString(),
+        type: "PAYMENT_REFUND",
+        title: "Refund Initiated",
+        message: `Your refund of ₹${amount} has been initiated via bank transfer and will be processed within 2-3 business days.`,
+        data: {
+          refundId: bankTransferId,
+          amount,
+          method: "BANK_TRANSFER",
+          transactionId: transaction._id.toString(),
+        },
+      });
+    }
+  } catch (notifError) {
+    console.error("❌ Failed to send player refund notification:", notifError);
+  }
 
   return {
     transactionId: transaction._id.toString(),
