@@ -75,7 +75,7 @@ export const openDispute = async (
     bookingId,
     userId,
     disputeType,
-    disputeDetails,
+    ...(disputeDetails !== undefined && { disputeDetails }),
     status: analysis.requiresManualReview ? "OPEN" : "RESOLVED",
     resolutionMethod: "AUTO",
     recommendedAction: analysis.recommendedAction,
