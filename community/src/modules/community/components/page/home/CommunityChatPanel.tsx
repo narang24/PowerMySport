@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { ChevronLeft, MessageSquare, PanelRightClose, PanelRightOpen, RotateCcw } from "lucide-react";
 import { motion } from "framer-motion";

@@ -276,7 +276,7 @@ export function useCommunityPage() {
   const selectedConversationDisplayName = selectedConversation
     ? selectedConversation.conversationType === "GROUP"
       ? selectedConversation.group?.name ||
-        selectedConversation.otherParticipant.displayName
+      selectedConversation.otherParticipant.displayName
       : selectedConversation.otherParticipant.displayName
     : "No conversation selected";
   const selectedConversationPhotoUrl =
@@ -327,8 +327,8 @@ export function useCommunityPage() {
         ? visibleConversations.filter((c) => c.unreadCount > 0)
         : conversationMode === "REQUESTS"
           ? visibleConversations.filter(
-              (c) => c.status === "PENDING" && c.conversationType !== "GROUP",
-            )
+            (c) => c.status === "PENDING" && c.conversationType !== "GROUP",
+          )
           : visibleConversations;
 
     return [...byMode].sort((a, b) => {
@@ -353,11 +353,11 @@ export function useCommunityPage() {
     value: "ALL" | "UNREAD" | "REQUESTS";
     label: string;
   }> = isGroupsDirectory
-    ? [
+      ? [
         { value: "ALL", label: "All" },
         { value: "UNREAD", label: "Unread" },
       ]
-    : [
+      : [
         { value: "ALL", label: "All" },
         { value: "UNREAD", label: "Unread" },
         { value: "REQUESTS", label: "Requests" },
@@ -522,11 +522,40 @@ export function useCommunityPage() {
     }
   }, [applyConversationPage]);
 
+  const markNotificationsForConversationAsRead = useCallback(
+    async (conversationId: string) => {
+      try {
+        const allNotifications = await communityService.listCommunityNotifications(
+          1,
+          100,
+          false, // unread only
+        );
+
+        const relatedNotifications = allNotifications.items.filter(
+          (item) => item.data?.conversationId === conversationId && !item.isRead,
+        );
+
+        await Promise.all(
+          relatedNotifications.map((notification) =>
+            communityService.markCommunityNotificationRead(notification.id),
+          ),
+        );
+      } catch (error) {
+        console.debug("Failed to mark notifications as read:", error);
+      }
+    },
+    [],
+  );
+
   const loadMessages = useCallback(
     async (conversationId: string) => {
       try {
         const response = await communityService.getMessages(conversationId);
         setMessages(Array.isArray(response.messages) ? response.messages : []);
+
+        // Mark related notifications as read
+        await markNotificationsForConversationAsRead(conversationId);
+
         await refreshConversationsNow();
         const socket = getCommunitySocket();
         if (socket.connected) {
@@ -539,7 +568,7 @@ export function useCommunityPage() {
         toast.error(message);
       }
     },
-    [refreshConversationsNow],
+    [refreshConversationsNow, markNotificationsForConversationAsRead],
   );
 
   useEffect(() => {
@@ -626,7 +655,15 @@ export function useCommunityPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(urlSearchParams.toString());
-    params.set("sidebar", sidebarMode.toLowerCase());
+    if (sidebarMode === "TOOLS") {
+      params.set("sidebar", "tools");
+    } else {
+      if (activeSidebarTab === "conversations") {
+        params.set("sidebar", "conversations");
+      } else {
+        params.set("sidebar", "community-overview");
+      }
+    }
     params.set("directory", directoryView.toLowerCase());
     if (sidebarMode === "TOOLS" && directoryView === "GROUPS")
       params.set("panel", groupToolsMode.toLowerCase());
@@ -651,6 +688,7 @@ export function useCommunityPage() {
   }, [
     urlSearchParams,
     sidebarMode,
+    activeSidebarTab,
     directoryView,
     groupToolsMode,
     selectedConversationId,
@@ -1226,11 +1264,11 @@ export function useCommunityPage() {
         setProfile((current) =>
           current
             ? {
-                ...current,
-                blockedUsers: (current.blockedUsers || []).filter(
-                  (id) => id !== targetUserId,
-                ),
-              }
+              ...current,
+              blockedUsers: (current.blockedUsers || []).filter(
+                (id) => id !== targetUserId,
+              ),
+            }
             : current,
         );
         toast.success("User unblocked");
@@ -1239,9 +1277,9 @@ export function useCommunityPage() {
         setProfile((current) =>
           current
             ? {
-                ...current,
-                blockedUsers: [...(current.blockedUsers || []), targetUserId],
-              }
+              ...current,
+              blockedUsers: [...(current.blockedUsers || []), targetUserId],
+            }
             : current,
         );
         toast.success("User blocked");
