@@ -586,34 +586,14 @@ export const initiateBooking = async (
         throw new Error("Dependent not found");
       }
 
-      // Validate dependent's date of birth
-      if (!dependent.dob || isNaN(dependent.dob.getTime())) {
-        throw new Error("Invalid date of birth for dependent");
+      // Validate dependent's age
+      if (typeof dependent.age !== "number" || isNaN(dependent.age)) {
+        throw new Error("Invalid age for dependent");
       }
 
       participantName = dependent.name;
       participantId = dependent._id;
-
-      // Calculate age from DOB with proper validation
-      const now = new Date();
-      const birthDate = new Date(dependent.dob);
-
-      // Check if DOB is in the future
-      if (birthDate > now) {
-        throw new Error("Date of birth cannot be in the future");
-      }
-
-      // Calculate age in years
-      let age = now.getFullYear() - birthDate.getFullYear();
-      const monthDiff = now.getMonth() - birthDate.getMonth();
-      const dayDiff = now.getDate() - birthDate.getDate();
-
-      // Adjust age if birthday hasn't occurred this year
-      if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
-        age--;
-      }
-
-      participantAge = age;
+      participantAge = dependent.age;
 
       // Validate minimum age (must be at least 3 years old)
       if (participantAge < 3) {

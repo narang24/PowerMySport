@@ -31,12 +31,14 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     const user = await registerUser({
       ...req.body,
       role: req.body.role || "PLAYER",
+      userType: req.body.userType || "Recreational",
     });
 
     const token = generateToken({
       id: user._id.toString(),
       email: user.email,
       role: user.role,
+      userType: user.userType,
     });
 
     res.cookie("token", token, authCookieOptions);
@@ -51,6 +53,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           name: user.name,
           email: user.email,
           role: user.role,
+          userType: user.userType,
           venueListerProfile: user.venueListerProfile,
         },
       },
@@ -71,6 +74,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       id: user._id.toString(),
       email: user.email,
       role: user.role,
+      userType: user.userType,
     });
 
     res.cookie("token", token, authCookieOptions);
@@ -85,6 +89,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           name: user.name,
           email: user.email,
           role: user.role,
+          userType: user.userType,
           venueListerProfile: user.venueListerProfile,
         },
       },
@@ -143,6 +148,7 @@ export const getProfile = async (
         email: user.email,
         phone: user.phone,
         role: user.role,
+        userType: user.userType,
         dob: user.dob,
         photoUrl: user.photoUrl,
         photoS3Key: user.photoS3Key,
@@ -190,6 +196,7 @@ export const getAuthBridge = async (
       data: {
         id: user._id,
         role: user.role,
+        userType: user.userType,
         name: user.name,
         email: user.email,
       },
@@ -235,6 +242,7 @@ export const updateProfileHandler = async (
         email: updatedUser.email,
         phone: updatedUser.phone,
         role: updatedUser.role,
+        userType: updatedUser.userType,
         dob: updatedUser.dob,
         photoUrl: updatedUser.photoUrl,
         photoS3Key: updatedUser.photoS3Key,
@@ -323,6 +331,7 @@ export const googleAuth = async (
       id: user._id.toString(),
       email: user.email,
       role: user.role,
+      userType: user.userType,
     });
 
     res.cookie("token", token, authCookieOptions);
@@ -337,6 +346,7 @@ export const googleAuth = async (
           name: user.name,
           email: user.email,
           role: user.role,
+          userType: user.userType,
           photoUrl: user.photoUrl,
           venueListerProfile: user.venueListerProfile,
         },
@@ -416,6 +426,7 @@ export const graduateDependentHandler = async (
           email: newUser.email,
           phone: newUser.phone,
           role: newUser.role,
+          userType: newUser.userType,
         },
       },
     });

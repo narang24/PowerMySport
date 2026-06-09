@@ -11,6 +11,7 @@ export interface RegisterPayload {
   phone: string;
   password: string;
   role: "PLAYER" | "VENUE_LISTER" | "COACH";
+  userType?: "Parent" | "Recreational" | "Coach" | "Academy" | "Admin";
   acceptedTerms: boolean;
   acceptedPrivacy: boolean;
 }
@@ -33,7 +34,7 @@ export const registerUser = async (
     throw new Error("User with this email or phone already exists");
   }
 
-  const user = new User(payload);
+  const user = new User({ ...payload, dependents: [] });
   const now = new Date();
   user.legalConsents = {
     terms: {
@@ -144,6 +145,7 @@ export interface GoogleLoginPayload {
   name: string;
   photoUrl?: string;
   role?: "PLAYER" | "VENUE_LISTER" | "COACH";
+  userType?: "Parent" | "Recreational" | "Coach" | "Academy" | "Admin";
   action?: "login" | "register";
   acceptedTerms?: boolean;
   acceptedPrivacy?: boolean;
@@ -191,6 +193,8 @@ export const googleLogin = async (
         photoUrl: payload.photoUrl,
         phone: uniquePhoneId, // Unique ID instead of fake phone number
         role: payload.role || "PLAYER",
+        userType: payload.userType || "Recreational",
+        dependents: [],
         legalConsents: {
           terms: {
             accepted: true,
@@ -255,9 +259,7 @@ export const graduateDependent = async (
     }
 
     // Check if dependent is at least 18 years old
-    const ageInMs = Date.now() - dependent.dob.getTime();
-    const age = Math.floor(ageInMs / (1000 * 60 * 60 * 24 * 365.25));
-    if (age < 18) {
+    if (dependent.age < 18) {
       throw new Error("Dependent must be at least 18 years old to graduate");
     }
 
@@ -276,6 +278,8 @@ export const graduateDependent = async (
       phone: payload.phone,
       password: payload.password,
       role: "PLAYER",
+      userType: "Recreational",
+      dependents: [],
     });
     await newUser.save({ session });
 
@@ -327,10 +331,9 @@ export const graduateDependent = async (
 
 export interface AddDependentPayload {
   name: string;
-  dob: Date;
-  gender?: "MALE" | "FEMALE" | "OTHER";
-  relation?: string;
-  sports?: string[];
+  age: number;
+  sportsFocus?: string[];
+  skillLevel?: string;
 }
 
 export const addDependent = async (
@@ -345,14 +348,10 @@ export const addDependent = async (
   // Add new dependent to array
   const newDependent: any = {
     name: payload.name,
-    dob: new Date(payload.dob),
-    relation: payload.relation || "CHILD",
-    sports: payload.sports || [],
+    age: payload.age,
+    sportsFocus: payload.sportsFocus || [],
+    skillLevel: payload.skillLevel || "",
   };
-
-  if (payload.gender) {
-    newDependent.gender = payload.gender;
-  }
 
   user.dependents.push(newDependent);
 
@@ -381,10 +380,9 @@ export const updateDependent = async (
 
   // Update dependent fields
   if (payload.name) dependent.name = payload.name;
-  if (payload.dob) dependent.dob = new Date(payload.dob);
-  if (payload.gender) dependent.gender = payload.gender;
-  if (payload.relation) dependent.relation = payload.relation;
-  if (payload.sports) dependent.sports = payload.sports;
+  if (payload.age !== undefined) dependent.age = payload.age;
+  if (payload.sportsFocus) dependent.sportsFocus = payload.sportsFocus;
+  if (payload.skillLevel) dependent.skillLevel = payload.skillLevel;
 
   await user.save();
   return dependent;

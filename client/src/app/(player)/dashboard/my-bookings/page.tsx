@@ -3,7 +3,6 @@
 import { bookingApi } from "@/modules/booking/services/booking";
 import { useAuthStore } from "@/modules/auth/store/authStore";
 import { PlayerPageHeader } from "@/modules/player/components/PlayerPageHeader";
-import { ProfileSectionHeader } from "@/modules/player/components/ProfileSectionHeader";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button } from "@/modules/shared/ui/Button";
 import { Card, CardContent } from "@/modules/shared/ui/Card";
@@ -11,7 +10,7 @@ import { EmptyState } from "@/modules/shared/ui/EmptyState";
 import { ConfirmDialog } from "@/modules/shared/ui/ConfirmDialog";
 import { ListSkeleton } from "@/modules/shared/ui/Skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Booking, Coach, Venue } from "@/types";
+import { Booking } from "@/types";
 import { formatDate, formatTime } from "@/utils/format";
 import {
   Calendar,
@@ -155,7 +154,9 @@ export default function BookingsPage() {
     activeTab === "venues" ? venueBookings : coachBookings;
 
   // Stats
-  const confirmedCount = bookings.filter((b) => b.status === "CONFIRMED").length;
+  const confirmedCount = bookings.filter(
+    (b) => b.status === "CONFIRMED",
+  ).length;
   const upcomingCount = bookings.filter(
     (b) => new Date(b.date) >= new Date(),
   ).length;
@@ -262,11 +263,15 @@ export default function BookingsPage() {
                 }`}
               >
                 <div className="flex items-center justify-center gap-2 flex-wrap">
-                  <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${activeTab === "venues" ? "bg-power-orange text-white" : "bg-slate-100 text-slate-500"}`}>
+                  <div
+                    className={`flex h-7 w-7 items-center justify-center rounded-lg ${activeTab === "venues" ? "bg-power-orange text-white" : "bg-slate-100 text-slate-500"}`}
+                  >
                     <MapPin className="h-4 w-4" />
                   </div>
                   <span className="text-sm sm:text-base">Venue Bookings</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold sm:text-xs ${activeTab === "venues" ? "bg-power-orange/10 text-power-orange" : "bg-slate-100 text-slate-600"}`}>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold sm:text-xs ${activeTab === "venues" ? "bg-power-orange/10 text-power-orange" : "bg-slate-100 text-slate-600"}`}
+                  >
                     {venueBookings.length}
                   </span>
                 </div>
@@ -283,11 +288,15 @@ export default function BookingsPage() {
                 }`}
               >
                 <div className="flex items-center justify-center gap-2 flex-wrap">
-                  <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${activeTab === "coaches" ? "bg-power-orange text-white" : "bg-slate-100 text-slate-500"}`}>
+                  <div
+                    className={`flex h-7 w-7 items-center justify-center rounded-lg ${activeTab === "coaches" ? "bg-power-orange text-white" : "bg-slate-100 text-slate-500"}`}
+                  >
                     <Award className="h-4 w-4" />
                   </div>
                   <span className="text-sm sm:text-base">Coach Bookings</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold sm:text-xs ${activeTab === "coaches" ? "bg-power-orange/10 text-power-orange" : "bg-purple-100/70 text-purple-700"}`}>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold sm:text-xs ${activeTab === "coaches" ? "bg-power-orange/10 text-power-orange" : "bg-purple-100/70 text-purple-700"}`}
+                  >
                     {coachBookings.length}
                   </span>
                 </div>
@@ -452,7 +461,11 @@ export default function BookingsPage() {
                           <Link
                             href={`/dashboard/my-bookings/${booking.id}/invoice`}
                           >
-                            <Button variant="secondary" size="sm" icon={<FileText size={14} />}>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              icon={<FileText size={14} />}
+                            >
                               Invoice
                             </Button>
                           </Link>

@@ -8,6 +8,7 @@ export interface UserDocument extends Document {
   email: string;
   phone: string;
   role: UserRole;
+  userType: "Parent" | "Recreational" | "Coach" | "Academy" | "Admin";
   password?: string;
   googleId?: string;
   photoUrl?: string;
@@ -34,10 +35,9 @@ export interface UserDocument extends Document {
   dependents: Array<{
     _id?: mongoose.Types.ObjectId;
     name: string;
-    dob: Date;
-    gender?: "MALE" | "FEMALE" | "OTHER";
-    relation?: string;
-    sports?: string[];
+    age: number;
+    sportsFocus: string[];
+    skillLevel: string;
   }>;
   notificationPreferences?: {
     email?: {
@@ -147,6 +147,11 @@ const userSchema = new Schema<UserDocument>(
       enum: ["PLAYER", "VENUE_LISTER", "COACH", "ACADEMY_OWNER", "ADMIN"],
       default: "PLAYER",
     },
+    userType: {
+      type: String,
+      enum: ["Parent", "Recreational", "Coach", "Academy", "Admin"],
+      default: "Recreational",
+    },
     playerProfile: {
       sports: [String],
       paymentHistory: [
@@ -229,23 +234,10 @@ const userSchema = new Schema<UserDocument>(
     },
     dependents: [
       {
-        name: {
-          type: String,
-          required: true,
-        },
-        dob: {
-          type: Date,
-          required: true,
-        },
-        gender: {
-          type: String,
-          enum: ["MALE", "FEMALE", "OTHER"],
-        },
-        relation: {
-          type: String,
-          default: "CHILD",
-        },
-        sports: [String],
+        name: { type: String, required: true },
+        age: { type: Number, required: true },
+        sportsFocus: [String],
+        skillLevel: { type: String },
       },
     ],
     notificationPreferences: {
