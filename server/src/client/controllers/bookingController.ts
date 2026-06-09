@@ -30,7 +30,7 @@ import {
   isPhonePeGatewayError,
   validatePhonePeCallback,
 } from "../../shared/services/PhonePeService";
-import { generateHourlySlots } from "../../utils/booking";
+import { generateDynamicSlots } from "../../utils/booking";
 import { isWithinOpeningHours } from "../../utils/openingHours";
 import { getPaginationParams } from "../../utils/pagination";
 import { transformDocument } from "../../middleware/responseTransform";
@@ -777,10 +777,17 @@ export const getVenueAvailability = async (
         (Number.isFinite(closeHour) ? closeHour : 0) +
         (closeMinute > 0 ? 1 : 0);
 
-      allSlots = generateHourlySlots(slotStartHour, slotEndHour).filter(
+      const intervalMinutes = (venue as any).minimumBookingDuration || 60;
+      allSlots = generateDynamicSlots(slotStartHour, slotEndHour, intervalMinutes).filter(
         (slot) => {
           const slotHour = parseInt(slot.split(":")[0] || "0", 10);
-          const slotEnd = `${String(slotHour + 1).padStart(2, "0")}:00`;
+          const slotMin = parseInt(slot.split(":")[1] || "0", 10);
+          
+          let endMin = slotMin + intervalMinutes;
+          let endHour = slotHour + Math.floor(endMin / 60);
+          endMin = endMin % 60;
+          
+          const slotEnd = `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}`;
           return isWithinOpeningHours(
             targetDate,
             slot,

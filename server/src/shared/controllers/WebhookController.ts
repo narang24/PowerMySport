@@ -24,7 +24,7 @@ export class WebhookController {
    * Verify PhonePe webhook signature (HMAC-SHA256)
    */
   private verifyPhonePeSignature(
-    payload: string,
+    payload: string | Buffer,
     signature: string,
     secret: string,
   ): boolean {
@@ -33,7 +33,14 @@ export class WebhookController {
       .update(payload)
       .digest("hex");
 
-    return expectedSignature === signature;
+    const expectedBuffer = Buffer.from(expectedSignature, "utf8");
+    const signatureBuffer = Buffer.from(signature, "utf8");
+
+    if (expectedBuffer.length !== signatureBuffer.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(expectedBuffer, signatureBuffer);
   }
 
   /**
@@ -43,7 +50,9 @@ export class WebhookController {
   async handlePhonePeWebhook(req: Request, res: Response): Promise<void> {
     try {
       // Get raw body for signature verification
-      const rawBody = (req as any).rawBody || JSON.stringify(req.body);
+      const rawBody = Buffer.isBuffer(req.body)
+        ? req.body
+        : (req as any).rawBody || JSON.stringify(req.body);
       const signature = req.headers["x-phonepe-signature"] as string;
 
       if (!signature) {
@@ -68,8 +77,8 @@ export class WebhookController {
       }
 
       // Parse payload
-      const payload =
-        typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      const payloadText = Buffer.isBuffer(req.body) ? req.body.toString("utf8") : req.body;
+      const payload = typeof payloadText === "string" ? JSON.parse(payloadText) : payloadText;
       const { event, created_at, payload: eventPayload } = payload;
 
       console.log(

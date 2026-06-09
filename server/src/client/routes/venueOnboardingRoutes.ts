@@ -21,6 +21,7 @@ import {
 } from "../../shared/controllers/emailVerificationController";
 import {
   authMiddleware,
+  onboardingAuthMiddleware,
   vendorMiddleware,
   adminMiddleware,
 } from "../../middleware/auth";
@@ -81,6 +82,7 @@ router.post(
  */
 router.post(
   "/step2",
+  onboardingAuthMiddleware,
   validateRequest(venueOnboardingStep2Schema),
   updateVenueDetailsStep2,
 );
@@ -91,6 +93,7 @@ router.post(
  */
 router.post(
   "/step3/upload-urls",
+  onboardingAuthMiddleware,
   validateRequest(getImageUploadUrlsSchema),
   getImageUploadUrls,
 );
@@ -101,6 +104,7 @@ router.post(
  */
 router.post(
   "/step3/confirm",
+  onboardingAuthMiddleware,
   validateRequest(venueOnboardingStep3ImagesSchema),
   confirmImagesStep2,
 );
@@ -111,6 +115,7 @@ router.post(
  */
 router.post(
   "/step4/upload-urls",
+  onboardingAuthMiddleware,
   validateRequest(getDocumentUploadUrlsSchema),
   getDocumentUploadUrls,
 );
@@ -121,12 +126,14 @@ router.post(
  */
 router.post(
   "/step4/finalize",
+  onboardingAuthMiddleware,
   validateRequest(venueOnboardingStep4Schema),
   finalizeOnboardingStep3,
 );
 
 router.post(
   "/step5/coaches",
+  onboardingAuthMiddleware,
   validateRequest(venueOnboardingStep5Schema),
   addVenueCoaches,
 );
@@ -135,13 +142,13 @@ router.post(
  * Get presigned URL for coach profile photo upload
  * POST /api/venues/onboarding/coach-photo-upload-url
  */
-router.post("/coach-photo-upload-url", getCoachPhotoUploadUrl);
+router.post("/coach-photo-upload-url", onboardingAuthMiddleware, getCoachPhotoUploadUrl);
 
 /**
  * Cancel/Delete onboarding
  * DELETE /api/venues/onboarding/:venueId
  */
-router.delete("/:venueId", deleteVenueOnboardingHandler);
+router.delete("/:venueId", onboardingAuthMiddleware, deleteVenueOnboardingHandler);
 
 // ============================================
 // ADMIN ROUTES (Protected - Admin only)

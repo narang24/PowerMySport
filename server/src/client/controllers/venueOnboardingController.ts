@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { generateToken } from "../../utils/jwt";
 import { S3Service } from "../../shared/services/S3Service";
 import { Venue } from "../models/Venue";
 import {
@@ -60,6 +61,12 @@ export const createVenueStep1 = async (
       return;
     }
 
+    const onboardingToken = generateToken({
+      id: venue._id.toString(),
+      email: venue.ownerEmail,
+      role: "VENUE_ONBOARDING",
+    });
+
     res.status(201).json({
       success: true,
       message: "Venue contact info saved. Verification code sent to email.",
@@ -69,6 +76,7 @@ export const createVenueStep1 = async (
         ownerEmail: venue.ownerEmail,
         approvalStatus: venue.approvalStatus,
         nextStep: "Verify your email (check your inbox for the code)",
+        token: onboardingToken,
       },
     });
   } catch (error) {

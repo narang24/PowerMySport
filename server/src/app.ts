@@ -29,7 +29,7 @@ import venueRoutes from "./client/routes/venueRoutes";
 import reviewRoutes from "./client/routes/reviewRoutes";
 import ecommerceRoutes from "./shop/routes/ecommerceRoutes";
 import academyOnboardingRoutes from "./admin/routes/academyOnboardingRoutes";
-import payoutRoutes from "./admin/routes/payoutRoutes";
+import payoutRoutes from "./client/routes/payoutRoutes";
 import payoutMethodsRoutes from "./admin/routes/payoutMethodsRoutes";
 import refundMethodRoutes from "./client/routes/refundMethodRoutes";
 import phonepeWebhook from "./shared/routes/phonepeWebhook";
@@ -106,6 +106,7 @@ app.use(cors(corsOptions));
 app.use(observabilityMiddleware);
 app.use(securityHeadersMiddleware);
 app.use(apiRateLimitMiddleware);
+app.use("/api/payments/phonepe", express.raw({ type: "application/json" }));
 app.use(
   express.json({
     verify: (req, _res, buf) => {
@@ -139,6 +140,7 @@ app.use("/api/venue-inquiries", venueInquiryRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/support-tickets", supportTicketRoutes);
 app.use("/api/refund-methods", refundMethodRoutes);
+app.use("/api/payouts", payoutRoutes);
 
 // Community Domain
 app.use("/api/community", communityRoutes);
@@ -147,7 +149,6 @@ app.use("/api/community", communityRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/academies", academyOnboardingRoutes);
 app.use("/api/stats", statsRoutes);
-app.use("/api/payouts", payoutRoutes);
 app.use("/api/payout-methods", payoutMethodsRoutes);
 
 // Shop Domain

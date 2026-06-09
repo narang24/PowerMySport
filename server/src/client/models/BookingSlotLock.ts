@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from "mongoose";
 
 export interface BookingSlotLockDocument extends Document {
-  resourceType: "VENUE_DAY" | "COACH_DAY";
+  resourceType: "VENUE_SLOT" | "COACH_SLOT";
   resourceId: mongoose.Types.ObjectId;
   dateKey: string;
   version: number;
@@ -14,7 +14,7 @@ const bookingSlotLockSchema = new Schema<BookingSlotLockDocument>(
   {
     resourceType: {
       type: String,
-      enum: ["VENUE_DAY", "COACH_DAY"],
+      enum: ["VENUE_SLOT", "COACH_SLOT"],
       required: true,
     },
     resourceId: {

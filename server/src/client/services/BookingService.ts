@@ -20,7 +20,8 @@ import {
   BookingWaitlistDocument,
 } from "../models/BookingWaitlist";
 import { calculateGroupPaymentSplits } from "../../utils/payment";
-import { generateHourlySlots } from "../../utils/booking";
+import { generateDynamicSlots } from "../../utils/booking";
+import { emitSlotLocked } from "../sockets/bookingSocket";
 import { NotificationService } from "./NotificationService";
 import { ScheduledNotificationService } from "./ScheduledNotificationService";
 import { BookingPaymentTransaction } from "../models/BookingPayment";
@@ -252,17 +253,18 @@ const hasConflictingCoachBooking = async (
   return Boolean(conflict);
 };
 
-const acquireResourceDayLock = async (
-  resourceType: "VENUE_DAY" | "COACH_DAY",
+const acquireResourceSlotLock = async (
+  resourceType: "VENUE_SLOT" | "COACH_SLOT",
   resourceId: string,
   date: Date,
+  startTime: string,
   session: ClientSession,
 ): Promise<void> => {
   await BookingSlotLock.findOneAndUpdate(
     {
       resourceType,
       resourceId: new mongoose.Types.ObjectId(resourceId),
-      dateKey: getDateKey(date),
+      dateKey: `${getDateKey(date)}-${startTime}`,
     },
     {
       $inc: { version: 1 },
@@ -290,12 +292,18 @@ const createBookingAtomically = async (
 
       await session.withTransaction(async () => {
         if (payload.venueId) {
-          await acquireResourceDayLock(
-            "VENUE_DAY",
+          await acquireResourceSlotLock(
+            "VENUE_SLOT",
             payload.venueId,
             payload.date,
+            payload.startTime,
             session,
           );
+
+          emitSlotLocked(payload.venueId, {
+            slotStartTime: payload.startTime,
+            dateKey: getDateKey(payload.date),
+          });
 
           const hasVenueConflict = await hasConflictingVenueBooking(
             payload.venueId,
@@ -313,10 +321,11 @@ const createBookingAtomically = async (
         }
 
         if (payload.coachId) {
-          await acquireResourceDayLock(
-            "COACH_DAY",
+          await acquireResourceSlotLock(
+            "COACH_SLOT",
             payload.coachId,
             payload.date,
+            payload.startTime,
             session,
           );
 
@@ -468,7 +477,7 @@ export const getAlternateVenueSlots = async (
     startTime: entry.startTime,
     endTime: entry.endTime,
   }));
-  const allSlots = generateHourlySlots(6, 23);
+  const allSlots = generateDynamicSlots(6, 23, 60);
 
   const canFit = (start: string): boolean => {
     const [h = 0, m = 0] = start.split(":").map(Number);
@@ -1710,12 +1719,17 @@ export const checkInBookingByCode = async (
     );
   }
 
-  // Check-in code expiration: 15 minutes after booking start time
-  const codeExpiryTime = new Date(bookingDateTime.getTime() + 15 * 60 * 1000);
+  // Check-in code expiration: exactly at booking end time
+  const endParts = booking.endTime.split(":").map(Number);
+  const endHour = endParts[0] ?? 0;
+  const endMin = endParts[1] ?? 0;
+  
+  const bookingEndDateTime = new Date(booking.date);
+  bookingEndDateTime.setHours(endHour, endMin, 0, 0);
 
-  if (now > codeExpiryTime) {
+  if (now > bookingEndDateTime) {
     throw new Error(
-      "Check-in code has expired. Check-in is allowed only till 15 minutes after booking start time.",
+      "Check-in code has expired. Check-in is allowed only till the booking end time.",
     );
   }
 

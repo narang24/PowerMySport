@@ -12,6 +12,10 @@ import {
   setupNotificationSocket,
   setupPresenceSocket,
 } from "./client/sockets/notificationSocket";
+import {
+  setupBookingSocket,
+  setBookingSocketInstance,
+} from "./client/sockets/bookingSocket";
 import { setNotificationSocketInstance } from "./client/services/NotificationService";
 import { setCommunityRealtimeSocketInstance } from "./community/services/CommunityRealtimeService";
 import { startExpirationJob } from "./utils/timer";
@@ -85,15 +89,18 @@ const startServer = async () => {
     setupFriendSocket(io);
     setupNotificationSocket(io);
     setupPresenceSocket(io);
+    setupBookingSocket(io);
     setFriendSocketInstance(io);
     setNotificationSocketInstance(io);
     setCommunityRealtimeSocketInstance(io);
+    setBookingSocketInstance(io);
 
     console.log("🔧 Socket.IO namespaces configured:");
     console.log("   - /community (requires community profile)");
     console.log("   - /friends (basic auth)");
     console.log("   - /presence (user presence tracking)");
     console.log("   - /notifications (real-time monitoring)");
+    console.log("   - /bookings (booking slot locks)");
 
     let server: http.Server | null = null;
     let attempts = 5;
