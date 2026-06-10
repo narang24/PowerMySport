@@ -407,20 +407,24 @@ export const getPlayersUsers = async (
         .lean(),
     ]);
 
-    const data = users.map((user) => {
-      const sports = user.playerProfile?.sports || [];
-      const dependents = Array.isArray(user.dependents) ? user.dependents : [];
+    const data = await Promise.all(
+      users.map(async (user) => {
+        const sports: string[] = [];
+        const dependents: any[] = [];
 
-      return {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: "PLAYER",
-        createdAt: user.createdAt,
-        lastActiveAt: user.lastActiveAt || user.createdAt,
-        isOnlineNow: await isUserOnline(user._id.toString()),
-      })),
+        return {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: "PLAYER",
+          createdAt: user.createdAt,
+          lastActiveAt: user.lastActiveAt || user.createdAt,
+          isOnlineNow: await isUserOnline(user._id.toString()),
+          sports,
+          dependents,
+        };
+      })
     );
 
     res.status(200).json({
@@ -590,8 +594,8 @@ export const getVenueListerUsers = async (
           createdAt: user.createdAt,
           lastActiveAt: user.lastActiveAt || user.createdAt,
           isOnlineNow: await isUserOnline(user._id.toString()),
-          businessName: user.venueListerProfile?.businessDetails?.name ?? "",
-          canAddMoreVenues: user.venueListerProfile?.canAddMoreVenues ?? false,
+          businessName: "",
+          canAddMoreVenues: false,
           venueCount: counts?.venueCount ?? 0,
           approvedVenueCount: counts?.approvedVenueCount ?? 0,
           pendingVenueCount: counts?.pendingVenueCount ?? 0,
