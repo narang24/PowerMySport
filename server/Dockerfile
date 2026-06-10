@@ -19,8 +19,8 @@ RUN npm run build
 # ── Stage 2: Runner (lean production image) ───────
 FROM node:20-alpine AS runner
 
-# Create non-root user for security
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# # Create non-root user for security
+# RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 WORKDIR /app
 
