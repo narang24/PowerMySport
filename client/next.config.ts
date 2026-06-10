@@ -1,6 +1,20 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async rewrites() {
+    return [
+      // Base community route
+      {
+        source: "/community",
+        destination: "https://community.powermysport.com",
+      },
+      // All nested community routes (e.g., /community/qna/123)
+      {
+        source: "/community/:path*",
+        destination: "https://community.powermysport.com/:path*",
+      },
+    ];
+  },
   /* config options here */
   reactCompiler: true,
   turbopack: {
