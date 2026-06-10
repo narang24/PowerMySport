@@ -6,12 +6,18 @@ const nextConfig: NextConfig = {
       // Base community route
       {
         source: "/community",
-        destination: "https://community.powermysport.com",
+        destination:
+          process.env.NODE_ENV === "development"
+            ? "http://localhost:3002/community"
+            : "https://community.powermysport.com/community",
       },
       // All nested community routes (e.g., /community/qna/123)
       {
         source: "/community/:path*",
-        destination: "https://community.powermysport.com/:path*",
+        destination:
+          process.env.NODE_ENV === "development"
+            ? "http://localhost:3002/community/:path*"
+            : "https://community.powermysport.com/community/:path*",
       },
     ];
   },
