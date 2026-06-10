@@ -125,8 +125,8 @@ userSchema.index({ role: 1, isActive: 1 });
 export const User = mongoose.model<UserDocument>("User", userSchema);
 
 // Discriminators for Hierarchical User Collection
-export const ParentUser = User.discriminator("Parent", new Schema({}));
-export const RecreationalUser = User.discriminator("Recreational", new Schema({}));
-export const CoachUser = User.discriminator("Coach", new Schema({}));
-export const AcademyOwnerUser = User.discriminator("Academy", new Schema({}));
-export const VenueListerUser = User.discriminator("VenueLister", new Schema({}));
+export const ParentUser = User.discriminator("ParentUser", new Schema({}), "Parent");
+export const RecreationalUser = User.discriminator("RecreationalUser", new Schema({}), "Recreational");
+export const CoachUser = User.discriminator("CoachUser", new Schema({}), "Coach");
+export const AcademyOwnerUser = User.discriminator("AcademyOwnerUser", new Schema({}), "Academy");
+export const VenueListerUser = User.discriminator("VenueListerUser", new Schema({}), "VenueLister");
