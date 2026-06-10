@@ -23,7 +23,9 @@ const authCookieOptions = {
   secure: process.env.NODE_ENV === "production",
   sameSite: "lax" as const,
   path: "/",
-  ...(authCookieDomain ? { domain: authCookieDomain } : {}),
+  // Only set domain in production to allow cross-subdomain auth (e.g. .powermysport.com)
+  // In development, omit it so localhost handles it gracefully across ports
+  ...(authCookieDomain && process.env.NODE_ENV === "production" ? { domain: authCookieDomain } : {}),
 };
 
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -54,7 +56,6 @@ export const register = async (req: Request, res: Response): Promise<void> => {
           email: user.email,
           role: user.role,
           userType: user.userType,
-          venueListerProfile: user.venueListerProfile,
         },
       },
     });
@@ -90,7 +91,6 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           email: user.email,
           role: user.role,
           userType: user.userType,
-          venueListerProfile: user.venueListerProfile,
         },
       },
     });
@@ -152,9 +152,6 @@ export const getProfile = async (
         dob: user.dob,
         photoUrl: user.photoUrl,
         photoS3Key: user.photoS3Key,
-        playerProfile: user.playerProfile,
-        venueListerProfile: user.venueListerProfile,
-        dependents: user.dependents,
       },
     });
   } catch (error) {
@@ -246,9 +243,6 @@ export const updateProfileHandler = async (
         dob: updatedUser.dob,
         photoUrl: updatedUser.photoUrl,
         photoS3Key: updatedUser.photoS3Key,
-        playerProfile: updatedUser.playerProfile,
-        venueListerProfile: updatedUser.venueListerProfile,
-        dependents: updatedUser.dependents,
       },
     });
   } catch (error) {
@@ -348,7 +342,6 @@ export const googleAuth = async (
           role: user.role,
           userType: user.userType,
           photoUrl: user.photoUrl,
-          venueListerProfile: user.venueListerProfile,
         },
       },
     });

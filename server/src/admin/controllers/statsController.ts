@@ -225,7 +225,7 @@ export const getAllUsers = async (
       User.countDocuments(query),
       User.find(query)
         .select(
-          "name email phone role createdAt lastActiveAt playerProfile.sports dependents venueListerProfile.businessDetails.name venueListerProfile.canAddMoreVenues",
+          "name email phone role createdAt lastActiveAt",
         )
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -399,7 +399,7 @@ export const getPlayersUsers = async (
       User.countDocuments(query),
       User.find(query)
         .select(
-          "name email phone createdAt lastActiveAt playerProfile.sports dependents",
+          "name email phone createdAt lastActiveAt",
         )
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -408,8 +408,8 @@ export const getPlayersUsers = async (
     ]);
 
     const data = users.map((user) => {
-      const sports = user.playerProfile?.sports || [];
-      const dependents = Array.isArray(user.dependents) ? user.dependents : [];
+      const sports: string[] = [];
+      const dependents: any[] = [];
 
       return {
         id: user._id.toString(),
@@ -532,7 +532,7 @@ export const getVenueListerUsers = async (
     const total = await User.countDocuments(query);
     const users = await User.find(query)
       .select(
-        "name email phone createdAt lastActiveAt venueListerProfile.businessDetails.name venueListerProfile.canAddMoreVenues",
+        "name email phone createdAt lastActiveAt",
       )
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -589,8 +589,8 @@ export const getVenueListerUsers = async (
         createdAt: user.createdAt,
         lastActiveAt: user.lastActiveAt || user.createdAt,
         isOnlineNow: isUserOnline(user._id.toString()),
-        businessName: user.venueListerProfile?.businessDetails?.name ?? "",
-        canAddMoreVenues: user.venueListerProfile?.canAddMoreVenues ?? false,
+        businessName: "",
+        canAddMoreVenues: false,
         venueCount: counts?.venueCount ?? 0,
         approvedVenueCount: counts?.approvedVenueCount ?? 0,
         pendingVenueCount: counts?.pendingVenueCount ?? 0,

@@ -2,6 +2,7 @@ import crypto from "crypto";
 import mongoose from "mongoose";
 import { Booking } from "../../client/models/Booking";
 import { User, UserDocument } from "../../client/models/User";
+import { Player } from "../../client/models/Player";
 import { sendPasswordResetEmail, sendWelcomeEmail } from "../../utils/email";
 import { S3Service } from "./S3Service";
 
@@ -34,7 +35,7 @@ export const registerUser = async (
     throw new Error("User with this email or phone already exists");
   }
 
-  const user = new User({ ...payload, dependents: [] });
+  const user = new User({ ...payload });
   const now = new Date();
   user.legalConsents = {
     terms: {
@@ -194,7 +195,6 @@ export const googleLogin = async (
         phone: uniquePhoneId, // Unique ID instead of fake phone number
         role: payload.role || "PLAYER",
         userType: payload.userType || "Recreational",
-        dependents: [],
         legalConsents: {
           terms: {
             accepted: true,
@@ -250,16 +250,18 @@ export const graduateDependent = async (
       throw new Error("Parent user not found");
     }
 
-    // Find the specific dependent
-    const dependent = parent.dependents.find(
-      (d) => d._id?.toString() === payload.dependentId,
-    );
-    if (!dependent || !dependent._id) {
+    const dependent = await Player.findOne({
+      _id: payload.dependentId,
+      userId: payload.parentId,
+      type: "DEPENDENT",
+    }).session(session);
+
+    if (!dependent) {
       throw new Error("Dependent not found");
     }
 
     // Check if dependent is at least 18 years old
-    if (dependent.age < 18) {
+    if (dependent.age && dependent.age < 18) {
       throw new Error("Dependent must be at least 18 years old to graduate");
     }
 
@@ -279,12 +281,10 @@ export const graduateDependent = async (
       password: payload.password,
       role: "PLAYER",
       userType: "Recreational",
-      dependents: [],
     });
     await newUser.save({ session });
 
     // Transfer all bookings where this dependent was the participant
-    // Use the dependent's ID directly (now guaranteed to exist)
     const dependentObjectId = dependent._id;
     const result = await Booking.updateMany(
       { participantId: dependentObjectId },
@@ -301,11 +301,8 @@ export const graduateDependent = async (
 
     console.log(`Transferred ${result.modifiedCount} bookings to new user`);
 
-    // Remove the dependent from parent's dependents array
-    parent.dependents = parent.dependents.filter(
-      (d) => d._id?.toString() !== payload.dependentId,
-    );
-    await parent.save({ session });
+    // Remove the dependent from Player collection
+    await Player.deleteOne({ _id: dependent._id }).session(session);
 
     // Commit the transaction
     await session.commitTransaction();
@@ -345,20 +342,17 @@ export const addDependent = async (
     throw new Error("User not found");
   }
 
-  // Add new dependent to array
-  const newDependent: any = {
+  const newDependent = new Player({
+    userId: user._id,
+    type: "DEPENDENT",
     name: payload.name,
     age: payload.age,
     sportsFocus: payload.sportsFocus || [],
     skillLevel: payload.skillLevel || "",
-  };
+  });
 
-  user.dependents.push(newDependent);
-
-  await user.save();
-
-  // Return the newly added dependent (last item in array)
-  return user.dependents[user.dependents.length - 1];
+  await newDependent.save();
+  return newDependent;
 };
 
 export const updateDependent = async (
@@ -366,25 +360,17 @@ export const updateDependent = async (
   dependentId: string,
   payload: Partial<AddDependentPayload>,
 ): Promise<any> => {
-  const user = await User.findById(userId);
-  if (!user) {
-    throw new Error("User not found");
-  }
-
-  const dependent = user.dependents.find(
-    (d) => d._id?.toString() === dependentId,
-  );
+  const dependent = await Player.findOne({ _id: dependentId, userId, type: "DEPENDENT" });
   if (!dependent) {
     throw new Error("Dependent not found");
   }
 
-  // Update dependent fields
   if (payload.name) dependent.name = payload.name;
   if (payload.age !== undefined) dependent.age = payload.age;
   if (payload.sportsFocus) dependent.sportsFocus = payload.sportsFocus;
   if (payload.skillLevel) dependent.skillLevel = payload.skillLevel;
 
-  await user.save();
+  await dependent.save();
   return dependent;
 };
 
@@ -392,12 +378,11 @@ export const deleteDependent = async (
   userId: string,
   dependentId: string,
 ): Promise<void> => {
-  const user = await User.findById(userId);
-  if (!user) {
-    throw new Error("User not found");
+  const dependent = await Player.findOne({ _id: dependentId, userId, type: "DEPENDENT" });
+  if (!dependent) {
+    throw new Error("Dependent not found");
   }
 
-  // Check if any bookings exist for this dependent as participant
   const bookingCount = await Booking.countDocuments({
     participantId: dependentId,
   });
@@ -408,11 +393,7 @@ export const deleteDependent = async (
     );
   }
 
-  // Remove dependent from array
-  user.dependents = user.dependents.filter(
-    (d) => d._id?.toString() !== dependentId,
-  );
-  await user.save();
+  await Player.deleteOne({ _id: dependentId });
 };
 
 export interface UpdateProfilePayload {
@@ -456,13 +437,19 @@ export const updateProfile = async (
   if (payload.dob) user.dob = new Date(payload.dob);
 
   // Update player profile if provided
-  if (payload.playerProfile) {
-    if (!user.playerProfile) {
-      user.playerProfile = {};
+  if (payload.playerProfile && Array.isArray(payload.playerProfile.sports)) {
+    let selfPlayer = await Player.findOne({ userId, type: "SELF" });
+    if (!selfPlayer) {
+      selfPlayer = new Player({
+        userId: user._id,
+        type: "SELF",
+        name: user.name,
+        sportsFocus: payload.playerProfile.sports,
+      });
+    } else {
+      selfPlayer.sportsFocus = payload.playerProfile.sports;
     }
-    if (Array.isArray(payload.playerProfile.sports)) {
-      user.playerProfile.sports = payload.playerProfile.sports;
-    }
+    await selfPlayer.save();
   }
 
   await user.save();
