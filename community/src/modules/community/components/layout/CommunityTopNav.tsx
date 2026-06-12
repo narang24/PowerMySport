@@ -17,7 +17,6 @@ import {
   House,
   Trophy,
   UserX,
-  Heart,
   ExternalLink,
 } from "lucide-react";
 
@@ -115,13 +114,7 @@ export default function CommunityTopNav() {
               <Trophy size={13} />
               Contributors
             </Link>
-            <Link
-              href="/following"
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-            >
-              <Heart size={13} />
-              Following
-            </Link>
+
             <Link
               href="/safety"
               className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
@@ -251,13 +244,7 @@ export default function CommunityTopNav() {
                       <Trophy size={15} />
                       Contributors
                     </Link>
-                    <Link
-                      href="/following"
-                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-                    >
-                      <Heart size={15} />
-                      Following
-                    </Link>
+
                     <Link
                       href="/safety"
                       className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
