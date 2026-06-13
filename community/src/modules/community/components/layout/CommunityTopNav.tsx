@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   MessagesSquare,
   BrainCircuit,
+  Heart,
 } from "lucide-react";
 
 // ─── Additional Settings dropdown items ────────────────────────────────────
