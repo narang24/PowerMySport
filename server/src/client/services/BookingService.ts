@@ -5,6 +5,7 @@ import { BookingSlotLock } from "../models/BookingSlotLock";
 import { Coach } from "../models/Coach";
 import { CoachSubscription } from "../models/CoachSubscription";
 import { User } from "../models/User";
+import { Player } from "../models/Player";
 import { Venue, VenueDocument } from "../models/Venue";
 import {
   sendBookingLifecycleEmail,
@@ -579,9 +580,7 @@ export const initiateBooking = async (
 
     if (payload.dependentId) {
       // Booking is for a dependent (child)
-      const dependent = user.dependents.find(
-        (d) => d._id?.toString() === payload.dependentId,
-      );
+      const dependent = await Player.findOne({ _id: payload.dependentId, userId: user._id, type: "DEPENDENT" });
       if (!dependent) {
         throw new Error("Dependent not found");
       }

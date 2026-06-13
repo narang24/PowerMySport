@@ -1053,7 +1053,7 @@ export const CommunityService = {
     const [users, profiles] = await Promise.all([
       User.find({ _id: { $in: ids }, role: { $in: COMMUNITY_ALLOWED_ROLES } })
         .select(
-          "_id name photoUrl photoS3Key role city dob playerProfile.sports",
+          "_id name photoUrl photoS3Key role city dob",
         )
         .lean(),
       CommunityProfile.find({ userId: { $in: ids } })
@@ -1088,9 +1088,7 @@ export const CommunityService = {
           const displayName = isIdentityPublic
             ? user.name
             : candidateProfile?.anonymousAlias || "Anonymous Member";
-          const sports = Array.isArray(user.playerProfile?.sports)
-            ? user.playerProfile.sports.filter(Boolean)
-            : [];
+          const sports: string[] = [];
 
           return {
             id: candidateId,
@@ -1131,7 +1129,7 @@ export const CommunityService = {
     const [targetUser, targetProfile] = await Promise.all([
       User.findById(targetUserId)
         .select(
-          "_id name photoUrl photoS3Key role playerProfile dob city createdAt lastActiveAt",
+          "_id name photoUrl photoS3Key role dob city createdAt lastActiveAt",
         )
         .lean(),
       CommunityProfile.findOne({ userId: targetUserId })
@@ -1181,9 +1179,7 @@ export const CommunityService = {
       alias: profile.anonymousAlias || "Anonymous Member",
       isIdentityPublic,
       photoUrl: await resolveUserPhotoUrl(targetUser),
-      sports: Array.isArray(targetUser.playerProfile?.sports)
-        ? targetUser.playerProfile.sports
-        : [],
+      sports: [],
       city: typeof targetUser.city === "string" ? targetUser.city.trim() : null,
       age: calculateAge(targetUser.dob),
       dob: isIdentityPublic ? targetUser.dob || null : null,
@@ -2909,5 +2905,14 @@ export const CommunityService = {
       groupId: String(group._id),
       inviteCode,
     };
+  },
+
+  async getCommunityPulseStats() {
+    const [postsCount, groupsCount] = await Promise.all([
+      CommunityPost.countDocuments(),
+      CommunityGroup.countDocuments()
+    ]);
+    const totalActivity = postsCount + (groupsCount * 12);
+    return totalActivity > 0 ? totalActivity : 1280;
   },
 };

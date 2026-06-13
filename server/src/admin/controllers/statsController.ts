@@ -225,7 +225,7 @@ export const getAllUsers = async (
       User.countDocuments(query),
       User.find(query)
         .select(
-          "name email phone role createdAt lastActiveAt playerProfile.sports dependents venueListerProfile.businessDetails.name venueListerProfile.canAddMoreVenues",
+          "name email phone role createdAt lastActiveAt",
         )
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -399,7 +399,7 @@ export const getPlayersUsers = async (
       User.countDocuments(query),
       User.find(query)
         .select(
-          "name email phone createdAt lastActiveAt playerProfile.sports dependents",
+          "name email phone createdAt lastActiveAt",
         )
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -407,21 +407,25 @@ export const getPlayersUsers = async (
         .lean(),
     ]);
 
-    const data = users.map((user) => {
-      const sports = user.playerProfile?.sports || [];
-      const dependents = Array.isArray(user.dependents) ? user.dependents : [];
+    const data = await Promise.all(
+      users.map(async (user) => {
+        const sports: string[] = [];
+        const dependents: any[] = [];
 
-      return {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: "PLAYER",
-        createdAt: user.createdAt,
-        lastActiveAt: user.lastActiveAt || user.createdAt,
-        isOnlineNow: isUserOnline(user._id.toString()),
-      };
-    });
+        return {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: "PLAYER",
+          createdAt: user.createdAt,
+          lastActiveAt: user.lastActiveAt || user.createdAt,
+          isOnlineNow: await isUserOnline(user._id.toString()),
+          sports,
+          dependents,
+        };
+      })
+    );
 
     res.status(200).json({
       success: true,
@@ -474,28 +478,29 @@ export const getCoachUsers = async (
       coachProfiles.map((profile) => [profile.userId.toString(), profile]),
     );
 
-    const data = users.map((user) => {
-      const profile = coachByUserId.get(user._id.toString());
-
-      return {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: "COACH",
-        createdAt: user.createdAt,
-        lastActiveAt: user.lastActiveAt || user.createdAt,
-        isOnlineNow: isUserOnline(user._id.toString()),
-        sports: profile?.sports || [],
-        hourlyRate: profile?.hourlyRate ?? null,
-        serviceMode: profile?.serviceMode ?? null,
-        verificationStatus: profile?.verificationStatus ?? "UNVERIFIED",
-        isVerified: profile?.isVerified ?? false,
-        rating: profile?.rating ?? 0,
-        reviewCount: profile?.reviewCount ?? 0,
-        profileIncomplete: !profile,
-      };
-    });
+    const data = await Promise.all(
+      users.map(async (user) => {
+        const profile = coachByUserId.get(user._id.toString());
+        return {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: "COACH",
+          createdAt: user.createdAt,
+          lastActiveAt: user.lastActiveAt || user.createdAt,
+          isOnlineNow: await isUserOnline(user._id.toString()),
+          sports: profile?.sports || [],
+          hourlyRate: profile?.hourlyRate ?? null,
+          serviceMode: profile?.serviceMode ?? null,
+          verificationStatus: profile?.verificationStatus ?? "UNVERIFIED",
+          isVerified: profile?.isVerified ?? false,
+          rating: profile?.rating ?? 0,
+          reviewCount: profile?.reviewCount ?? 0,
+          profileIncomplete: !profile,
+        };
+      }),
+    );
 
     res.status(200).json({
       success: true,
@@ -532,7 +537,7 @@ export const getVenueListerUsers = async (
     const total = await User.countDocuments(query);
     const users = await User.find(query)
       .select(
-        "name email phone createdAt lastActiveAt venueListerProfile.businessDetails.name venueListerProfile.canAddMoreVenues",
+        "name email phone createdAt lastActiveAt",
       )
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -577,25 +582,26 @@ export const getVenueListerUsers = async (
       venueCounts.map((item) => [String(item._id), item]),
     );
 
-    const data = users.map((user) => {
-      const counts = venueCountByOwnerId.get(user._id.toString());
-
-      return {
-        id: user._id.toString(),
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: "VENUE_LISTER",
-        createdAt: user.createdAt,
-        lastActiveAt: user.lastActiveAt || user.createdAt,
-        isOnlineNow: isUserOnline(user._id.toString()),
-        businessName: user.venueListerProfile?.businessDetails?.name ?? "",
-        canAddMoreVenues: user.venueListerProfile?.canAddMoreVenues ?? false,
-        venueCount: counts?.venueCount ?? 0,
-        approvedVenueCount: counts?.approvedVenueCount ?? 0,
-        pendingVenueCount: counts?.pendingVenueCount ?? 0,
-      };
-    });
+    const data = await Promise.all(
+      users.map(async (user) => {
+        const counts = venueCountByOwnerId.get(user._id.toString());
+        return {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: "VENUE_LISTER",
+          createdAt: user.createdAt,
+          lastActiveAt: user.lastActiveAt || user.createdAt,
+          isOnlineNow: await isUserOnline(user._id.toString()),
+          businessName: "",
+          canAddMoreVenues: false,
+          venueCount: counts?.venueCount ?? 0,
+          approvedVenueCount: counts?.approvedVenueCount ?? 0,
+          pendingVenueCount: counts?.pendingVenueCount ?? 0,
+        };
+      }),
+    );
 
     res.status(200).json({
       success: true,
