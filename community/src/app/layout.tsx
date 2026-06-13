@@ -41,7 +41,9 @@ export default function RootLayout({
           <Suspense fallback={<div className="h-16 w-full bg-white/90 border-b border-white/70" />}>
             <CommunityTopNav />
           </Suspense>
-          <CommunityNotificationToastListener />
+          <Suspense fallback={null}>
+            <CommunityNotificationToastListener />
+          </Suspense>
           <main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
         </div>
         <Toaster richColors closeButton position="top-right" />
