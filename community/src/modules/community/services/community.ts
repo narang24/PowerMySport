@@ -500,6 +500,20 @@ export const communityService = {
     return response.data.data;
   },
 
+  async deleteGroup(groupId: string): Promise<{
+    groupId: string;
+    deletedGroup: boolean;
+  }> {
+    const response = await axiosInstance.delete<
+      ApiResponse<{
+        groupId: string;
+        deletedGroup: boolean;
+      }>
+    >(`/community/groups/${groupId}`);
+    clearCacheByPrefixes(["groups", "conversations"]);
+    return response.data.data;
+  },
+
   async leaveGroup(groupId: string): Promise<{
     groupId: string;
     removed: boolean;

@@ -9,6 +9,7 @@ import {
   Plus,
   Search,
   Settings,
+  Trash,
   UserPlus,
   Users,
   X,
@@ -56,6 +57,8 @@ export default function CommunityDirectoryPanel({ page }: Props) {
     handleOpenReportModal,
     isLeavingGroupId,
     handleLeaveGroup,
+    isDeletingGroupId,
+    handleDeleteGroup,
     inviteGroupId,
     conversationModeOptions,
     conversationMode,
@@ -481,6 +484,21 @@ export default function CommunityDirectoryPanel({ page }: Props) {
                                   >
                                     <LogOut size={14} /> Leave Group
                                   </button>
+                                  {group.isAdmin && (
+                                    <button
+                                      onClick={() =>
+                                        void handleDeleteGroup(
+                                          group.id,
+                                        )
+                                      }
+                                      disabled={
+                                        isDeletingGroupId === group.id
+                                      }
+                                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[12px] font-bold text-red-600 hover:bg-red-100 disabled:opacity-60"
+                                    >
+                                      <Trash size={14} /> Delete Group
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() =>
                                       handleOpenReportModal(

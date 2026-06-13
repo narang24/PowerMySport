@@ -136,6 +136,7 @@ export function useCommunityPage(options?: { forceView?: "community-overview" | 
     string | null
   >(null);
   const [isLeavingGroupId, setIsLeavingGroupId] = useState<string | null>(null);
+  const [isDeletingGroupId, setIsDeletingGroupId] = useState<string | null>(null);
 
   const [reportModal, setReportModal] = useState<{
     targetType: "MESSAGE" | "GROUP";
@@ -1115,6 +1116,23 @@ export function useCommunityPage(options?: { forceView?: "community-overview" | 
     }
   };
 
+  const handleDeleteGroup = async (groupId: string) => {
+    try {
+      setIsDeletingGroupId(groupId);
+      await communityService.deleteGroup(groupId);
+      await refreshGroupDirectoryState();
+      if (selectedConversation?.group?.id === groupId) {
+        setSelectedConversationId(null);
+        setWorkspaceView("DIRECTORY");
+      }
+      toast.success("Group deleted");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete group");
+    } finally {
+      setIsDeletingGroupId(null);
+    }
+  };
+
   const handleOpenReportModal = (
     targetType: "MESSAGE" | "GROUP",
     targetId: string,
@@ -1778,6 +1796,8 @@ export function useCommunityPage(options?: { forceView?: "community-overview" | 
     handleCreateGroup,
     handleJoinGroup,
     handleLeaveGroup,
+    isDeletingGroupId,
+    handleDeleteGroup,
     handleOpenReportModal,
     handleSubmitReportWrapper,
     handleAddMemberToGroup,
