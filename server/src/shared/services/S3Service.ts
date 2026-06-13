@@ -145,14 +145,19 @@ export class S3Service {
     });
 
     // Generate presigned URL for downloading/viewing the image (7 days expiry)
-    const getCommand = new GetObjectCommand({
-      Bucket: this.imagesBucket,
-      Key: key,
-    });
+    let downloadUrl: string;
+    if (process.env.AWS_CLOUDFRONT_DOMAIN) {
+      downloadUrl = `https://${process.env.AWS_CLOUDFRONT_DOMAIN}/${key}`;
+    } else {
+      const getCommand = new GetObjectCommand({
+        Bucket: this.imagesBucket,
+        Key: key,
+      });
 
-    const downloadUrl = await getSignedUrl(this.s3Client, getCommand, {
-      expiresIn: 604800, // 7 days
-    });
+      downloadUrl = await getSignedUrl(this.s3Client, getCommand, {
+        expiresIn: 604800, // 7 days
+      });
+    }
 
     return {
       uploadUrl,
@@ -394,6 +399,10 @@ export class S3Service {
     bucketType: "verification" | "images" = "images",
     expiresIn: number = 3600,
   ): Promise<string> {
+    if (bucketType === "images" && process.env.AWS_CLOUDFRONT_DOMAIN) {
+      return `https://${process.env.AWS_CLOUDFRONT_DOMAIN}/${key}`;
+    }
+
     const bucket =
       bucketType === "verification" ? this.documentsBucket : this.imagesBucket;
 
