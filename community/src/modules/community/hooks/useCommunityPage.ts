@@ -595,11 +595,22 @@ export function useCommunityPage(options?: { forceView?: "community-overview" | 
         // Mark related notifications as read
         await markNotificationsForConversationAsRead(conversationId);
 
-        await refreshConversationsNow();
+        // Optimistically clear unread count for immediate sidebar UI update
+        setConversations((current) =>
+          Array.isArray(current)
+            ? current.map((c) =>
+                c.id === conversationId ? { ...c, unreadCount: 0 } : c
+              )
+            : current
+        );
+
         const socket = getCommunitySocket();
         if (socket.connected) {
           socket.emit("community:markRead", { conversationId });
         }
+
+        // Defer refresh to allow backend to process markRead
+        setTimeout(() => refreshConversationsNow(), 500);
       } catch (e) {
         const message =
           e instanceof Error ? e.message : "Failed to load messages";
