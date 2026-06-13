@@ -121,6 +121,15 @@ export default function CommunityTopNav() {
           {/* ── Desktop nav ───────────────────────────────────────────────── */}
           <div className="hidden items-center gap-1.5 md:flex">
 
+            {/* Main App */}
+            <a
+              href={mainAppUrl}
+              className="mr-1 inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-power-orange/30 bg-power-orange/10 px-3 py-2.5 text-xs font-semibold text-power-orange shadow-sm transition hover:bg-power-orange/15"
+            >
+              Main App
+              <ExternalLink size={13} />
+            </a>
+
             {/* Chats */}
             <Link
               href="/chats"

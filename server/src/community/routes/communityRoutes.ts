@@ -9,6 +9,7 @@ import {
   deleteMessage,
   deleteCommunityAnswer,
   deleteCommunityPost,
+  deleteGroup,
   getCommunityPostDetails,
   getMyCommunityReputation,
   editMessage,
@@ -114,6 +115,7 @@ router.post("/groups/join-by-code/:inviteCode", joinGroupByCode);
 router.get("/groups/:groupId/members", getGroupMembers);
 router.get("/groups/:groupId/invite-code", getGroupInviteCode);
 router.post("/groups/:groupId/leave", leaveGroup);
+router.delete("/groups/:groupId", deleteGroup);
 router.post(
   "/reports",
   validateRequest(communityReportSchema),

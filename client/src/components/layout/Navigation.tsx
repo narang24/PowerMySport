@@ -94,6 +94,8 @@ export const Navigation: React.FC<NavProps> = ({
     { href: "/services", label: "Services" },
     { href: "/how-it-works", label: "How It Works" },
     { href: "/contact", label: "Contact" },
+    { href: "/community", label: "Community" },
+    { href: "/shop", label: "Shop" },
   ];
 
   const isActive = (path: string) => pathname === path;

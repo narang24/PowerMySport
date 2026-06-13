@@ -4,6 +4,7 @@ import {
   AdminEcommerceController,
 } from "../controllers/EcommerceController";
 import { WebhookController } from "../../shared/controllers/WebhookController";
+import { joinWaitlist } from "../controllers/WaitlistController";
 import { authMiddleware, requirePermission } from "../../middleware/auth";
 
 const router = Router();
@@ -20,6 +21,12 @@ const webhookController = new WebhookController();
 router.get("/products", (req: Request, res: Response) =>
   controller.listProducts(req, res),
 );
+
+/**
+ * POST /api/v1/waitlist
+ * Join waitlist for shop
+ */
+router.post("/waitlist", joinWaitlist);
 
 /**
  * GET /api/v1/products/:id

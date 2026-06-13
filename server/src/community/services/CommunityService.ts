@@ -1500,6 +1500,40 @@ export const CommunityService = {
     };
   },
 
+  async deleteGroup(userId: string, groupId: string) {
+    await ensureProfile(userId);
+
+    const group = await CommunityGroup.findById(groupId);
+    if (!group) {
+      throw new Error("Group not found");
+    }
+
+    const isCreator = String(group.createdBy) === userId;
+    const isAdmin = group.admins.some((adminId) => String(adminId) === userId);
+
+    if (!isCreator && !isAdmin) {
+      throw new Error("Only group admins can delete the group");
+    }
+
+    const groupConversation = await CommunityConversation.findOne({
+      conversationType: "GROUP",
+      groupId: group._id,
+    });
+
+    if (groupConversation) {
+      await Promise.all([
+        CommunityMessage.deleteMany({
+          conversationId: groupConversation._id,
+        }),
+        CommunityConversation.deleteOne({ _id: groupConversation._id }),
+      ]);
+    }
+
+    await CommunityGroup.deleteOne({ _id: group._id });
+
+    return { groupId: String(group._id), deletedGroup: true };
+  },
+
   async leaveGroup(userId: string, groupId: string) {
     await ensureProfile(userId);
 

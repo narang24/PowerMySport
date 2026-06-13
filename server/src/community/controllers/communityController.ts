@@ -472,6 +472,27 @@ export const joinGroup = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+export const deleteGroup = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const groupId = String(req.params.groupId || "");
+    if (!groupId) {
+      throw new Error("groupId is required");
+    }
+
+    const data = await CommunityService.deleteGroup(getUserId(req), groupId);
+    res.status(200).json({
+      success: true,
+      message: "Group deleted successfully",
+      data,
+    });
+  } catch (error) {
+    handleError(res, error, "Failed to delete group");
+  }
+};
+
 export const leaveGroup = async (
   req: Request,
   res: Response,
