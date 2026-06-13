@@ -186,6 +186,13 @@ const buildCommunityNotificationsKey = (
 const BLOCKED_USERS_CACHE_KEY = "blocked-users";
 
 export const communityService = {
+  async clearNotificationCache(): Promise<void> {
+    clearCacheByPrefixes([
+      "community-notifications",
+      "community-unread-count",
+    ]);
+  },
+
   async ensureSession(): Promise<AuthBridgeSession> {
     const response =
       await axiosInstance.get<ApiResponse<AuthBridgeSession>>("/auth/bridge");
@@ -919,6 +926,9 @@ export const communityService = {
       "community-notifications",
       "community-unread-count",
     ]);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("community:notificationsRead"));
+    }
   },
 
   async markAllCommunityNotificationsRead(): Promise<number> {
@@ -952,6 +962,10 @@ export const communityService = {
       "community-notifications",
       "community-unread-count",
     ]);
+
+    if (typeof window !== "undefined" && totalMarked > 0) {
+      window.dispatchEvent(new Event("community:notificationsRead"));
+    }
 
     return totalMarked;
   },

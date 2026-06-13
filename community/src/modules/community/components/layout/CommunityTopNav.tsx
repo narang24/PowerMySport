@@ -58,11 +58,23 @@ export default function CommunityTopNav() {
     void loadUnreadCount();
 
     const socket = getCommunitySocket();
-    socket.on("notification:new", loadUnreadCount);
+    const handleNewNotification = () => {
+      void communityService.clearNotificationCache();
+      void loadUnreadCount();
+    };
+
+    socket.on("notification:new", handleNewNotification);
     if (!socket.connected) socket.connect();
+    
+    // Also update badge when notifications are marked read locally
+    const handleLocalRead = () => {
+      void loadUnreadCount();
+    };
+    window.addEventListener("community:notificationsRead", handleLocalRead);
 
     return () => {
-      socket.off("notification:new", loadUnreadCount);
+      socket.off("notification:new", handleNewNotification);
+      window.removeEventListener("community:notificationsRead", handleLocalRead);
     };
   }, []);
 
