@@ -267,7 +267,7 @@ export default function CommunityChatPanel({ page }: Props) {
                             : "Type a message..."
                         }
                         disabled={
-                          !canSendSelectedConversationMessage || isSending || isUploadingImage
+                          !canSendSelectedConversationMessage || isUploadingImage
                         }
                         rows={1}
                         className="max-h-28 flex-1 resize-none rounded-3xl border border-slate-200 bg-white px-4 py-2.5 text-sm focus:border-power-orange focus:outline-none disabled:cursor-not-allowed"
