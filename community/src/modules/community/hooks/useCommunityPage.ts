@@ -96,12 +96,7 @@ export function useCommunityPage(options?: { forceView?: "community-overview" | 
   const [hasMoreConversations, setHasMoreConversations] = useState(false);
   const [isLoadingMoreConversations, setIsLoadingMoreConversations] =
     useState(false);
-  const [selectedConversationId, setSelectedConversationId] = useState<
-    string | null
-  >(() => {
-    if (typeof window === "undefined") return null;
-    return window.localStorage.getItem(COMMUNITY_SELECTED_CONVERSATION_KEY);
-  });
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
 
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [messagePage, setMessagePage] = useState(1);
@@ -468,7 +463,7 @@ export function useCommunityPage(options?: { forceView?: "community-overview" | 
             safeItems.some((c) => c.id === current)
           )
             return current;
-          return safeItems[0].id;
+          return null;
         });
       }
     },

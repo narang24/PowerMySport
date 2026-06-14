@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageBubble } from "@/modules/community/components/chat/MessageBubble";
+import CommunityChatEmptyState from "@/modules/community/components/page/home/CommunityChatEmptyState";
 import type { CommunityPageViewModel } from "@/modules/community/hooks/useCommunityPage";
 import { useRef, useLayoutEffect, useCallback, useState } from "react";
 import { getCommunitySocket } from "@/lib/realtime/socket";
@@ -148,18 +149,16 @@ export default function CommunityChatPanel({ page }: Props) {
   const hasContent = newMessage.trim().length > 0 || !!pendingImageFile;
 
   // Empty state — no conversation selected
-  if (!selectedConversation && workspaceView !== "CHAT") {
+  if (!selectedConversation) {
     return (
-      <div className="hidden lg:flex h-full flex-col items-center justify-center bg-[#efeae2] bg-[radial-gradient(rgba(255,255,255,0.34)_1px,transparent_1px),radial-gradient(rgba(0,0,0,0.03)_1px,transparent_1px)] bg-position-[0_0,11px_11px] bg-size-[22px_22px]">
-        <div className="flex flex-col items-center gap-4 text-center px-8">
-          <div className="h-20 w-20 rounded-full bg-white/60 backdrop-blur shadow-md flex items-center justify-center">
-            <MessageSquare size={36} className="text-power-orange opacity-70" />
-          </div>
-          <div>
-            <p className="text-lg font-semibold text-slate-700">Select a conversation</p>
-            <p className="mt-1 text-sm text-slate-500">Choose a chat from the left to start messaging</p>
-          </div>
-        </div>
+      <div className={`h-full min-h-0 min-w-0 flex-col overflow-hidden ${workspaceView === "CHAT" ? "flex" : "hidden lg:flex"}`}>
+        <CommunityChatEmptyState 
+          onBack={() => {
+            setIsConversationSidebarOpen(true);
+            setSidebarMode("INBOX");
+            setWorkspaceView("DIRECTORY");
+          }} 
+        />
       </div>
     );
   }

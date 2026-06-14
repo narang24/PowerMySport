@@ -44,7 +44,7 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <CommunityNotificationToastListener />
           </Suspense>
-          <main className="min-h-0 flex-1 flex flex-col overflow-hidden">{children}</main>
+          <main className="min-h-0 flex-1 relative overflow-y-auto">{children}</main>
         </div>
         <Toaster richColors closeButton position="top-right" />
       </body>
