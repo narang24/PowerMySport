@@ -29,8 +29,15 @@ import {
   CheckCircle2,
   Medal,
   TrendingUp,
+  Smile,
+  Sprout,
+  Wallet,
+  CreditCard,
+  Diamond,
+  Shield,
+  Network,
 } from "lucide-react";
-import { useState, useEffect, useRef, type FormEvent } from "react";
+import { useState, useEffect, useRef, Fragment, type FormEvent } from "react";
 import { motion, AnimatePresence, type Variants } from "framer-motion";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -83,43 +90,43 @@ type PlayerProfile = {
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const PERSONALITY_OPTIONS = [
-  { label: "Shy", icon: "🌱" },
-  { label: "Energetic", icon: "⚡" },
-  { label: "Competitive", icon: "🏆" },
-  { label: "Social", icon: "🤝" },
-  { label: "Focused", icon: "🎯" },
-  { label: "Curious", icon: "🔭" },
-  { label: "Patient", icon: "🧘" },
-  { label: "Team-oriented", icon: "👥" },
+  { label: "Shy", icon: Shield },
+  { label: "Energetic", icon: Zap },
+  { label: "Competitive", icon: Trophy },
+  { label: "Social", icon: Users },
+  { label: "Focused", icon: Crosshair },
+  { label: "Curious", icon: Compass },
+  { label: "Patient", icon: Timer },
+  { label: "Team-oriented", icon: Network },
 ] as const;
 
 const OBJECTIVES = [
   {
     value: "Recreational",
     label: "Just for Fun",
-    icon: "🎮",
+    icon: Smile,
     desc: "Play and enjoy sport casually",
   },
   {
     value: "Health",
     label: "Get Fit",
-    icon: "💪",
+    icon: Activity,
     desc: "Build strength and stamina",
   },
   {
     value: "Social",
     label: "Make Friends",
-    icon: "🤝",
+    icon: Users,
     desc: "Connect through sport",
   },
-  { value: "Competitive", label: "Compete", icon: "🏆", desc: "Train to win" },
+  { value: "Competitive", label: "Compete", icon: Trophy, desc: "Train to win" },
 ] as const;
 
 const FITNESS_LEVELS = [
   {
     value: "Low",
     label: "Beginner",
-    icon: "🌱",
+    icon: Sprout,
     color: "text-emerald-600",
     bar: "w-1/3",
     barColor: "bg-emerald-400",
@@ -128,7 +135,7 @@ const FITNESS_LEVELS = [
   {
     value: "Moderate",
     label: "Developing",
-    icon: "🔥",
+    icon: Flame,
     color: "text-amber-600",
     bar: "w-2/3",
     barColor: "bg-amber-400",
@@ -137,7 +144,7 @@ const FITNESS_LEVELS = [
   {
     value: "High",
     label: "Advanced",
-    icon: "⚡",
+    icon: Zap,
     color: "text-violet-600",
     bar: "w-full",
     barColor: "bg-violet-500",
@@ -149,28 +156,28 @@ const BUDGET_OPTIONS = [
   {
     value: "Budget",
     label: "Budget",
-    icon: "💰",
+    icon: Wallet,
     desc: "Cost-effective choices",
   },
   {
     value: "Moderate",
     label: "Moderate",
-    icon: "💳",
+    icon: CreditCard,
     desc: "Quality balanced",
   },
   {
     value: "Premium",
     label: "Premium",
-    icon: "💎",
+    icon: Diamond,
     desc: "Best of everything",
   },
 ] as const;
 
 const STEPS = [
-  { id: 1, label: "Profile", icon: UserCircle2, xp: 20 },
-  { id: 2, label: "Goals", icon: Target, xp: 25 },
-  { id: 3, label: "Lifestyle", icon: Activity, xp: 25 },
-  { id: 4, label: "Details", icon: Sparkles, xp: 25 },
+  { id: 1, label: "Profile", icon: UserCircle2 },
+  { id: 2, label: "Goals", icon: Target },
+  { id: 3, label: "Lifestyle", icon: Activity },
+  { id: 4, label: "Details", icon: Sparkles },
 ] as const;
 
 const initialForm: GuidanceFormState = {
@@ -218,37 +225,12 @@ const stagger: Variants = {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function XPBar({ earned, total }: { earned: number; total: number }) {
-  const pct = Math.round((earned / total) * 100);
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-1.5">
-        <Flame className="h-4 w-4 text-power-orange" />
-        <span className="text-xs font-bold text-power-orange">{earned} XP</span>
-      </div>
-      <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
-        <motion.div
-          className="h-full rounded-full bg-gradient-to-r from-power-orange to-amber-400"
-          initial={{ width: 0 }}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-        />
-      </div>
-      <span className="text-xs text-slate-400 font-medium">{total} XP</span>
-    </div>
-  );
-}
-
 function StepIndicator({
   current,
   steps,
-  xpEarned,
-  totalXP,
 }: {
   current: number;
   steps: typeof STEPS;
-  xpEarned: number;
-  totalXP: number;
 }) {
   return (
     <div className="mb-8">
@@ -258,16 +240,15 @@ function StepIndicator({
             Progress
           </span>
         </div>
-        <XPBar earned={xpEarned} total={totalXP} />
       </div>
-      <div className="flex items-center gap-1 sm:gap-2">
+      <div className="flex items-start w-full">
         {steps.map((step, idx) => {
           const Icon = step.icon;
           const done = current > step.id;
           const active = current === step.id;
           return (
-            <div key={step.id} className="flex items-center flex-1">
-              <div className="flex flex-col items-center flex-1">
+            <Fragment key={step.id}>
+              <div className="flex flex-col items-center shrink-0 w-14 sm:w-20">
                 <div
                   className={`flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full border-2 transition-all duration-300 ${
                     done
@@ -284,7 +265,7 @@ function StepIndicator({
                   )}
                 </div>
                 <span
-                  className={`mt-1 text-[10px] font-semibold hidden sm:block ${
+                  className={`mt-1.5 text-[10px] font-semibold hidden sm:block text-center ${
                     active
                       ? "text-power-orange"
                       : done
@@ -296,13 +277,15 @@ function StepIndicator({
                 </span>
               </div>
               {idx < steps.length - 1 && (
-                <div
-                  className={`h-0.5 flex-1 mx-1 rounded transition-all duration-500 ${
-                    current > step.id ? "bg-emerald-400" : "bg-slate-100"
-                  }`}
-                />
+                <div className="flex-1 mt-[18px] sm:mt-[20px] mx-1 sm:mx-2">
+                  <div
+                    className={`h-0.5 w-full rounded transition-all duration-500 ${
+                      current > step.id ? "bg-emerald-400" : "bg-slate-100"
+                    }`}
+                  />
+                </div>
               )}
-            </div>
+            </Fragment>
           );
         })}
       </div>
@@ -607,7 +590,7 @@ function Step2Goals({
             accent
           >
             <div className="flex items-start gap-3">
-              <span className="text-2xl">{obj.icon}</span>
+              <div className="text-slate-700 mt-1"><obj.icon className="h-5 w-5" /></div>
               <div>
                 <p className="font-bold text-slate-900">{obj.label}</p>
                 <p className="text-xs text-slate-500 mt-0.5">{obj.desc}</p>
@@ -632,7 +615,7 @@ function Step2Goals({
               onClick={() => update("current_fitness_level", lvl.value)}
             >
               <div className="flex items-center gap-3">
-                <span className="text-xl">{lvl.icon}</span>
+                <div className="text-slate-700"><lvl.icon className="h-5 w-5" /></div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
                     <span className="font-semibold text-slate-800 text-sm">
@@ -738,8 +721,8 @@ function Step3Lifestyle({
               selected={form.budget_tier === b.value}
               onClick={() => update("budget_tier", b.value)}
             >
-              <div className="text-center py-1">
-                <div className="text-2xl mb-1">{b.icon}</div>
+              <div className="text-center py-1 flex flex-col items-center">
+                <div className="mb-2 text-slate-700"><b.icon className="h-6 w-6" /></div>
                 <p className="font-bold text-slate-900 text-sm">{b.label}</p>
                 <p className="text-[11px] text-slate-500 mt-0.5">{b.desc}</p>
               </div>
@@ -796,7 +779,7 @@ function Step4Details({
           </span>
         </span>
         <div className="flex flex-wrap gap-2">
-          {PERSONALITY_OPTIONS.map(({ label, icon }) => {
+          {PERSONALITY_OPTIONS.map(({ label, icon: Icon }) => {
             const selected = form.personality_tags.includes(label);
             return (
               <button
@@ -809,7 +792,7 @@ function Step4Details({
                     : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
                 }`}
               >
-                <span className="text-base leading-none">{icon}</span>
+                <div className="text-slate-600 flex items-center justify-center"><Icon className="h-4 w-4" /></div>
                 <span className="truncate">{label}</span>
                 {selected && (
                   <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
@@ -1049,11 +1032,6 @@ export default function GuidancePage() {
   const [showResults, setShowResults] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
 
-  const totalXP = STEPS.reduce((s, st) => s + st.xp, 0);
-  const xpEarned = showResults
-    ? totalXP
-    : STEPS.slice(0, step - 1).reduce((sum, s) => sum + s.xp, 0);
-
   useEffect(() => {
     api
       .get("/auth/players")
@@ -1117,7 +1095,7 @@ export default function GuidancePage() {
 
   const nextStep = () => {
     const messages = [
-      "Step Complete! +XP",
+      "Step Complete!",
       "Keep Going! ⚡",
       "Almost There! 🔥",
       "Final Step! 🏆",
@@ -1236,8 +1214,6 @@ export default function GuidancePage() {
               <StepIndicator
                 current={step}
                 steps={STEPS}
-                xpEarned={xpEarned}
-                totalXP={totalXP}
               />
 
               <AnimatePresence mode="wait">
@@ -1288,9 +1264,6 @@ export default function GuidancePage() {
                   >
                     Continue
                     <ChevronRight className="h-4 w-4" />
-                    <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold">
-                      +{STEPS[step]?.xp ?? 0} XP
-                    </span>
                   </button>
                 ) : (
                   <button
@@ -1308,9 +1281,6 @@ export default function GuidancePage() {
                       <>
                         <Trophy className="h-4 w-4" />
                         Generate Roadmap
-                        <span className="ml-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold">
-                          +{STEPS[3]?.xp ?? 0} XP
-                        </span>
                       </>
                     )}
                   </button>
@@ -1356,12 +1326,6 @@ export default function GuidancePage() {
                         Your Roadmap
                       </span>
                     </div>
-                    <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-100 px-3 py-1">
-                      <Star className="h-3.5 w-3.5 text-emerald-600 fill-emerald-400" />
-                      <span className="text-xs font-bold text-emerald-700">
-                        {xpEarned} XP earned
-                      </span>
-                    </div>
                   </div>
                   <ResultsView submission={submission} />
                 </div>
@@ -1387,16 +1351,16 @@ export default function GuidancePage() {
                   </p>
                   <div className="mt-6 grid grid-cols-2 gap-3 w-full max-w-xs">
                     {[
-                      { icon: "🎯", label: "Sport match" },
-                      { icon: "📅", label: "Weekly plan" },
-                      { icon: "🏋️", label: "Training guide" },
-                      { icon: "🧭", label: "Next actions" },
-                    ].map(({ icon, label }) => (
+                      { icon: Target, label: "Sport match" },
+                      { icon: Calendar, label: "Weekly plan" },
+                      { icon: Dumbbell, label: "Training guide" },
+                      { icon: Compass, label: "Next actions" },
+                    ].map(({ icon: Icon, label }) => (
                       <div
                         key={label}
                         className="flex items-center gap-2 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500"
                       >
-                        <span className="text-base">{icon}</span>
+                        <div className="text-slate-500"><Icon className="h-4 w-4" /></div>
                         <span className="font-medium">{label}</span>
                       </div>
                     ))}

@@ -201,15 +201,17 @@ export const communityService = {
 
   async searchCommunityUsers(
     query: string,
+    filters?: { userType?: string; role?: string }
   ): Promise<CommunityUserSearchResult[]> {
     const normalizedQuery = query.trim().toLowerCase();
+    const cacheKey = `players:${normalizedQuery}:${filters?.userType || ""}:${filters?.role || ""}`;
     return withRequestCache(
-      `players:${normalizedQuery}`,
+      cacheKey,
       async () => {
         const response = await axiosInstance.get<
           ApiResponse<CommunityUserSearchResult[]>
         >("/community/players/search", {
-          params: { q: query, limit: 8 },
+          params: { q: query, limit: 20, ...filters },
         });
 
         return response.data.data;
@@ -218,8 +220,8 @@ export const communityService = {
     );
   },
 
-  async searchPlayers(query: string): Promise<CommunityUserSearchResult[]> {
-    return this.searchCommunityUsers(query);
+  async searchPlayers(query: string, filters?: { userType?: string; role?: string }): Promise<CommunityUserSearchResult[]> {
+    return this.searchCommunityUsers(query, filters);
   },
 
   async getPlayerProfile(userId: string): Promise<CommunityMemberProfile> {
