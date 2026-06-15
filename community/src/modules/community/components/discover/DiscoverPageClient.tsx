@@ -121,13 +121,13 @@ export default function DiscoverPageClient() {
   };
 
   const handleCommunityChat = (groupId: string) => {
-    router.push("/chats?sidebar=groups");
+    router.push("/chats?sidebar=conversations&directory=groups");
   };
 
   const handlePlayerChat = async (userId: string) => {
     try {
-      await communityService.startConversation(userId);
-      router.push("/chats");
+      const conversation = await communityService.startConversation(userId);
+      router.push(`/chats?conversation=${conversation.id}`);
     } catch (error) {
       console.error("Failed to start conversation:", error);
     }
