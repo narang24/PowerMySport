@@ -722,10 +722,13 @@ export function useCommunityPage(options?: { forceView?: "community-overview" | 
       setGroupToolsMode((c) =>
         c === urlGroupToolsMode ? c : urlGroupToolsMode,
       );
-    if (typeof urlConversationId === "string" && urlConversationId.trim())
+    if (typeof urlConversationId === "string" && urlConversationId.trim()) {
       setSelectedConversationId((c) =>
         c === urlConversationId ? c : urlConversationId,
       );
+      setActiveSidebarTab("conversations");
+      setWorkspaceView("CHAT");
+    }
     if (typeof urlQuery === "string" && urlQuery.trim())
       setGroupSearchQuery((c) => (c === urlQuery.trim() ? c : urlQuery.trim()));
 
@@ -834,6 +837,13 @@ export function useCommunityPage(options?: { forceView?: "community-overview" | 
     if (selectedConversation?.conversationType !== "GROUP")
       setShowGroupMembersPanel(false);
   }, [selectedConversation?.conversationType]);
+
+  useEffect(() => {
+    if (selectedConversation) {
+      const isGroup = selectedConversation.conversationType === "GROUP";
+      setDirectoryView(isGroup ? "GROUPS" : "CONTACTS");
+    }
+  }, [selectedConversation]);
 
   useEffect(() => {
     const query = playerSearchQuery.trim();
