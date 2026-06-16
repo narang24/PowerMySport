@@ -30,9 +30,14 @@
  */
 
 import { performance } from "perf_hooks";
+import { exec } from "child_process";
+import { promisify } from "util";
+
+const execAsync = promisify(exec);
 
 // ─── Config ────────────────────────────────────────────────────────────────
-const BASE_URL = "https://api.powermysport.com";
+// const BASE_URL = "https://api.powermysport.com";
+const BASE_URL = "http://localhost:5000";
 
 const args = parseArgs(process.argv.slice(2));
 const RPS = parseInt(args["--rps"] ?? "50");
@@ -161,6 +166,18 @@ const stats = {
   errors: [],
   startTime: null,
   endTime: null,
+};
+
+const envDetails = {
+  Environment: "powermysport-api-docker",
+  Instance: "t3.small  (2 vCPU, 2 GB RAM)",
+  AutoScaling: "Min 1 → Max 4 instances",
+  LoadBalancer: "Application LB (ALB) — internet-facing",
+  Region: "ap-south-1 (Mumbai)",
+  Health: "Green ✓",
+  Status: "Ready",
+  Platform: "Docker",
+  CNAME: "api.powermysport.com"
 };
 
 let activeRequests = 0;
@@ -306,12 +323,14 @@ function printReport() {
 
   // ── Deployment Info ──
   console.log(`\n${C.bold}${C.blue}▸ Deployment Info${C.reset}`);
-  console.log(`  Environment  : powermysport-api-docker`);
-  console.log(`  Instance     : t3.small  (2 vCPU, 2 GB RAM)`);
-  console.log(`  Auto Scaling : Min 1 → Max 4 instances`);
-  console.log(`  Load Balancer: Application LB (ALB) — internet-facing`);
-  console.log(`  Region       : ap-south-1 (Mumbai)`);
-  console.log(`  Health       : ${C.green}Green ✓${C.reset}`);
+  console.log(`  Environment  : ${envDetails.Environment}  (${envDetails.Status})`);
+  console.log(`  Platform     : ${envDetails.Platform}`);
+  console.log(`  Instance     : ${envDetails.Instance}`);
+  console.log(`  Auto Scaling : ${envDetails.AutoScaling}`);
+  console.log(`  Load Balancer: ${envDetails.LoadBalancer}`);
+  console.log(`  Region       : ${envDetails.Region}`);
+  console.log(`  Health       : ${envDetails.Health.includes("Green") ? C.green : C.yellow}${envDetails.Health}${C.reset}`);
+  console.log(`  CNAME        : ${envDetails.CNAME}`);
   console.log(`  Target URL   : ${TARGET_URL}`);
 
   // ── Test Config ──
@@ -424,6 +443,31 @@ async function main() {
   console.log(`\n${C.bold}${C.cyan}  ⚡ PowerMySport — Production Load Test${C.reset}`);
   console.log(`  ${C.dim}Target : ${TARGET_URL}${C.reset}`);
   console.log(`  ${C.dim}Config : ${RPS} RPS × ${DURATION_SEC}s  |  concurrency: ${CONCURRENCY}  |  scenario: ${SCENARIO}${C.reset}\n`);
+
+  // Fetch EB Status
+  console.log(`${C.dim}  Fetching environment status from AWS Elastic Beanstalk...${C.reset}`);
+  try {
+    const { stdout } = await execAsync("eb status", { cwd: ".." });
+    const extract = (key) => {
+      const match = stdout.match(new RegExp(`${key}: (.+)`));
+      return match ? match[1].trim() : null;
+    };
+    
+    const envNameMatch = stdout.match(/Environment details for: (.+)/);
+    if (envNameMatch) envDetails.Environment = envNameMatch[1].trim();
+    
+    if (extract("Region")) envDetails.Region = extract("Region");
+    if (extract("Health")) envDetails.Health = extract("Health") + (extract("Health") === "Green" ? " ✓" : "");
+    if (extract("Status")) envDetails.Status = extract("Status");
+    if (extract("Platform")) {
+      const p = extract("Platform");
+      envDetails.Platform = p.includes('::platform/') ? p.split('::platform/')[1] : p;
+    }
+    if (extract("CNAME")) envDetails.CNAME = extract("CNAME");
+    console.log(`${C.green}  ✓ Environment: ${envDetails.Environment} (${envDetails.Health})${C.reset}\n`);
+  } catch (err) {
+    console.log(`${C.yellow}  ⚠️  Could not fetch live eb status. Using default info.${C.reset}\n`);
+  }
 
   // Validate URL first
   console.log(`${C.dim}  Pinging server...${C.reset}`);

@@ -2,6 +2,8 @@ import cookieParser from "cookie-parser";
 import cors, { CorsOptions } from "cors";
 import "dotenv/config";
 import express, { Express } from "express";
+import mongoose from "mongoose";
+import redis from "./config/redis";
 import { errorHandler } from "./middleware/errorHandler";
 import { errorLogger, requestLogger } from "./middleware/logger";
 import { observabilityMiddleware } from "./middleware/observability";
@@ -36,6 +38,14 @@ import sportsRoutes from "./shared/routes/sportsRoutes";
 import ecommerceRoutes from "./shop/routes/ecommerceRoutes";
 
 export const app: Express = express();
+
+/**
+ * Trust the first proxy hop (the ALB) so that req.ip returns the real
+ * client IP from the X-Forwarded-For header instead of the ALB's internal
+ * IP. Without this, the Redis-backed rate limiter would see all traffic
+ * as coming from a single IP and block legitimate users.
+ */
+app.set("trust proxy", 1);
 
 // Initialize scheduled cleanup jobs
 initializeScheduledJobs();
@@ -155,10 +165,68 @@ app.use("/api/payout-methods", payoutMethodsRoutes);
 // Shop Domain
 app.use("/api/v1", ecommerceRoutes);
 
-app.get("/api/health", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Server is running",
+app.get("/api/health", async (req, res) => {
+  const dbReadyState = mongoose.connection.readyState;
+  const dbStateMap: Record<number, string> = {
+    0: "disconnected",
+    1: "connected",
+    2: "connecting",
+    3: "disconnecting",
+  };
+  const dbStatus = dbStateMap[dbReadyState] ?? "unknown";
+
+  // Live Redis ping
+  let redisStatus = "disconnected";
+  let redisPingMs: number | null = null;
+  try {
+    const t0 = Date.now();
+    await redis.ping();
+    redisPingMs = Date.now() - t0;
+    redisStatus = "connected";
+  } catch {
+    redisStatus = "error";
+  }
+
+  const memoryUsage = process.memoryUsage();
+  const uptimeSec = Math.round(process.uptime());
+
+  const allHealthy = dbStatus === "connected" && redisStatus === "connected";
+
+  res.status(allHealthy ? 200 : 503).json({
+    success: allHealthy,
+    status: allHealthy ? "healthy" : "degraded",
+    message: allHealthy ? "All systems operational" : "One or more services degraded",
+    timestamp: new Date().toISOString(),
+    uptime: `${uptimeSec}s`,
+    environment: process.env.NODE_ENV || "development",
+    services: {
+      database: {
+        status: dbStatus,
+        provider: "MongoDB Atlas",
+      },
+      redis: {
+        status: redisStatus,
+        pingMs: redisPingMs,
+        provider: "AWS ElastiCache",
+      },
+      rateLimiter: {
+        backend: "redis",
+        note: "Shared across all auto-scaled instances via Redis INCR/EXPIRE",
+      },
+    },
+    system: {
+      memory: {
+        rss: `${Math.round(memoryUsage.rss / 1024 / 1024)} MB`,
+        heapUsed: `${Math.round(memoryUsage.heapUsed / 1024 / 1024)} MB`,
+        heapTotal: `${Math.round(memoryUsage.heapTotal / 1024 / 1024)} MB`,
+        external: `${Math.round(memoryUsage.external / 1024 / 1024)} MB`,
+      },
+      nodeVersion: process.version,
+      platform: process.platform,
+      pid: process.pid,
+      // instance hostname helps identify which EB instance served the request
+      hostname: (await import("os")).hostname(),
+    },
   });
 });
 
