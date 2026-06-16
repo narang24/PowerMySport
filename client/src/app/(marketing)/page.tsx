@@ -264,7 +264,8 @@ export default function HomePage() {
               variants={itemVariants}
               className="text-lg text-slate-600"
             >
-              Get personalised AI guidance and community support before you book your child's first session
+              Get personalised AI guidance and community support before you book
+              your child's first session
             </motion.p>
           </motion.div>
 
@@ -359,41 +360,46 @@ export default function HomePage() {
               viewport={{ once: true, margin: "-100px" }}
             >
               <motion.div variants={itemVariants} className="mb-3">
-                <SectionLabel label="For Parents & Guardians" color="blue" />
+                <SectionLabel label="Get Started" color="blue" />
               </motion.div>
               <motion.h2
                 variants={itemVariants}
                 className="font-title mb-4 text-3xl font-bold text-slate-900 sm:text-4xl lg:text-5xl"
               >
-                Manage Their Sports Easily
+                Build your child&apos;s Sports Plan
               </motion.h2>
               <motion.p
                 variants={itemVariants}
                 className="mb-10 text-lg text-slate-600"
               >
-                Keep track of all your kids' coaches, venues, and schedules
-                from one simple parent dashboard.
+                Follow these simple steps to set up your child's athletic journey and get personalised recommendations.
               </motion.p>
 
               <motion.div variants={sectionVariants} className="space-y-4">
                 {[
                   {
-                    icon: <Users2 size={22} />,
-                    title: "Add Multiple Kids",
-                    desc: "Add all your kids to one account. Track each child's sports and schedules separately.",
+                    icon: <UserIcon size={22} />,
+                    title: "Create Profile",
+                    desc: "Set up your child's profile with their details and sports interests to get started.",
                     color: "bg-indigo-100 text-indigo-600",
                   },
                   {
                     icon: <Trophy size={22} />,
-                    title: "Book Venues & Coaches",
-                    desc: "Easily book the best venues and find great coaches for your kids to learn from.",
+                    title: "Build Customised Plans",
+                    desc: "Build customised plans for the selected sport tailored specifically to your child.",
                     color: "bg-orange-100 text-power-orange",
                   },
                   {
                     icon: <Zap size={22} />,
-                    title: "Track Sessions",
-                    desc: "See all upcoming games, past bookings, and coach reviews in one place.",
+                    title: "Get Recommendations",
+                    desc: "Get recommendation to start coaching / Book Trial session.",
                     color: "bg-emerald-100 text-emerald-600",
+                  },
+                  {
+                    icon: <Users size={22} />,
+                    title: "Need Assistance?",
+                    desc: "Need assistance to build a sports plan? Reach out to our community or experts.",
+                    color: "bg-blue-100 text-blue-600",
                   },
                 ].map((item) => (
                   <motion.div
@@ -497,8 +503,6 @@ export default function HomePage() {
         </div>
       </section>
 
-
-
       {/* ── Testimonials ── */}
       <Testimonials
         title="What Our Users Say"
@@ -535,7 +539,8 @@ export default function HomePage() {
                 variants={itemVariants}
                 className="text-lg text-slate-600"
               >
-                Whether you&apos;re a parent booking for your kids, a coach finding students, or a venue owner growing bookings  start today.
+                Whether you&apos;re a parent booking for your kids, a coach
+                finding students, or a venue owner growing bookings start today.
               </motion.p>
             </motion.div>
 
@@ -699,7 +704,8 @@ export default function HomePage() {
               Your Child&apos;s Next Training Session Starts Here
             </motion.h2>
             <motion.p variants={itemVariants} className="text-slate-600">
-              Browse venues, academies, and coaches to plan your child&apos;s next session with confidence
+              Browse venues, academies, and coaches to plan your child&apos;s
+              next session with confidence
             </motion.p>
           </motion.div>
 
