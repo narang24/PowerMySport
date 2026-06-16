@@ -36,8 +36,8 @@ import { promisify } from "util";
 const execAsync = promisify(exec);
 
 // ─── Config ────────────────────────────────────────────────────────────────
-// const BASE_URL = "https://api.powermysport.com";
-const BASE_URL = "http://localhost:5000";
+const BASE_URL = "https://api.powermysport.com";
+// const BASE_URL = "http://localhost:5000";
 
 const args = parseArgs(process.argv.slice(2));
 const RPS = parseInt(args["--rps"] ?? "50");
@@ -286,7 +286,7 @@ function drawProgress(elapsed, total, succeeded, failed, rateLimited, rps) {
   const bar =
     C.green + "█".repeat(filled) + C.dim + "░".repeat(barLen - filled) + C.reset;
 
-  const realFails = failed - rateLimited; // exclude 429s from failure rate
+  const realFails = failed; // stats.failed already excludes 429s (tracked in rateLimited separately)
   const denominator = succeeded + realFails;
   const successRate = denominator > 0 ? ((succeeded / denominator) * 100).toFixed(1) : "—";
   const rateColor = parseFloat(successRate) >= 99 ? C.green : parseFloat(successRate) >= 95 ? C.yellow : C.red;

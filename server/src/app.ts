@@ -2,6 +2,7 @@ import cookieParser from "cookie-parser";
 import cors, { CorsOptions } from "cors";
 import "dotenv/config";
 import express, { Express } from "express";
+import { hostname as osHostname } from "os";
 import mongoose from "mongoose";
 import redis from "./config/redis";
 import { errorHandler } from "./middleware/errorHandler";
@@ -165,7 +166,7 @@ app.use("/api/payout-methods", payoutMethodsRoutes);
 // Shop Domain
 app.use("/api/v1", ecommerceRoutes);
 
-app.get("/api/health", async (req, res) => {
+app.get("/api/health", async (_req, res) => {
   const dbReadyState = mongoose.connection.readyState;
   const dbStateMap: Record<number, string> = {
     0: "disconnected",
@@ -175,27 +176,45 @@ app.get("/api/health", async (req, res) => {
   };
   const dbStatus = dbStateMap[dbReadyState] ?? "unknown";
 
-  // Live Redis ping
+  // Live Redis ping with a 500ms timeout so a busy Redis under load
+  // never blocks the ALB health check and causes a false-positive Severe state.
   let redisStatus = "disconnected";
   let redisPingMs: number | null = null;
   try {
     const t0 = Date.now();
-    await redis.ping();
+    await Promise.race([
+      redis.ping(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("ping timeout")), 500),
+      ),
+    ]);
     redisPingMs = Date.now() - t0;
     redisStatus = "connected";
-  } catch {
-    redisStatus = "error";
+  } catch (err: any) {
+    redisStatus = err?.message === "ping timeout" ? "timeout" : "error";
   }
 
   const memoryUsage = process.memoryUsage();
   const uptimeSec = Math.round(process.uptime());
+  const dbHealthy = dbStatus === "connected";
+  const redisHealthy = redisStatus === "connected";
+  const allHealthy = dbHealthy && redisHealthy;
 
-  const allHealthy = dbStatus === "connected" && redisStatus === "connected";
-
-  res.status(allHealthy ? 200 : 503).json({
+  /**
+   * IMPORTANT: Always return HTTP 200.
+   *
+   * If we return 503, the ALB marks the instance as unhealthy → EB goes
+   * Severe. A transient Redis ping timeout under load is NOT a reason to
+   * pull the instance out of rotation. Service degradation is surfaced in
+   * the JSON body (status / services fields) for monitoring dashboards
+   * and alerting tools.
+   */
+  res.status(200).json({
     success: allHealthy,
     status: allHealthy ? "healthy" : "degraded",
-    message: allHealthy ? "All systems operational" : "One or more services degraded",
+    message: allHealthy
+      ? "All systems operational"
+      : `Degraded: ${[!dbHealthy && "database", !redisHealthy && "redis"].filter(Boolean).join(", ")}`,
     timestamp: new Date().toISOString(),
     uptime: `${uptimeSec}s`,
     environment: process.env.NODE_ENV || "development",
@@ -211,7 +230,7 @@ app.get("/api/health", async (req, res) => {
       },
       rateLimiter: {
         backend: "redis",
-        note: "Shared across all auto-scaled instances via Redis INCR/EXPIRE",
+        sharedAcrossInstances: true,
       },
     },
     system: {
@@ -224,8 +243,7 @@ app.get("/api/health", async (req, res) => {
       nodeVersion: process.version,
       platform: process.platform,
       pid: process.pid,
-      // instance hostname helps identify which EB instance served the request
-      hostname: (await import("os")).hostname(),
+      hostname: osHostname(), // identifies which EB instance served this request
     },
   });
 });
