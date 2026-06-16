@@ -44,6 +44,8 @@ const getProducer = async (): Promise<Producer | null> => {
       "⚠️  Kafka producer unavailable — messages will fall back to direct DB write:",
       err instanceof Error ? err.message : err,
     );
+    // Reset after 60 s so transient broker blips don't lock out Kafka forever.
+    setTimeout(() => { kafkaAvailable = true; }, 60_000);
     return null;
   }
 };

@@ -196,7 +196,8 @@ export const setupCommunitySocket = (io: Server): void => {
         );
 
         if (result.messageIds.length) {
-          io.to(`conversation:${conversationId}`).emit(
+          // ⚠️  Must use communityNamespace (not io) — rooms are scoped to /community
+          communityNamespace.to(`conversation:${conversationId}`).emit(
             "community:messagesRead",
             {
               conversationId,
@@ -206,7 +207,7 @@ export const setupCommunitySocket = (io: Server): void => {
           );
 
           for (const participantId of result.participantIds) {
-            io.to(`user:${participantId}`).emit(
+            communityNamespace.to(`user:${participantId}`).emit(
               "community:conversationUpdated",
               {
                 conversationId,
@@ -291,6 +292,7 @@ export const setupCommunitySocket = (io: Server): void => {
         if (produced) {
           // Kafka path: ack sender immediately with optimistic message.
           // Consumer will broadcast confirmed message to everyone.
+          console.log(`[kafka:producer] \ud83d\udce4 Produced | tempId=${tempId} conversationId=${conversationId}`);
           if (typeof callback === "function") {
             callback({ success: true, data: optimisticMessage });
           }
@@ -304,13 +306,14 @@ export const setupCommunitySocket = (io: Server): void => {
           content,
         );
 
-        io.to(`conversation:${conversationId}`).emit(
+        // ⚠️  Must use communityNamespace (not io) — rooms are scoped to /community
+        communityNamespace.to(`conversation:${conversationId}`).emit(
           "community:newMessage",
           message,
         );
 
         for (const participantId of message.participantIds) {
-          io.to(`user:${participantId}`).emit("community:conversationUpdated", {
+          communityNamespace.to(`user:${participantId}`).emit("community:conversationUpdated", {
             conversationId,
             conversationType: message.conversationType || "DM",
           });
@@ -366,13 +369,13 @@ export const setupCommunitySocket = (io: Server): void => {
           content,
         );
 
-        io.to(`conversation:${updated.conversationId}`).emit(
+        communityNamespace.to(`conversation:${updated.conversationId}`).emit(
           "community:messageEdited",
           updated,
         );
 
         for (const participantId of updated.participantIds) {
-          io.to(`user:${participantId}`).emit("community:conversationUpdated", {
+          communityNamespace.to(`user:${participantId}`).emit("community:conversationUpdated", {
             conversationId: updated.conversationId,
             conversationType: updated.conversationType || "DM",
           });
@@ -420,13 +423,13 @@ export const setupCommunitySocket = (io: Server): void => {
 
         const deleted = await CommunityService.deleteMessage(userId, messageId);
 
-        io.to(`conversation:${deleted.conversationId}`).emit(
+        communityNamespace.to(`conversation:${deleted.conversationId}`).emit(
           "community:messageDeleted",
           deleted,
         );
 
         for (const participantId of deleted.participantIds) {
-          io.to(`user:${participantId}`).emit("community:conversationUpdated", {
+          communityNamespace.to(`user:${participantId}`).emit("community:conversationUpdated", {
             conversationId: deleted.conversationId,
             conversationType: deleted.conversationType || "DM",
           });

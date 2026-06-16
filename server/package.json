@@ -20,7 +20,9 @@
     "test:qna": "npm run build && node --test dist/tests/communityQnaUtils.test.js",
     "test:community-policy": "npm run build && node --test dist/tests/communityPolicy.test.js",
     "test:community": "npm run build && node --test dist/tests/communityQnaUtils.test.js dist/tests/communityPolicy.test.js",
-    "test:coach-subscriptions": "npm run build && node --test dist/tests/coachSubscriptionRoutes.integration.test.js"
+    "test:coach-subscriptions": "npm run build && node --test dist/tests/coachSubscriptionRoutes.integration.test.js",
+    "kafka:setup": "ts-node src/scripts/kafkaAdmin.ts",
+    "kafka:test": "ts-node src/scripts/testKafkaPipeline.ts"
   },
   "keywords": [],
   "author": "",

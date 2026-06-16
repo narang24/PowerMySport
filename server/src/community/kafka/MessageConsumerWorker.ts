@@ -7,7 +7,7 @@ import { CommunityConversation } from "../models/CommunityConversation";
 import { CommunityProfile } from "../models/CommunityProfile";
 import { User } from "../../client/models/User";
 import OutboxMessage from "../../shared/models/OutboxMessage";
-import { S3Service } from "../../shared/services/S3Service";
+import { s3Service } from "../../shared/services/S3Service";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -16,7 +16,7 @@ const resolvePhotoUrl = async (user: {
   photoS3Key?: string;
 }) => {
   if (user.photoS3Key) {
-    return S3Service.getInstance().getSignedUrl(user.photoS3Key);
+    return s3Service.generateDownloadUrl(user.photoS3Key, "images", 604800);
   }
   return user.photoUrl || null;
 };
@@ -36,6 +36,10 @@ const resolvePhotoUrl = async (user: {
 export const startMessageConsumer = async (
   io: Server,
 ): Promise<(() => Promise<void>) | null> => {
+  // ⚠️  Community sockets join rooms under the /community namespace.
+  //     All broadcasts MUST target this namespace, not the root io Server.
+  const communityNs = io.of("/community");
+
   try {
     const kafka = createKafkaClient();
     const consumer = kafka.consumer({
@@ -52,7 +56,7 @@ export const startMessageConsumer = async (
 
     await consumer.run({
       // Process one message at a time per partition to keep DB write order safe.
-      eachMessage: async ({ message }) => {
+      eachMessage: async ({ partition, message }) => {
         if (!message.value) return;
 
         let event: ChatMessageEvent;
@@ -63,8 +67,11 @@ export const startMessageConsumer = async (
           return;
         }
 
+        console.log(`[kafka:consumer] 📩 Received msg | partition=${partition} tempId=${event.tempId} conversationId=${event.conversationId}`);
+
         try {
-          await persistAndBroadcast(io, event);
+          await persistAndBroadcast(communityNs, event);
+          console.log(`[kafka:consumer] ✅ Persisted & broadcast | tempId=${event.tempId}`);
         } catch (err) {
           // Log and continue — don't crash the consumer on a bad message.
           console.error("[kafka:consumer] Failed to persist message:", err);
@@ -89,7 +96,9 @@ export const startMessageConsumer = async (
 
 // ── Core DB write + broadcast ─────────────────────────────────────────────────
 
-async function persistAndBroadcast(io: Server, event: ChatMessageEvent) {
+// Accepts a Namespace (e.g. io.of("/community")) so broadcasts hit the
+// correct room scope — community socket rooms live under /community.
+async function persistAndBroadcast(communityNs: ReturnType<Server["of"]>, event: ChatMessageEvent) {
   const { conversationId, senderId, content, tempId } = event;
 
   // 1. Load conversation (needed for participants + lastMessageAt update)
@@ -129,6 +138,11 @@ async function persistAndBroadcast(io: Server, event: ChatMessageEvent) {
     ? sender?.name || "Player"
     : senderProfile?.anonymousAlias || "Anonymous Player";
 
+  // Resolve sender's avatar (signed S3 URL or raw photoUrl)
+  const senderPhotoUrl = senderProfile?.isIdentityPublic && sender
+    ? await resolvePhotoUrl(sender)
+    : null;
+
   const otherParticipantIds = allParticipantIds.filter((id) => id !== senderId);
 
   // 5. Enqueue outbox notification
@@ -158,6 +172,7 @@ async function persistAndBroadcast(io: Server, event: ChatMessageEvent) {
     conversationType: conversation.conversationType || "DM",
     senderId: String(message.senderId),
     senderDisplayName,
+    senderPhotoUrl,          // now included so UI can render the sender's avatar
     content: message.content,
     createdAt: message.createdAt,
     updatedAt: message.updatedAt,
@@ -169,14 +184,14 @@ async function persistAndBroadcast(io: Server, event: ChatMessageEvent) {
   };
 
   // 7. Broadcast to all participants in the conversation room
-  io.to(`conversation:${conversationId}`).emit(
+  communityNs.to(`conversation:${conversationId}`).emit(
     "community:newMessage",
     confirmedMessage,
   );
 
   // 8. Ping each participant's personal room so their conversation list updates
   for (const participantId of allParticipantIds) {
-    io.to(`user:${participantId}`).emit("community:conversationUpdated", {
+    communityNs.to(`user:${participantId}`).emit("community:conversationUpdated", {
       conversationId,
       conversationType: conversation.conversationType || "DM",
     });

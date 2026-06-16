@@ -1,0 +1,27 @@
+# Local Redis instance for Socket.IO adapter + user presence + caching (dev only)
+#
+# Usage:
+#   docker compose -f docker-compose.redis.yml up -d
+#   docker compose -f docker-compose.redis.yml down
+#
+# Production: replace REDIS_URL in .env with your AWS ElastiCache endpoint
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: powermysport-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  redis_data:
+    driver: local

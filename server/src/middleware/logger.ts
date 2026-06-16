@@ -25,7 +25,8 @@ export const requestLogger = (
   console.log(`⏰ Time: ${new Date().toLocaleString()}`);
   console.log(`🔹 Method: ${method}`);
   console.log(`🔹 URL: ${url}`);
-  console.log(`🔹 User: ${(req as any).user?.email || "Not authenticated"}`);
+  // Note: req.user is populated by auth middleware which runs AFTER this logger.
+  // The authenticated user is shown in the outgoing response log below.
 
   // Log query params if present
   if (verboseLogs && Object.keys(query).length > 0) {
@@ -54,6 +55,8 @@ export const requestLogger = (
     console.log(`📤 OUTGOING RESPONSE`);
     console.log("-".repeat(80));
     console.log(`⏱️  Duration: ${duration}ms`);
+    // req.user is now populated (auth ran before the route handler)
+    console.log(`🔹 User: ${(req as any).user?.email || "Not authenticated"}`);
     console.log(
       `🔹 Status: ${statusCode} ${statusCode >= 200 && statusCode < 300 ? "✅" : statusCode >= 400 ? "❌" : "⚠️"}`,
     );

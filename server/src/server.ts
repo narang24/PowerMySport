@@ -213,6 +213,7 @@ const startServer = async () => {
     startListening(Number(PORT));
 
     process.on("SIGTERM", shutdown);
+    process.on("SIGINT", shutdown);  // also handle Ctrl+C in local dev
   } catch (error) {
     console.error("❌ Failed to start server:", error);
     process.exit(1);
