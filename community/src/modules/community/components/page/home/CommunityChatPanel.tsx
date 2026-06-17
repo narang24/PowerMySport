@@ -15,13 +15,22 @@ import {
   MoreVertical,
   Check,
   Pencil,
+  Smile,
+  Pin,
+  PinOff,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageBubble } from "@/modules/community/components/chat/MessageBubble";
 import CommunityChatEmptyState from "@/modules/community/components/page/home/CommunityChatEmptyState";
 import type { CommunityPageViewModel } from "@/modules/community/hooks/useCommunityPage";
-import { useRef, useLayoutEffect, useCallback, useState } from "react";
+import { useRef, useLayoutEffect, useCallback, useState, useEffect } from "react";
 import { getCommunitySocket } from "@/lib/realtime/socket";
+import dynamic from "next/dynamic";
+
+const EmojiPicker = dynamic(
+  () => import("@emoji-mart/react").then((m) => m.default),
+  { ssr: false, loading: () => null }
+);
 
 type Props = { page: CommunityPageViewModel };
 
@@ -71,6 +80,14 @@ export default function CommunityChatPanel({ page }: Props) {
     loadMoreMessages,
     typingUsers,
     scrollContainerRef,
+    handleReplyMessage,
+    handleCancelReply,
+    replyingToMessage,
+    handlePinMessage,
+    handleAddReaction,
+    pinnedMessageId,
+    pinnedMessage,
+    messageReactions,
   } = page;
 
   const previousScrollHeightRef = useRef<number>(0);
@@ -78,6 +95,9 @@ export default function CommunityChatPanel({ page }: Props) {
   const typingEmitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [textareaRows, setTextareaRows] = useState(1);
+  const [showComposerEmoji, setShowComposerEmoji] = useState(false);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   // Preserve scroll position when prepending older messages
   useLayoutEffect(() => {
@@ -114,6 +134,8 @@ export default function CommunityChatPanel({ page }: Props) {
     }
     // Reset textarea height after send
     setTextareaRows(1);
+    handleCancelReply();
+    setShowComposerEmoji(false);
     // Refocus the textarea
     setTimeout(() => textareaRef.current?.focus(), 50);
   };
@@ -140,6 +162,52 @@ export default function CommunityChatPanel({ page }: Props) {
     },
     [setNewMessage, selectedConversation],
   );
+
+  // Close emoji picker on outside click
+  useEffect(() => {
+    if (!showComposerEmoji) return;
+    const handler = (e: MouseEvent) => {
+      if (
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(e.target as Node) &&
+        emojiButtonRef.current &&
+        !emojiButtonRef.current.contains(e.target as Node)
+      ) {
+        setShowComposerEmoji(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showComposerEmoji]);
+
+  const insertEmoji = (emoji: { native: string }) => {
+    const textarea = textareaRef.current;
+    const char = emoji.native;
+    if (!textarea) {
+      handleMessageChange(newMessage + char);
+      setShowComposerEmoji(false);
+      return;
+    }
+    const start = textarea.selectionStart ?? newMessage.length;
+    const end = textarea.selectionEnd ?? newMessage.length;
+    const next = newMessage.slice(0, start) + char + newMessage.slice(end);
+    handleMessageChange(next);
+    setShowComposerEmoji(false);
+    setTimeout(() => {
+      textarea.focus();
+      const pos = start + char.length;
+      textarea.setSelectionRange(pos, pos);
+    }, 10);
+  };
+
+  const scrollToMessage = useCallback((messageId: string) => {
+    const el = document.getElementById(`msg-${messageId}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.style.transition = "background-color 0.4s ease";
+    el.style.backgroundColor = "rgba(251,191,36,0.25)";
+    setTimeout(() => { el.style.backgroundColor = ""; }, 1400);
+  }, []);
 
   const currentlyTypingUsers = selectedConversation
     ? (typingUsers[selectedConversation.id] || [])
@@ -261,7 +329,43 @@ export default function CommunityChatPanel({ page }: Props) {
         </AnimatePresence>
       </div>
 
+      {/* ── Pinned message bar ── */}
+      <AnimatePresence>
+        {pinnedMessage && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="shrink-0 overflow-hidden"
+          >
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => scrollToMessage(pinnedMessage.id)}
+              onKeyDown={(e) => e.key === "Enter" && scrollToMessage(pinnedMessage.id)}
+              className="group flex cursor-pointer items-center gap-3 border-b border-amber-200/60 bg-amber-50 px-4 py-2 hover:bg-amber-100/70 transition-colors"
+            >
+              <Pin size={12} className="shrink-0 text-amber-500" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-600 mb-0">Pinned message</p>
+                <p className="truncate text-[12px] text-slate-700">
+                  {pinnedMessage.type === "IMAGE" ? "📷 Image" : pinnedMessage.content}
+                </p>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); handlePinMessage(pinnedMessage); }}
+                aria-label="Unpin message"
+                className="shrink-0 rounded-full p-1 text-slate-400 opacity-0 transition hover:text-amber-600 group-hover:opacity-100"
+              >
+                <PinOff size={13} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ── Messages area ────────────────────────────────────────── */}
+
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
@@ -293,7 +397,7 @@ export default function CommunityChatPanel({ page }: Props) {
               new Date(prevMessage.createdAt).toDateString();
 
           return (
-            <div key={message.id}>
+            <div key={message.id} id={`msg-${message.id}`}>
               {showDateSeparator && (
                 <div className="flex items-center gap-3 py-3">
                   <div className="h-px flex-1 bg-slate-300/50" />
@@ -321,9 +425,14 @@ export default function CommunityChatPanel({ page }: Props) {
                 onEdit={handleBeginEditMessage}
                 onDelete={handleDeleteMessage}
                 onCopy={handleCopyMessage}
+                onReply={handleReplyMessage}
+                onPin={handlePinMessage}
+                onAddReaction={handleAddReaction}
                 isCopied={copiedMessageId === message.id}
                 isEditing={editingMessageId === message.id}
                 isMutating={isMutatingMessageId === message.id}
+                isPinned={pinnedMessageId === message.id}
+                reactions={messageReactions[message.id] ?? []}
               />
             </div>
           );
@@ -355,6 +464,35 @@ export default function CommunityChatPanel({ page }: Props) {
 
         <div ref={messagesEndRef} className="h-1" />
       </div>
+
+      {/* ── Reply banner ── */}
+      <AnimatePresence>
+        {replyingToMessage && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-t border-sky-400/25 bg-sky-50 shrink-0"
+          >
+            <div className="flex items-center gap-3 px-4 py-2.5">
+              <div className="w-0.5 self-stretch rounded-full bg-sky-400" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-sky-500 mb-0.5">Replying to</p>
+                <p className="truncate text-[13px] text-slate-600">
+                  {replyingToMessage.type === "IMAGE" ? "📷 Image" : replyingToMessage.content}
+                </p>
+              </div>
+              <button
+                onClick={handleCancelReply}
+                aria-label="Cancel reply"
+                className="shrink-0 rounded-full p-1 text-slate-400 hover:text-slate-600 transition"
+              >
+                <X size={15} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Edit banner ──────────────────────────────────────────── */}
       <AnimatePresence>
@@ -470,6 +608,49 @@ export default function CommunityChatPanel({ page }: Props) {
               <ImagePlus size={16} />
             )}
           </button>
+
+          {/* Emoji keyboard button */}
+          <div className="relative mb-0.5">
+            <button
+              ref={emojiButtonRef}
+              type="button"
+              disabled={!canSendSelectedConversationMessage}
+              onClick={() => setShowComposerEmoji((v) => !v)}
+              aria-label="Pick emoji"
+              className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition
+                active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 sm:h-10 sm:w-10
+                ${showComposerEmoji
+                  ? "border-power-orange bg-power-orange/10 text-power-orange"
+                  : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-power-orange"
+                }`}
+            >
+              <Smile size={16} />
+            </button>
+
+            <AnimatePresence>
+              {showComposerEmoji && (
+                <motion.div
+                  ref={emojiPickerRef}
+                  initial={{ opacity: 0, scale: 0.92, y: 6 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.92, y: 6 }}
+                  transition={{ duration: 0.14 }}
+                  className="absolute bottom-full left-0 z-50 mb-2"
+                  style={{ filter: "drop-shadow(0 8px 32px rgba(0,0,0,0.15))" }}
+                >
+                  <EmojiPicker
+                    onEmojiSelect={insertEmoji}
+                    theme="light"
+                    previewPosition="none"
+                    skinTonePosition="none"
+                    set="native"
+                    perLine={8}
+                    maxFrequentRows={2}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Textarea */}
           <div className="relative flex-1 min-w-0">

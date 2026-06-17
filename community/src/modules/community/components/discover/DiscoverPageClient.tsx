@@ -21,6 +21,7 @@ import {
   Plus,
   MessageSquare,
   LogIn,
+  LogOut,
   Eye,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -42,6 +43,7 @@ export default function DiscoverPageClient() {
     useState<CommunityGroupSummary | null>(null);
   const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
   const [isJoiningCommunity, setIsJoiningCommunity] = useState(false);
+  const [isLeavingCommunityId, setIsLeavingCommunityId] = useState<string | null>(null);
 
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
   const [isPlayerModalOpen, setIsPlayerModalOpen] = useState(false);
@@ -54,6 +56,14 @@ export default function DiscoverPageClient() {
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
+  // Sort helper: members first, then by memberCount desc
+  const sortCommunities = (list: CommunityGroupSummary[]) =>
+    [...list].sort((a, b) => {
+      if (a.isMember && !b.isMember) return -1;
+      if (!a.isMember && b.isMember) return 1;
+      return b.memberCount - a.memberCount;
+    });
+
   useEffect(() => {
     let isMounted = true;
     const fetchData = async () => {
@@ -62,7 +72,8 @@ export default function DiscoverPageClient() {
         if (activeTab === "COMMUNITIES") {
           const groupsData = await communityService.listGroups(debouncedQuery);
           if (isMounted) {
-            setCommunities(groupsData);
+            // Sort on initial load: members first
+            setCommunities(sortCommunities(groupsData));
             setPlayers([]);
           }
         } else {
@@ -94,18 +105,20 @@ export default function DiscoverPageClient() {
     setRefreshTrigger((prev) => prev + 1);
   };
 
+
   const handleJoinGroup = async (groupId: string) => {
     setIsJoiningCommunity(true);
     try {
       await communityService.joinGroup(groupId);
-      // Update local state to reflect membership
-      setCommunities((prev) =>
-        prev.map((c) =>
+      // Update local state + re-sort immediately (real-time)
+      setCommunities((prev) => {
+        const updated = prev.map((c) =>
           c.id === groupId
             ? { ...c, isMember: true, memberCount: c.memberCount + 1 }
             : c,
-        ),
-      );
+        );
+        return sortCommunities(updated);
+      });
       if (selectedCommunity?.id === groupId) {
         setSelectedCommunity({
           ...selectedCommunity,
@@ -117,6 +130,33 @@ export default function DiscoverPageClient() {
       console.error("Failed to join community:", error);
     } finally {
       setIsJoiningCommunity(false);
+    }
+  };
+
+  const handleLeaveGroup = async (groupId: string) => {
+    setIsLeavingCommunityId(groupId);
+    try {
+      await communityService.leaveGroup(groupId);
+      // Update local state + re-sort immediately (real-time)
+      setCommunities((prev) => {
+        const updated = prev.map((c) =>
+          c.id === groupId
+            ? { ...c, isMember: false, memberCount: Math.max(0, c.memberCount - 1) }
+            : c,
+        );
+        return sortCommunities(updated);
+      });
+      if (selectedCommunity?.id === groupId) {
+        setSelectedCommunity({
+          ...selectedCommunity,
+          isMember: false,
+          memberCount: Math.max(0, selectedCommunity.memberCount - 1),
+        });
+      }
+    } catch (error) {
+      console.error("Failed to leave community:", error);
+    } finally {
+      setIsLeavingCommunityId(null);
     }
   };
 
@@ -319,14 +359,22 @@ export default function DiscoverPageClient() {
                                   <Eye size={14} /> Details
                                 </button>
                                 {group.isMember ? (
-                                  <button
-                                    onClick={() =>
-                                      handleCommunityChat(group.id)
-                                    }
-                                    className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-white transition hover:bg-slate-800"
-                                  >
-                                    <MessageSquare size={14} /> Chat
-                                  </button>
+                                  <>
+                                    <button
+                                      onClick={() => handleCommunityChat(group.id)}
+                                      className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-white transition hover:bg-slate-800"
+                                    >
+                                      <MessageSquare size={14} /> Chat
+                                    </button>
+                                    <button
+                                      onClick={() => handleLeaveGroup(group.id)}
+                                      disabled={isLeavingCommunityId === group.id}
+                                      title="Leave group"
+                                      className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+                                    >
+                                      <LogOut size={14} />
+                                    </button>
+                                  </>
                                 ) : (
                                   <button
                                     onClick={() => handleJoinGroup(group.id)}
@@ -472,7 +520,9 @@ export default function DiscoverPageClient() {
         community={selectedCommunity}
         onJoin={handleJoinGroup}
         onChat={handleCommunityChat}
+        onLeave={handleLeaveGroup}
         isJoining={isJoiningCommunity}
+        isLeaving={isLeavingCommunityId === selectedCommunity?.id}
       />
 
       <PlayerDetailsModal

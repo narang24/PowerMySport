@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { AnimatePresence } from "framer-motion";
 import { CommunityMemberProfileModal } from "@/modules/community/components/CommunityMemberProfileModal";
@@ -23,6 +23,10 @@ export default function CommunityPageModals({ page }: Props) {
     retryFailedMessage,
     handleBeginEditMessage,
     handleDeleteMessage,
+    handleReplyMessage,
+    handlePinMessage,
+    handleAddReaction,
+    pinnedMessageId,
     reportModal,
     setReportModal,
     isSubmittingReport,
@@ -45,11 +49,15 @@ export default function CommunityPageModals({ page }: Props) {
           <MobileMessageActions
             message={mobileActionMessage}
             profileUserId={profile?.userId}
+            isPinned={pinnedMessageId === mobileActionMessage.id}
             onClose={() => setMobileActionMessageId(null)}
             onCopy={handleCopyMessage}
             onRetry={retryFailedMessage}
             onEdit={handleBeginEditMessage}
             onDelete={handleDeleteMessage}
+            onReply={handleReplyMessage}
+            onPin={handlePinMessage}
+            onAddReaction={handleAddReaction}
           />
         )}
       </AnimatePresence>

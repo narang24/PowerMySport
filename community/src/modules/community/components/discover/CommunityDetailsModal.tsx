@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { CommunityGroupSummary } from "@/modules/community/types";
-import { X, Users, MapPin, Target, Shield, LogIn, MessageSquare } from "lucide-react";
+import { X, Users, MapPin, Target, Shield, LogIn, LogOut, MessageSquare } from "lucide-react";
 
 interface CommunityDetailsModalProps {
   community: CommunityGroupSummary | null;
@@ -10,7 +10,9 @@ interface CommunityDetailsModalProps {
   onClose: () => void;
   onJoin: (groupId: string) => void;
   onChat: (groupId: string) => void;
+  onLeave: (groupId: string) => void;
   isJoining: boolean;
+  isLeaving: boolean;
 }
 
 export default function CommunityDetailsModal({
@@ -19,7 +21,9 @@ export default function CommunityDetailsModal({
   onClose,
   onJoin,
   onChat,
+  onLeave,
   isJoining,
+  isLeaving,
 }: CommunityDetailsModalProps) {
   if (!isOpen || !community) return null;
 
@@ -140,15 +144,26 @@ export default function CommunityDetailsModal({
               {/* Footer */}
               <div className="border-t border-slate-100 bg-slate-50/50 px-6 py-4 sm:px-8 sm:py-5">
                 {community.isMember ? (
-                  <button
-                    onClick={() => {
-                      onChat(community.id);
-                      onClose();
-                    }}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-slate-800"
-                  >
-                    <MessageSquare size={16} /> Open Chat
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        onChat(community.id);
+                        onClose();
+                      }}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-slate-800"
+                    >
+                      <MessageSquare size={16} /> Open Chat
+                    </button>
+                    <button
+                      onClick={() => onLeave(community.id)}
+                      disabled={isLeaving}
+                      title="Leave group"
+                      className="flex items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-60"
+                    >
+                      <LogOut size={16} />
+                      {isLeaving ? "Leaving..." : "Leave"}
+                    </button>
+                  </div>
                 ) : (
                   <button
                     onClick={() => onJoin(community.id)}

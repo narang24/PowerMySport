@@ -153,6 +153,11 @@ export function useCommunityPage(options?: { forceView?: "community-overview" | 
     null,
   );
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [replyingToMessageId, setReplyingToMessageId] = useState<string | null>(null);
+  const [pinnedMessageId, setPinnedMessageId] = useState<string | null>(null);
+  const [messageReactions, setMessageReactions] = useState<
+    Record<string, Array<{ emoji: string; count: number; reactedByMe: boolean }>>
+  >({});
   const [mobileActionMessageId, setMobileActionMessageId] = useState<
     string | null
   >(null);
@@ -217,6 +222,16 @@ export function useCommunityPage(options?: { forceView?: "community-overview" | 
     if (!mobileActionMessageId) return null;
     return messages.find((m) => m.id === mobileActionMessageId) || null;
   }, [messages, mobileActionMessageId]);
+
+  const replyingToMessage = useMemo(() => {
+    if (!replyingToMessageId) return null;
+    return messages.find((m) => m.id === replyingToMessageId) || null;
+  }, [messages, replyingToMessageId]);
+
+  const pinnedMessage = useMemo(() => {
+    if (!pinnedMessageId) return null;
+    return messages.find((m) => m.id === pinnedMessageId) || null;
+  }, [messages, pinnedMessageId]);
 
   const appendMessage = (incoming: ConversationMessage) => {
     setMessages((current) => {
@@ -1933,6 +1948,84 @@ export function useCommunityPage(options?: { forceView?: "community-overview" | 
     }
   };
 
+  // ── Reply / Pin / Reactions (local-state, optimistic) ────────────────────
+
+  const handleReplyMessage = useCallback((message: ConversationMessage) => {
+    setReplyingToMessageId(message.id);
+  }, []);
+
+  const handleCancelReply = useCallback(() => {
+    setReplyingToMessageId(null);
+  }, []);
+
+  const handlePinMessage = useCallback((message: ConversationMessage) => {
+    setPinnedMessageId((prev) => {
+      if (prev === message.id) {
+        toast.success("Message unpinned");
+        return null;
+      }
+      toast.success("Message pinned");
+      return message.id;
+    });
+  }, []);
+
+  const handleAddReaction = useCallback(
+    (messageId: string, emoji: string) => {
+      setMessageReactions((prev) => {
+        const existing = prev[messageId] ?? [];
+        // Find if user already reacted on this message
+        const myReaction = existing.find((r) => r.reactedByMe);
+        let updated: Array<{ emoji: string; count: number; reactedByMe: boolean }>;
+
+        if (myReaction) {
+          if (myReaction.emoji === emoji) {
+            // Same emoji → toggle off
+            updated = existing
+              .map((r) =>
+                r.emoji === emoji
+                  ? { ...r, count: r.count - 1, reactedByMe: false }
+                  : r,
+              )
+              .filter((r) => r.count > 0);
+          } else {
+            // Switch reaction: remove old, add/increment new
+            const withoutOld = existing
+              .map((r) =>
+                r.emoji === myReaction.emoji
+                  ? { ...r, count: r.count - 1, reactedByMe: false }
+                  : r,
+              )
+              .filter((r) => r.count > 0);
+            const existingNew = withoutOld.find((r) => r.emoji === emoji);
+            if (existingNew) {
+              updated = withoutOld.map((r) =>
+                r.emoji === emoji
+                  ? { ...r, count: r.count + 1, reactedByMe: true }
+                  : r,
+              );
+            } else {
+              updated = [...withoutOld, { emoji, count: 1, reactedByMe: true }];
+            }
+          }
+        } else {
+          // No prior reaction — add new
+          const found = existing.find((r) => r.emoji === emoji);
+          if (found) {
+            updated = existing.map((r) =>
+              r.emoji === emoji
+                ? { ...r, count: r.count + 1, reactedByMe: true }
+                : r,
+            );
+          } else {
+            updated = [...existing, { emoji, count: 1, reactedByMe: true }];
+          }
+        }
+        return { ...prev, [messageId]: updated };
+      });
+    },
+    [],
+  );
+
   return {
     prefersReducedMotion,
     router,
@@ -2078,6 +2171,15 @@ export function useCommunityPage(options?: { forceView?: "community-overview" | 
     pendingImageFile,
     setPendingImageFile,
     imageInputRef,
+    replyingToMessageId,
+    replyingToMessage,
+    handleReplyMessage,
+    handleCancelReply,
+    pinnedMessageId,
+    pinnedMessage,
+    handlePinMessage,
+    messageReactions,
+    handleAddReaction,
   };
 }
 

@@ -6,6 +6,7 @@ import {
   touchUserLastActive,
 } from "../../shared/services/UserPresenceService";
 import { verifyToken } from "../../utils/jwt";
+import { produceMessage } from "../kafka/MessageProducerService";
 
 const extractTokenFromCookie = (cookieHeader?: string): string | null => {
   if (!cookieHeader) {
@@ -396,6 +397,43 @@ export const setupCommunitySocket = (io: Server): void => {
           return;
         }
 
+        // ── Kafka path ────────────────────────────────────────────────────
+        // 1. Build a temp ID so the sender's UI can swap the optimistic
+        //    message for the confirmed one once the consumer broadcasts.
+        const tempId = `temp:${Date.now()}:${userId}`;
+        const optimisticMessage = {
+          tempId,
+          id: tempId,
+          conversationId,
+          senderId: userId,
+          type: messageType,
+          content,
+          createdAt: new Date().toISOString(),
+          pending: true,
+        };
+
+        // 2. Try to produce to Kafka — returns false if broker unavailable
+        const produced = await produceMessage({
+          tempId,
+          conversationId,
+          senderId: userId,
+          content,
+          type: messageType,
+          ...(metadata ? { metadata } : {}),
+          queuedAt: new Date().toISOString(),
+        });
+
+        if (produced) {
+          // Kafka path: ack sender immediately with optimistic message.
+          // Consumer will persist to MongoDB and broadcast confirmed msg to everyone.
+          console.log(`[kafka:producer] 📤 Produced | tempId=${tempId} conversationId=${conversationId}`);
+          if (typeof callback === "function") {
+            callback({ success: true, data: optimisticMessage });
+          }
+          return;
+        }
+
+        // ── Fallback: direct DB write (Kafka unavailable) ─────────────────
         const message = await CommunityService.sendMessage(
           userId,
           conversationId,
