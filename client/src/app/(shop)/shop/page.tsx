@@ -1,24 +1,20 @@
 import ShopWaitlist from "../../../components/shop/ShopWaitlist";
+import { ShopCatalogClient } from "@/components/shop/ShopCatalogClient";
+import { listProducts, type Product } from "@/lib/shop/ecommerce-api";
 
-export default function ShopPage() {
-  const isShopLive = process.env.NEXT_PUBLIC_SHOP_IS_LIVE === "true";
+export default async function ShopPage() {
+  const isShopLive = process.env.NEXT_PUBLIC_SHOP_IS_LIVE !== "false";
 
   // If the shop isn't launched yet, show the waitlist capture page.
   if (!isShopLive) {
     return <ShopWaitlist />;
   }
 
-  // The actual shop component when it launches
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="text-center">
-        <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl mb-4">
-          Welcome to the PowerMySport Shop!
-        </h1>
-        <p className="text-lg text-slate-600">
-          We are officially live. Start browsing gear now.
-        </p>
-      </div>
-    </div>
-  );
+  const data = await listProducts({
+    page: 1,
+    limit: 48,
+    sortBy: "newest",
+  }).catch(() => ({ products: [] as Product[], total: 0, page: 1, pages: 1 }));
+
+  return <ShopCatalogClient products={data.products} />;
 }
