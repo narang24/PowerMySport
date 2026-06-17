@@ -4,7 +4,11 @@ import { CTA } from "@/modules/marketing/components/marketing/CTA";
 import { Hero } from "@/modules/marketing/components/marketing/Hero";
 import { SectionLabel } from "@/modules/marketing/components/marketing/SectionLabel";
 import { getCommunityAppUrl } from "@/lib/community/url";
-import { pathwayApi, SportPathway, PathwayLevel } from "@/modules/sports/services/pathway";
+import {
+  pathwayApi,
+  SportPathway,
+  PathwayLevel,
+} from "@/modules/sports/services/pathway";
 import { sportsApi, Sport } from "@/modules/sports/services/sports";
 import Fuse from "fuse.js";
 import { motion, Variants, AnimatePresence } from "framer-motion";
@@ -250,12 +254,45 @@ const levelIconMap: Record<number, React.ReactNode> = {
   5: <Globe className="h-5 w-5" />,
 };
 
-const levelColorMap: Record<number, { gradient: string; bg: string; border: string; text: string; badge: string }> = {
-  1: { gradient: "from-emerald-500 to-teal-500", bg: "from-emerald-50 to-teal-50", border: "border-emerald-200", text: "text-emerald-600", badge: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  2: { gradient: "from-blue-500 to-indigo-500", bg: "from-blue-50 to-indigo-50", border: "border-blue-200", text: "text-blue-600", badge: "bg-blue-100 text-blue-700 border-blue-200" },
-  3: { gradient: "from-violet-500 to-purple-600", bg: "from-violet-50 to-purple-50", border: "border-violet-200", text: "text-violet-600", badge: "bg-violet-100 text-violet-700 border-violet-200" },
-  4: { gradient: "from-orange-500 to-amber-500", bg: "from-orange-50 to-amber-50", border: "border-orange-200", text: "text-orange-600", badge: "bg-orange-100 text-orange-700 border-orange-200" },
-  5: { gradient: "from-rose-500 to-pink-600", bg: "from-rose-50 to-pink-50", border: "border-rose-200", text: "text-rose-600", badge: "bg-rose-100 text-rose-700 border-rose-200" },
+const levelColorMap: Record<
+  number,
+  { gradient: string; bg: string; border: string; text: string; badge: string }
+> = {
+  1: {
+    gradient: "from-emerald-500 to-teal-500",
+    bg: "from-emerald-50 to-teal-50",
+    border: "border-emerald-200",
+    text: "text-emerald-600",
+    badge: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  },
+  2: {
+    gradient: "from-blue-500 to-indigo-500",
+    bg: "from-blue-50 to-indigo-50",
+    border: "border-blue-200",
+    text: "text-blue-600",
+    badge: "bg-blue-100 text-blue-700 border-blue-200",
+  },
+  3: {
+    gradient: "from-violet-500 to-purple-600",
+    bg: "from-violet-50 to-purple-50",
+    border: "border-violet-200",
+    text: "text-violet-600",
+    badge: "bg-violet-100 text-violet-700 border-violet-200",
+  },
+  4: {
+    gradient: "from-orange-500 to-amber-500",
+    bg: "from-orange-50 to-amber-50",
+    border: "border-orange-200",
+    text: "text-orange-600",
+    badge: "bg-orange-100 text-orange-700 border-orange-200",
+  },
+  5: {
+    gradient: "from-rose-500 to-pink-600",
+    bg: "from-rose-50 to-pink-50",
+    border: "border-rose-200",
+    text: "text-rose-600",
+    badge: "bg-rose-100 text-rose-700 border-rose-200",
+  },
 };
 
 // ─── Dynamic pathway level card ────────────────────────────────────────────────
@@ -283,15 +320,27 @@ function PathwayLevelCard({
       }`}
     >
       <div className="flex items-center gap-3">
-        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${colors.gradient} text-white shadow-md transition-transform duration-300 group-hover:scale-110`}>
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${colors.gradient} text-white shadow-md transition-transform duration-300 group-hover:scale-110`}
+        >
           {levelIconMap[level.level]}
         </div>
         <div className="flex-1 min-w-0">
-          <p className={`text-[10px] font-bold uppercase tracking-widest ${colors.text}`}>Level {level.level}</p>
-          <p className="font-bold text-slate-900 truncate text-sm">{level.label}</p>
+          <p
+            className={`text-[10px] font-bold uppercase tracking-widest ${colors.text}`}
+          >
+            Level {level.level}
+          </p>
+          <p className="font-bold text-slate-900 truncate text-sm">
+            {level.label}
+          </p>
           <p className="text-xs text-slate-500 truncate">{level.keyFocus}</p>
         </div>
-        <motion.div animate={{ rotate: isActive ? 180 : 0 }} transition={{ duration: 0.22 }} className={`shrink-0 ${colors.text}`}>
+        <motion.div
+          animate={{ rotate: isActive ? 180 : 0 }}
+          transition={{ duration: 0.22 }}
+          className={`shrink-0 lg:hidden ${colors.text}`}
+        >
           <ChevronDown className="h-4 w-4" />
         </motion.div>
       </div>
@@ -301,9 +350,21 @@ function PathwayLevelCard({
 
 // ─── Dynamic pathway detail ────────────────────────────────────────────────────
 
-function PathwayLevelDetail({ level, sportName }: { level: any; sportName?: string }) {
+function PathwayLevelDetail({
+  level,
+  sportName,
+}: {
+  level: any;
+  sportName?: string;
+}) {
   const colors = levelColorMap[level.level] ?? levelColorMap[1];
-  const commitment = (level as any).parentalCommitment || pathwayLevels.find(l => l.level === level.level)?.parentalCommitment || { time: "Varies", financial: "Varies", travel: "Varies", role: "Supportive Parent" };
+  const commitment = (level as any).parentalCommitment ||
+    pathwayLevels.find((l) => l.level === level.level)?.parentalCommitment || {
+      time: "Varies",
+      financial: "Varies",
+      travel: "Varies",
+      role: "Supportive Parent",
+    };
 
   return (
     <motion.div
@@ -312,78 +373,143 @@ function PathwayLevelDetail({ level, sportName }: { level: any; sportName?: stri
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -10, scale: 0.98 }}
       transition={SPRING_STIFF}
-      className={`relative flex-1 flex flex-col overflow-hidden rounded-3xl border bg-gradient-to-br ${colors.bg} ${colors.border} p-6 sm:p-8 shadow-xl`}
+      className={`relative flex-1 flex flex-col overflow-hidden rounded-3xl border bg-gradient-to-br ${colors.bg} ${colors.border} p-5 sm:p-6 lg:p-8 shadow-xl`}
     >
-      <div className="flex items-start gap-5 mb-6">
-        <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${colors.gradient} text-white shadow-lg`}>
+      <div className="flex items-start gap-3 sm:gap-5 mb-6">
+        <div
+          className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${colors.gradient} text-white shadow-lg`}
+        >
           {levelIconMap[level.level]}
         </div>
-        <div>
+        <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className={`inline-flex items-center rounded-full border px-3 py-0.5 text-xs font-bold uppercase tracking-widest ${colors.badge}`}>Level {level.level}</span>
-            <span className={`inline-flex items-center rounded-full border px-3 py-0.5 text-xs font-semibold ${colors.badge}`}>{level.ageRange}</span>
+            <span
+              className={`inline-block max-w-full break-words rounded-full border px-3 py-0.5 text-xs font-bold uppercase tracking-widest ${colors.badge}`}
+            >
+              Level {level.level}
+            </span>
+            <span
+              className={`inline-block max-w-full break-words rounded-full border px-3 py-0.5 text-xs font-semibold ${colors.badge}`}
+            >
+              {level.ageRange}
+            </span>
             {level.governingBody && (
-              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-100 px-3 py-0.5 text-xs font-semibold text-slate-600">{level.governingBody}</span>
+              <span className="inline-block max-w-full break-words rounded-full border border-slate-200 bg-slate-100 px-3 py-0.5 text-xs font-semibold text-slate-600">
+                {level.governingBody}
+              </span>
             )}
           </div>
-          <h3 className="text-xl font-bold text-slate-900 sm:text-2xl">{level.title}</h3>
+          <h3 className="text-lg sm:text-xl font-bold text-slate-900 lg:text-2xl break-words">
+            {level.title}
+          </h3>
         </div>
       </div>
-      <p className="mb-6 text-sm leading-relaxed text-slate-600">{level.description}</p>
-      
+      <p className="mb-6 text-sm leading-relaxed text-slate-600">
+        {level.description}
+      </p>
+
       {/* Parent's Corner */}
-      <div className={"mb-8 rounded-2xl border bg-white/90 p-6 " + colors.border + " shadow-sm backdrop-blur-md transition-all duration-300 hover:shadow-md"}>
+      <div
+        className={
+          "mb-8 rounded-2xl border bg-white/90 p-4 sm:p-6 " +
+          colors.border +
+          " shadow-sm backdrop-blur-md transition-all duration-300 hover:shadow-md"
+        }
+      >
         <h4 className="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-800">
           <HeartHandshake className={"h-5 w-5 " + colors.text} />
           Parent's Corner
         </h4>
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2">
           <div className="flex items-start gap-3">
-            <div className={"flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow " + colors.gradient}>
+            <div
+              className={
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow " +
+                colors.gradient
+              }
+            >
               <Clock className="h-4 w-4" />
             </div>
-            <div>
-              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">Time Investment</p>
-              <p className="text-sm font-semibold text-slate-800">{commitment.time}</p>
+            <div className="flex-1 min-w-0">
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                Time Investment
+              </p>
+              <p className="text-sm font-semibold text-slate-800">
+                {commitment.time}
+              </p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className={"flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow " + colors.gradient}>
+            <div
+              className={
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow " +
+                colors.gradient
+              }
+            >
               <Wallet className="h-4 w-4" />
             </div>
-            <div>
-              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">Financial Impact</p>
-              <p className="text-sm font-semibold text-slate-800">{commitment.financial}</p>
+            <div className="flex-1 min-w-0">
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                Financial Impact
+              </p>
+              <p className="text-sm font-semibold text-slate-800">
+                {commitment.financial}
+              </p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className={"flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow " + colors.gradient}>
+            <div
+              className={
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow " +
+                colors.gradient
+              }
+            >
               <Map className="h-4 w-4" />
             </div>
-            <div>
-              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">Travel</p>
-              <p className="text-sm font-semibold text-slate-800">{commitment.travel}</p>
+            <div className="flex-1 min-w-0">
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                Travel
+              </p>
+              <p className="text-sm font-semibold text-slate-800">
+                {commitment.travel}
+              </p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className={"flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow " + colors.gradient}>
+            <div
+              className={
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow " +
+                colors.gradient
+              }
+            >
               <Compass className="h-4 w-4" />
             </div>
-            <div>
-              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">Your Role</p>
-              <p className="text-sm font-semibold text-slate-800">{commitment.role}</p>
+            <div className="flex-1 min-w-0">
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                Your Role
+              </p>
+              <p className="text-sm font-semibold text-slate-800">
+                {commitment.role}
+              </p>
             </div>
           </div>
         </div>
       </div>
 
       <div className="mb-6 mt-6 lg:mt-auto">
-        <h4 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500"><TrendingUp className="h-3.5 w-3.5" />Key Objectives</h4>
+        <h4 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+          <TrendingUp className="h-3.5 w-3.5" />
+          Key Objectives
+        </h4>
         <ul className="space-y-2">
           {level.steps.map((step: string, i: number) => (
             <li key={i} className="flex items-start gap-2.5">
-              <CheckCircle className={"mt-0.5 h-4 w-4 shrink-0 " + colors.text} />
-              <span className="text-sm leading-relaxed text-slate-700">{step}</span>
+              <CheckCircle
+                className={"mt-0.5 h-4 w-4 shrink-0 " + colors.text}
+              />
+              <span className="flex-1 min-w-0 text-sm leading-relaxed text-slate-700">
+                {step}
+              </span>
             </li>
           ))}
         </ul>
@@ -391,14 +517,14 @@ function PathwayLevelDetail({ level, sportName }: { level: any; sportName?: stri
 
       {/* Actionable CTAs */}
       <div className="mt-2 flex flex-col sm:flex-row gap-3">
-        <Link 
+        <Link
           href={`${getCommunityAppUrl()}/discover?tab=COMMUNITIES`}
           className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white shadow-sm transition-all hover:opacity-90 bg-gradient-to-r ${colors.gradient}`}
         >
           <Users className="h-4 w-4" />
           Find Local Communities
         </Link>
-        <Link 
+        <Link
           href={`${getCommunityAppUrl()}/discover?tab=COACHES`}
           className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50"
         >
@@ -418,11 +544,23 @@ function PathwayExplorerSection() {
   const [fuse, setFuse] = useState<Fuse<Sport> | null>(null);
   const [suggestions, setSuggestions] = useState<Sport[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [result, setResult] = useState<{ pathway: SportPathway; source: "db" | "generated" } | null>(null);
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [result, setResult] = useState<{
+    pathway: SportPathway;
+    source: "db" | "generated";
+  } | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
-  const [activeTab, setActiveTab] = useState<"pathway" | "tournaments" | "scholarships" | "universities" | "equipment" | "careers">("pathway");
+  const [activeTab, setActiveTab] = useState<
+    | "pathway"
+    | "tournaments"
+    | "scholarships"
+    | "universities"
+    | "equipment"
+    | "careers"
+  >("pathway");
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Fetch all sports on mount
@@ -447,7 +585,7 @@ function PathwayExplorerSection() {
       setActiveTab("pathway");
       return;
     }
-    const results = fuse.search(query).map(r => r.item);
+    const results = fuse.search(query).map((r) => r.item);
     setSuggestions(results.slice(0, 5));
     setShowSuggestions(results.length > 0);
   }, [query, fuse]);
@@ -469,7 +607,9 @@ function PathwayExplorerSection() {
         setQuery(res.pathway.sportName); // Update input field to match the properly formatted DB name
         setStatus("success");
       } else {
-        setErrorMsg(`"${name}" doesn't appear to be a recognised sport. Please try a different name.`);
+        setErrorMsg(
+          `"${name}" doesn't appear to be a recognised sport. Please try a different name.`,
+        );
         setStatus("error");
       }
     } catch {
@@ -492,7 +632,7 @@ function PathwayExplorerSection() {
   const selectedLevel = currentLevels[activeIdx] || currentLevels[0];
 
   return (
-    <section className="relative overflow-hidden py-16 sm:py-20 lg:py-28">
+    <section className="relative overflow-hidden py-12 sm:py-16 md:py-20 lg:py-28">
       <AmbientBlob className="h-96 w-96 bg-orange-100/40 -left-40 top-10" />
       <AmbientBlob className="h-80 w-80 bg-indigo-100/30 -right-40 top-20" />
 
@@ -508,22 +648,38 @@ function PathwayExplorerSection() {
           <motion.div variants={fadeUp} className="mb-4 flex justify-center">
             <SectionLabel label="For Parents" color="orange" />
           </motion.div>
-          <motion.h2 variants={fadeUp} className="font-title mx-auto max-w-2xl text-3xl font-bold text-slate-900 sm:text-4xl lg:text-5xl">
+          <motion.h2
+            variants={fadeUp}
+            className="font-title mx-auto max-w-2xl text-2xl font-bold text-slate-900 sm:text-3xl md:text-4xl lg:text-5xl"
+          >
             Find the Right Pathway.
             <span className="relative ml-2 inline-block">
               Instantly.
-              <span aria-hidden className="absolute -bottom-1 left-0 h-1 w-full rounded-full bg-gradient-to-r from-orange-400 to-orange-200" />
+              <span
+                aria-hidden
+                className="absolute -bottom-1 left-0 h-1 w-full rounded-full bg-gradient-to-r from-orange-400 to-orange-200"
+              />
             </span>
           </motion.h2>
-          <motion.p variants={fadeUp} className="mx-auto mt-4 max-w-lg text-lg text-slate-600">
-            Type any sport to see what it takes for your child to excel. We break down the timeline, requirements, and steps needed.
+          <motion.p
+            variants={fadeUp}
+            className="mx-auto mt-4 max-w-lg text-base text-slate-600 sm:text-lg"
+          >
+            Type any sport to see what it takes for your child to excel. We
+            break down the timeline, requirements, and steps needed.
           </motion.p>
         </motion.div>
 
         {/* Search bar */}
-        <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} className="mx-auto max-w-2xl relative">
-          <div className="relative flex items-center gap-2 rounded-2xl border border-white/70 bg-white/90 p-1.5 sm:p-2 sm:pr-3 shadow-xl backdrop-blur-sm sm:gap-3">
-            <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-power-orange text-white sm:flex">
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          className="mx-auto max-w-2xl relative"
+        >
+          <div className="relative flex items-center gap-1.5 rounded-2xl border border-white/70 bg-white/90 p-1.5 sm:gap-3 sm:p-2 sm:pr-3 shadow-xl backdrop-blur-sm">
+            <div className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-power-orange text-white sm:flex sm:h-12 sm:w-12">
               {status === "loading" ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
               ) : (
@@ -534,22 +690,33 @@ function PathwayExplorerSection() {
               ref={inputRef}
               type="text"
               value={query}
-              onChange={(e) => { setQuery(e.target.value); setStatus("idle"); }}
-              onKeyDown={(e) => { if (e.key === "Enter") { handleSearch(query); } if (e.key === "Escape") setShowSuggestions(false); }}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setStatus("idle");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSearch(query);
+                }
+                if (e.key === "Escape") setShowSuggestions(false);
+              }}
               onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
               placeholder="e.g. Cricket, Badminton..."
-              className="flex-1 bg-transparent px-3 py-2 text-sm font-medium text-slate-900 placeholder-slate-400 outline-none sm:px-0 sm:text-base"
+              className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm font-medium text-slate-900 placeholder-slate-400 outline-none sm:px-0 sm:text-base"
               aria-label="Search sport pathway"
             />
             {query && (
-              <button onClick={clearSearch} className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
+              <button
+                onClick={clearSearch}
+                className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full hover:bg-slate-100 transition-colors"
+              >
                 <X className="h-4 w-4 text-slate-400" />
               </button>
             )}
             <button
               onClick={() => handleSearch(query)}
               disabled={status === "loading" || !query.trim()}
-              className="shrink-0 rounded-xl bg-power-orange px-4 py-2.5 text-xs font-bold text-white shadow transition-all hover:bg-orange-600 disabled:opacity-50 sm:px-5 sm:text-sm"
+              className="shrink-0 rounded-xl bg-power-orange px-3 py-2.5 text-xs font-bold text-white shadow transition-all hover:bg-orange-600 disabled:opacity-50 sm:px-5 sm:text-sm"
             >
               Search
             </button>
@@ -574,7 +741,9 @@ function PathwayExplorerSection() {
                       className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-orange-50"
                     >
                       <Database className="h-4 w-4 shrink-0 text-power-orange" />
-                      <span className="text-sm font-medium text-slate-800">{s.name}</span>
+                      <span className="text-sm font-medium text-slate-800">
+                        {s.name}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -585,12 +754,27 @@ function PathwayExplorerSection() {
 
         {/* Popular quick-picks */}
         {status === "idle" && !result && (
-          <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} className="mt-5 flex flex-wrap justify-center gap-2">
-            {["Cricket", "Badminton", "Football", "Kabaddi", "Wrestling", "Archery", "Table Tennis", "Boxing"].map((s) => (
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true }}
+            className="mt-5 flex flex-wrap justify-center gap-2 px-2"
+          >
+            {[
+              "Cricket",
+              "Badminton",
+              "Football",
+              "Kabaddi",
+              "Wrestling",
+              "Archery",
+              "Table Tennis",
+              "Boxing",
+            ].map((s) => (
               <button
                 key={s}
                 onClick={() => handleSearch(s)}
-                className="rounded-full border border-slate-200 bg-white/80 px-4 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition-all hover:border-orange-200 hover:bg-orange-50 hover:text-power-orange"
+                className="rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition-all hover:border-orange-200 hover:bg-orange-50 hover:text-power-orange sm:px-4"
               >
                 {s}
               </button>
@@ -605,18 +789,28 @@ function PathwayExplorerSection() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="mx-auto mt-12 max-w-lg rounded-3xl border border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50 p-10 text-center shadow-lg"
+              className="mx-auto mt-12 max-w-lg rounded-3xl border border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50 p-6 sm:p-10 text-center shadow-lg"
             >
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-power-orange text-white shadow-lg">
                 <Sparkles className="h-8 w-8 animate-pulse" />
               </div>
-              <p className="text-lg font-bold text-slate-900">Generating Pathway…</p>
-              <p className="mt-2 text-sm text-slate-500">
-                Our AI is researching the <span className="font-semibold text-power-orange">{query}</span> development pathway in India.
+              <p className="text-lg font-bold text-slate-900">
+                Generating Pathway…
+              </p>
+              <p className="mt-2 text-sm text-slate-500 break-words">
+                Our AI is researching the{" "}
+                <span className="font-semibold text-power-orange">{query}</span>{" "}
+                development pathway in India.
               </p>
               <div className="mt-6 flex items-center justify-center gap-1.5">
                 {[0, 1, 2].map((i) => (
-                  <span key={i} className="h-2 w-2 rounded-full bg-power-orange" style={{ animation: "bounce 1.2s " + (i * 0.2) + "s infinite" }} />
+                  <span
+                    key={i}
+                    className="h-2 w-2 rounded-full bg-power-orange"
+                    style={{
+                      animation: "bounce 1.2s " + i * 0.2 + "s infinite",
+                    }}
+                  />
                 ))}
               </div>
             </motion.div>
@@ -630,11 +824,16 @@ function PathwayExplorerSection() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="mx-auto mt-12 max-w-lg rounded-3xl border border-red-100 bg-red-50 p-8 text-center shadow"
+              className="mx-auto mt-12 max-w-lg rounded-3xl border border-red-100 bg-red-50 p-6 sm:p-8 text-center shadow"
             >
               <p className="text-lg font-bold text-red-700">Not Found</p>
-              <p className="mt-2 text-sm text-red-600">{errorMsg}</p>
-              <button onClick={clearSearch} className="mt-5 rounded-xl bg-red-600 px-6 py-2 text-sm font-semibold text-white transition hover:bg-red-700">
+              <p className="mt-2 text-sm text-red-600 break-words">
+                {errorMsg}
+              </p>
+              <button
+                onClick={clearSearch}
+                className="mt-5 rounded-xl bg-red-600 px-6 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+              >
                 Try Another Sport
               </button>
             </motion.div>
@@ -650,7 +849,7 @@ function PathwayExplorerSection() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               transition={SPRING_STIFF}
-              className="mt-16"
+              className="mt-12 sm:mt-16"
             >
               {/* Header logic */}
               {result ? (
@@ -668,39 +867,67 @@ function PathwayExplorerSection() {
                       </span>
                     )}
                   </div>
-                  <h2 className="font-title text-3xl font-bold text-slate-900 sm:text-4xl">
+                  <h2 className="font-title text-2xl font-bold text-slate-900 break-words sm:text-3xl md:text-4xl">
                     {result.pathway.sportName} Pathway
                   </h2>
                   {result.pathway.overview && (
-                    <p className="mt-2 max-w-2xl text-slate-600">{result.pathway.overview}</p>
+                    <p className="mt-2 max-w-2xl text-slate-600">
+                      {result.pathway.overview}
+                    </p>
                   )}
                 </div>
               ) : (
                 <div className="mb-8 text-center sm:text-left">
-                  <h2 className="font-title text-2xl font-bold text-slate-900 sm:text-3xl">
+                  <h2 className="font-title text-xl font-bold text-slate-900 sm:text-2xl md:text-3xl">
                     The General Sports Pathway
                   </h2>
-                  <p className="mt-2 max-w-2xl text-slate-600">
-                    Discover the five universal stages of athletic development in India. Search for a specific sport above to see tailored insights.
+                  <p className="mt-2 max-w-2xl text-slate-600 mx-auto sm:mx-0">
+                    Discover the five universal stages of athletic development
+                    in India. Search for a specific sport above to see tailored
+                    insights.
                   </p>
                 </div>
               )}
 
               {/* Tabs */}
               {result && (
-                <div className="mb-10 flex w-full overflow-x-auto gap-2 rounded-2xl border border-slate-200/50 bg-slate-100/50 p-2 backdrop-blur-sm scrollbar-hide lg:flex-wrap">
+                <div className="mb-10 grid grid-cols-2 gap-1.5 rounded-2xl border border-slate-200/50 bg-slate-100/50 p-1.5 backdrop-blur-sm sm:grid-cols-3 sm:gap-2 sm:p-2 lg:flex lg:flex-wrap">
                   {[
-                    { id: "pathway", label: "Pathway", icon: <Flag className="h-4 w-4" /> },
-                    { id: "tournaments", label: "Tournaments", icon: <Trophy className="h-4 w-4" /> },
-                    { id: "scholarships", label: "Scholarships", icon: <Wallet className="h-4 w-4" /> },
-                    { id: "universities", label: "Universities", icon: <Landmark className="h-4 w-4" /> },
-                    { id: "equipment", label: "Equipment", icon: <ShoppingBag className="h-4 w-4" /> },
-                    { id: "careers", label: "Careers", icon: <Briefcase className="h-4 w-4" /> },
+                    {
+                      id: "pathway",
+                      label: "Pathway",
+                      icon: <Flag className="h-4 w-4" />,
+                    },
+                    {
+                      id: "tournaments",
+                      label: "Tournaments",
+                      icon: <Trophy className="h-4 w-4" />,
+                    },
+                    {
+                      id: "scholarships",
+                      label: "Scholarships",
+                      icon: <Wallet className="h-4 w-4" />,
+                    },
+                    {
+                      id: "universities",
+                      label: "Universities",
+                      icon: <Landmark className="h-4 w-4" />,
+                    },
+                    {
+                      id: "equipment",
+                      label: "Equipment",
+                      icon: <ShoppingBag className="h-4 w-4" />,
+                    },
+                    {
+                      id: "careers",
+                      label: "Careers",
+                      icon: <Briefcase className="h-4 w-4" />,
+                    },
                   ].map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className={`relative flex shrink-0 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-semibold transition-all sm:text-sm lg:flex-1 lg:px-4 ${
+                      className={`relative flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[11px] font-semibold transition-all sm:gap-2 sm:text-sm lg:flex-1 lg:px-4 ${
                         activeTab === tab.id
                           ? "text-power-orange shadow-sm"
                           : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-900"
@@ -710,12 +937,16 @@ function PathwayExplorerSection() {
                         <motion.div
                           layoutId="activeTab"
                           className="absolute inset-0 rounded-xl bg-white shadow-sm ring-1 ring-slate-200/50"
-                          transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                          transition={{
+                            type: "spring",
+                            bounce: 0.2,
+                            duration: 0.6,
+                          }}
                         />
                       )}
-                      <span className="relative z-10 flex items-center gap-2 whitespace-nowrap">
+                      <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
                         {tab.icon}
-                        {tab.label}
+                        <span className="truncate">{tab.label}</span>
                       </span>
                     </button>
                   ))}
@@ -731,78 +962,149 @@ function PathwayExplorerSection() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="grid gap-8 lg:grid-cols-[380px_1fr]"
+                    className="grid grid-cols-1 gap-6 lg:gap-8 lg:grid-cols-[340px_1fr] xl:grid-cols-[380px_1fr]"
                   >
                     {/* Left: level pills */}
                     <div className="space-y-3">
-                  {/* Visual Pyramid Indicator for Desktop */}
-                  <motion.div variants={scaleIn} className="mb-6 hidden lg:block">
-                    <svg viewBox="0 0 300 160" className="w-full" aria-hidden>
-                      {[
-                        { y: 130, width: 280, fill: "rgba(16,185,129,0.12)", stroke: "rgba(16,185,129,0.4)", label: "Grassroots" },
-                        { y: 104, width: 224, fill: "rgba(59,130,246,0.12)", stroke: "rgba(59,130,246,0.4)", label: "District" },
-                        { y: 78,  width: 168, fill: "rgba(139,92,246,0.12)", stroke: "rgba(139,92,246,0.4)", label: "State" },
-                        { y: 52,  width: 112, fill: "rgba(249,115,22,0.12)", stroke: "rgba(249,115,22,0.4)", label: "National" },
-                        { y: 26,  width: 56,  fill: "rgba(244,63,94,0.12)",  stroke: "rgba(244,63,94,0.4)", label: "International"  },
-                      ].map((tier, i) => (
-                        <g 
-                          key={i} 
-                          onClick={() => setActiveIdx(i)} 
-                          className="cursor-pointer transition-opacity hover:opacity-80"
+                      {/* Visual Pyramid Indicator for Desktop */}
+                      <motion.div
+                        variants={scaleIn}
+                        className="mb-6 hidden lg:block"
+                      >
+                        <svg
+                          viewBox="0 0 300 160"
+                          className="w-full"
+                          aria-hidden
                         >
-                          <rect
-                            x={(300 - tier.width) / 2}
-                            y={tier.y - 22}
-                            width={tier.width}
-                            height={22}
-                            rx={4}
-                            fill={i === activeIdx ? tier.fill.replace("0.12", "0.3") : tier.fill}
-                            stroke={tier.stroke}
-                            strokeWidth={i === activeIdx ? 1.5 : 1}
-                            style={{ transition: "fill 0.3s" }}
-                          />
-                          <text
-                            x="150"
-                            y={130 - i * 26 - 8}
-                            textAnchor="middle"
-                            fontSize="8"
-                            fontWeight={i === activeIdx ? "700" : "500"}
-                            fill={i === activeIdx ? "#0f172a" : "#94a3b8"}
-                            style={{ transition: "fill 0.3s" }}
-                          >
-                            {tier.label}
-                          </text>
-                        </g>
-                      ))}
-                    </svg>
-                  </motion.div>
+                          {[
+                            {
+                              y: 130,
+                              width: 280,
+                              fill: "rgba(16,185,129,0.12)",
+                              stroke: "rgba(16,185,129,0.4)",
+                              label: "Grassroots",
+                            },
+                            {
+                              y: 104,
+                              width: 224,
+                              fill: "rgba(59,130,246,0.12)",
+                              stroke: "rgba(59,130,246,0.4)",
+                              label: "District",
+                            },
+                            {
+                              y: 78,
+                              width: 168,
+                              fill: "rgba(139,92,246,0.12)",
+                              stroke: "rgba(139,92,246,0.4)",
+                              label: "State",
+                            },
+                            {
+                              y: 52,
+                              width: 112,
+                              fill: "rgba(249,115,22,0.12)",
+                              stroke: "rgba(249,115,22,0.4)",
+                              label: "National",
+                            },
+                            {
+                              y: 26,
+                              width: 56,
+                              fill: "rgba(244,63,94,0.12)",
+                              stroke: "rgba(244,63,94,0.4)",
+                              label: "International",
+                            },
+                          ].map((tier, i) => (
+                            <g
+                              key={i}
+                              onClick={() => setActiveIdx(i)}
+                              className="cursor-pointer transition-opacity hover:opacity-80"
+                            >
+                              <rect
+                                x={(300 - tier.width) / 2}
+                                y={tier.y - 22}
+                                width={tier.width}
+                                height={22}
+                                rx={4}
+                                fill={
+                                  i === activeIdx
+                                    ? tier.fill.replace("0.12", "0.3")
+                                    : tier.fill
+                                }
+                                stroke={tier.stroke}
+                                strokeWidth={i === activeIdx ? 1.5 : 1}
+                                style={{ transition: "fill 0.3s" }}
+                              />
+                              <text
+                                x="150"
+                                y={130 - i * 26 - 8}
+                                textAnchor="middle"
+                                fontSize="8"
+                                fontWeight={i === activeIdx ? "700" : "500"}
+                                fill={i === activeIdx ? "#0f172a" : "#94a3b8"}
+                                style={{ transition: "fill 0.3s" }}
+                              >
+                                {tier.label}
+                              </text>
+                            </g>
+                          ))}
+                        </svg>
+                      </motion.div>
 
-                  {currentLevels.map((lv, i) => (
-                    <div key={lv.level} className="flex flex-col gap-3">
-                      <PathwayLevelCard
-                        level={lv}
-                        isActive={i === activeIdx}
-                        onClick={() => setActiveIdx(i)}
-                      />
+                      {currentLevels.map((lv, i) => (
+                        <div key={lv.level} className="flex flex-col gap-3">
+                          <PathwayLevelCard
+                            level={lv}
+                            isActive={i === activeIdx}
+                            onClick={() => {
+                              if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                                setActiveIdx(activeIdx === i ? -1 : i);
+                              } else {
+                                setActiveIdx(i);
+                              }
+                            }}
+                          />
+                          <AnimatePresence initial={false}>
+                            {i === activeIdx && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{
+                                  height: { type: "spring", stiffness: 300, damping: 30 },
+                                  opacity: { duration: 0.2 },
+                                }}
+                                className="lg:hidden overflow-hidden origin-top"
+                              >
+                                <div className="pt-1 pb-2">
+                                  <PathwayLevelDetail
+                                    level={lv}
+                                    sportName={
+                                      result
+                                        ? result.pathway.sportName
+                                        : "General"
+                                    }
+                                  />
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Right: detail (Desktop Only) */}
+                    <div className="hidden h-full lg:flex lg:flex-col">
                       <AnimatePresence mode="wait">
-                        {i === activeIdx && (
-                          <div className="lg:hidden">
-                            <PathwayLevelDetail level={lv} sportName={result ? result.pathway.sportName : "General"} />
-                          </div>
+                        {selectedLevel && (
+                          <PathwayLevelDetail
+                            key={selectedLevel.level}
+                            level={selectedLevel}
+                            sportName={
+                              result ? result.pathway.sportName : "General"
+                            }
+                          />
                         )}
                       </AnimatePresence>
                     </div>
-                  ))}
-                </div>
-
-                {/* Right: detail (Desktop Only) */}
-                <div className="hidden h-full lg:flex lg:flex-col">
-                  <AnimatePresence mode="wait">
-                      {selectedLevel && (
-                        <PathwayLevelDetail key={selectedLevel.level} level={selectedLevel} sportName={result ? result.pathway.sportName : "General"} />
-                      )}
-                    </AnimatePresence>
-                  </div>
                   </motion.div>
                 )}
 
@@ -813,21 +1115,30 @@ function PathwayExplorerSection() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                    className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
                   >
                     {result.pathway.tournaments?.length > 0 ? (
                       result.pathway.tournaments.map((t: any, i: number) => (
-                        <div key={i} className="flex flex-col justify-between rounded-2xl border border-slate-200/60 bg-white/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-orange-200 group">
+                        <div
+                          key={i}
+                          className="flex flex-col justify-between rounded-2xl border border-slate-200/60 bg-white/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-orange-200 group"
+                        >
                           <div>
                             <div className="mb-3 flex items-start justify-between gap-2">
-                              <h3 className="font-title font-bold text-slate-800">{t.name}</h3>
-                              <span className="shrink-0 rounded-full bg-orange-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-power-orange">{t.level}</span>
+                              <h3 className="font-title font-bold text-slate-800 break-words">
+                                {t.name}
+                              </h3>
+                              <span className="shrink-0 max-w-[50%] truncate rounded-full bg-orange-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-power-orange">
+                                {t.level}
+                              </span>
                             </div>
-                            <p className="mb-4 text-sm text-slate-600 line-clamp-3">{t.description}</p>
+                            <p className="mb-4 text-sm text-slate-600 line-clamp-3">
+                              {t.description}
+                            </p>
                           </div>
                           <div className="flex items-center gap-2 border-t border-slate-100 pt-3 text-xs font-semibold text-slate-500">
-                            <Users className="h-4 w-4 text-slate-400" />
-                            {t.ageGroup}
+                            <Users className="h-4 w-4 text-slate-400 shrink-0" />
+                            <span className="truncate">{t.ageGroup}</span>
                           </div>
                         </div>
                       ))
@@ -846,27 +1157,40 @@ function PathwayExplorerSection() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="grid gap-4 sm:grid-cols-2"
+                    className="grid grid-cols-1 gap-4 sm:grid-cols-2"
                   >
                     {result.pathway.scholarships?.length > 0 ? (
                       result.pathway.scholarships.map((s: any, i: number) => (
-                        <div key={i} className="flex flex-col rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white/60 to-slate-50/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-emerald-200">
+                        <div
+                          key={i}
+                          className="flex flex-col rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white/60 to-slate-50/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-emerald-200"
+                        >
                           <div className="mb-4 flex items-center gap-3">
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 shadow-inner">
                               <Wallet className="h-6 w-6" />
                             </div>
-                            <div>
-                              <h3 className="font-title font-bold text-slate-800 text-lg leading-tight">{s.name}</h3>
-                              <p className="text-xs font-semibold text-emerald-600 mt-1">{s.provider}</p>
+                            <div className="min-w-0">
+                              <h3 className="font-title font-bold text-slate-800 text-lg leading-tight break-words">
+                                {s.name}
+                              </h3>
+                              <p className="text-xs font-semibold text-emerald-600 mt-1">
+                                {s.provider}
+                              </p>
                             </div>
                           </div>
-                          <p className="text-sm text-slate-600 leading-relaxed mb-4 flex-1">{s.description}</p>
+                          <p className="text-sm text-slate-600 leading-relaxed mb-4 flex-1">
+                            {s.description}
+                          </p>
                           <div className="mt-auto border-t border-slate-100 pt-4">
                             <div className="flex items-center gap-1.5 mb-1.5">
                               <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">Eligibility</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">
+                                Eligibility
+                              </span>
                             </div>
-                            <p className="text-sm font-medium text-slate-700 leading-relaxed">{s.eligibility}</p>
+                            <p className="text-sm font-medium text-slate-700 leading-relaxed">
+                              {s.eligibility}
+                            </p>
                           </div>
                         </div>
                       ))
@@ -885,28 +1209,44 @@ function PathwayExplorerSection() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                    className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
                   >
                     {result.pathway.universities?.length > 0 ? (
                       result.pathway.universities.map((u: any, i: number) => (
-                        <div key={i} className="flex flex-col rounded-2xl border border-slate-200/60 bg-white/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-indigo-200">
+                        <div
+                          key={i}
+                          className="flex flex-col rounded-2xl border border-slate-200/60 bg-white/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-indigo-200"
+                        >
                           <div className="mb-4 flex items-center gap-3">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
                               <Landmark className="h-5 w-5" />
                             </div>
-                            <div>
-                              <h3 className="font-title font-bold leading-tight text-slate-800">{u.name}</h3>
-                              <p className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-1"><MapPin className="h-3 w-3" /> {u.location}</p>
+                            <div className="min-w-0">
+                              <h3 className="font-title font-bold leading-tight text-slate-800 break-words">
+                                {u.name}
+                              </h3>
+                              <p className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-1">
+                                <MapPin className="h-3 w-3 shrink-0" />{" "}
+                                <span className="truncate">{u.location}</span>
+                              </p>
                             </div>
                           </div>
                           <div className="space-y-3 flex-1">
                             <div>
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Admission Criteria</p>
-                              <p className="text-sm text-slate-700">{u.admissionCriteria}</p>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                Admission Criteria
+                              </p>
+                              <p className="text-sm text-slate-700">
+                                {u.admissionCriteria}
+                              </p>
                             </div>
                             <div>
-                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Sports Quota Details</p>
-                              <p className="text-sm text-slate-700">{u.sportsQuotaDetails}</p>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                Sports Quota Details
+                              </p>
+                              <p className="text-sm text-slate-700">
+                                {u.sportsQuotaDetails}
+                              </p>
                             </div>
                           </div>
                         </div>
@@ -926,26 +1266,35 @@ function PathwayExplorerSection() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                    className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
                   >
                     {result.pathway.equipment?.length > 0 ? (
                       result.pathway.equipment.map((e: any, i: number) => (
-                        <div key={i} className="flex flex-col rounded-2xl border border-slate-200/60 bg-white/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-power-orange/30">
+                        <div
+                          key={i}
+                          className="flex flex-col rounded-2xl border border-slate-200/60 bg-white/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-power-orange/30"
+                        >
                           <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-                            <span className="inline-block rounded-lg bg-slate-100 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 border border-slate-200 text-left leading-snug max-w-full">
+                            <span className="inline-block rounded-lg bg-slate-100 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 border border-slate-200 text-left leading-snug max-w-full break-words">
                               {e.level}
                             </span>
                             <div className="flex shrink-0 items-center gap-1.5 text-power-orange bg-orange-50 px-3 py-1.5 rounded-full border border-orange-100">
                               <Wallet className="h-3.5 w-3.5 shrink-0" />
-                              <span className="text-xs font-bold whitespace-nowrap">{e.estimatedCost}</span>
+                              <span className="text-xs font-bold whitespace-nowrap">
+                                {e.estimatedCost}
+                              </span>
                             </div>
                           </div>
-                          <h4 className="mb-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">Essential Gear</h4>
+                          <h4 className="mb-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                            Essential Gear
+                          </h4>
                           <ul className="space-y-2.5 flex-1 mt-1">
                             {e.items.map((item: string, j: number) => (
                               <li key={j} className="flex items-start gap-2.5">
                                 <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
-                                <span className="text-sm font-medium text-slate-700 leading-relaxed">{item}</span>
+                                <span className="text-sm font-medium text-slate-700 leading-relaxed">
+                                  {item}
+                                </span>
                               </li>
                             ))}
                           </ul>
@@ -966,26 +1315,37 @@ function PathwayExplorerSection() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2 }}
-                    className="grid gap-4 sm:grid-cols-2"
+                    className="grid grid-cols-1 gap-4 sm:grid-cols-2"
                   >
                     {result.pathway.careers?.length > 0 ? (
                       result.pathway.careers.map((c: any, i: number) => (
-                        <div key={i} className="flex flex-col rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white/60 to-slate-50/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-blue-200 group">
+                        <div
+                          key={i}
+                          className="flex flex-col rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white/60 to-slate-50/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-blue-200 group"
+                        >
                           <div className="mb-4 flex items-center gap-3">
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600 shadow-inner">
                               <Briefcase className="h-6 w-6" />
                             </div>
-                            <div>
-                              <h3 className="font-title font-bold text-slate-800 text-lg leading-tight">{c.role}</h3>
+                            <div className="min-w-0">
+                              <h3 className="font-title font-bold text-slate-800 text-lg leading-tight break-words">
+                                {c.role}
+                              </h3>
                             </div>
                           </div>
-                          <p className="text-sm text-slate-600 leading-relaxed mb-4 flex-1">{c.description}</p>
+                          <p className="text-sm text-slate-600 leading-relaxed mb-4 flex-1">
+                            {c.description}
+                          </p>
                           <div className="mt-auto border-t border-slate-100 pt-4">
                             <div className="flex items-center gap-1.5 mb-1.5">
                               <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500">Demand</span>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500">
+                                Demand
+                              </span>
                             </div>
-                            <p className="text-sm font-medium text-slate-700 leading-relaxed">{c.demand}</p>
+                            <p className="text-sm font-medium text-slate-700 leading-relaxed">
+                              {c.demand}
+                            </p>
                           </div>
                         </div>
                       ))
@@ -997,14 +1357,10 @@ function PathwayExplorerSection() {
                   </motion.div>
                 )}
               </AnimatePresence>
-
             </motion.div>
           )}
         </AnimatePresence>
       </div>
-
-      <style>
-</style>
     </section>
   );
 }
@@ -1057,7 +1413,7 @@ export default function PathwaysPage() {
       <PathwayExplorerSection />
 
       {/* ── Stats Banner ── */}
-      <section className="relative py-12 sm:py-16">
+      <section className="relative py-10 sm:py-16">
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute left-1/2 top-0 h-64 w-full -translate-x-1/2 bg-gradient-to-b from-orange-50/40 to-transparent" />
         </div>
@@ -1068,7 +1424,7 @@ export default function PathwaysPage() {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, margin: "-60px" }}
-            className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4"
           >
             {statCards.map((stat) => (
               <motion.div
@@ -1076,7 +1432,7 @@ export default function PathwaysPage() {
                 variants={cardReveal}
                 whileHover={{ y: -4, scale: 1.02 }}
                 transition={SPRING_STIFF}
-                className="group flex flex-col items-center rounded-2xl border border-white/70 bg-white/80 p-6 text-center backdrop-blur-sm premium-shadow will-change-transform"
+                className="group flex flex-col items-center rounded-2xl border border-white/70 bg-white/80 p-5 sm:p-6 text-center backdrop-blur-sm premium-shadow will-change-transform"
               >
                 <div
                   className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110 ${stat.color}`}
@@ -1094,7 +1450,7 @@ export default function PathwaysPage() {
       </section>
 
       {/* ── How PowerMySport Helps ── */}
-      <section className="relative overflow-hidden py-16 sm:py-20 lg:py-28">
+      <section className="relative overflow-hidden py-12 sm:py-16 md:py-20 lg:py-28">
         <AmbientBlob className="h-80 w-80 bg-orange-100/40 -right-24 top-16" />
         <AmbientBlob className="h-72 w-72 bg-emerald-100/30 -left-32 bottom-20" />
 
@@ -1107,20 +1463,23 @@ export default function PathwaysPage() {
             className="mb-14 text-center"
           >
             <motion.div variants={fadeUp} className="mb-4 flex justify-center">
-              <SectionLabel label="We Support You at Every Step" color="green" />
+              <SectionLabel
+                label="We Support You at Every Step"
+                color="green"
+              />
             </motion.div>
             <motion.h2
               variants={fadeUp}
-              className="font-title mx-auto max-w-2xl text-3xl font-bold text-slate-900 sm:text-4xl lg:text-5xl"
+              className="font-title mx-auto max-w-2xl text-2xl font-bold text-slate-900 sm:text-3xl md:text-4xl lg:text-5xl"
             >
               PowerMySport Helps You Grow Faster
             </motion.h2>
             <motion.p
               variants={fadeUp}
-              className="mx-auto mt-4 max-w-xl text-lg text-slate-600"
+              className="mx-auto mt-4 max-w-xl text-base text-slate-600 sm:text-lg"
             >
-              No matter where you start, we provide the tools,
-              coaches, and places you need to reach the next level.
+              No matter where you start, we provide the tools, coaches, and
+              places you need to reach the next level.
             </motion.p>
           </motion.div>
 
@@ -1129,7 +1488,7 @@ export default function PathwaysPage() {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true, margin: "-60px" }}
-            className="grid gap-6 md:grid-cols-3"
+            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
           >
             {[
               {
@@ -1162,7 +1521,7 @@ export default function PathwaysPage() {
                 variants={cardReveal}
                 whileHover={{ y: -6, scale: 1.015 }}
                 transition={SPRING_STIFF}
-                className="group relative overflow-hidden rounded-2xl border border-white/70 bg-white/80 p-8 backdrop-blur-sm premium-shadow will-change-transform hover:border-white/90"
+                className="group relative overflow-hidden rounded-2xl border border-white/70 bg-white/80 p-6 sm:p-8 backdrop-blur-sm premium-shadow will-change-transform hover:border-white/90"
               >
                 {/* decorative circle */}
                 <div
