@@ -107,7 +107,7 @@ export function GroupMembersList({
                 prefersReducedMotion ? undefined : { y: -2, scale: 1.01 }
               }
               whileTap={prefersReducedMotion ? undefined : { scale: 0.99 }}
-              className="w-full rounded-2xl border border-border bg-white p-3 text-left transition hover:border-power-orange/30 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-power-orange sm:p-3.5"
+              className="w-full rounded-2xl border border-white/60 bg-white/70 backdrop-blur-md p-3 text-left shadow-[0_2px_8px_rgba(0,0,0,0.02)] transition-all hover:-translate-y-0.5 hover:border-power-orange/30 hover:bg-white/90 hover:shadow-[0_8px_20px_rgba(233,115,22,0.06)] focus:outline-none focus:ring-2 focus:ring-power-orange sm:p-3.5"
               aria-label={`View ${member.displayName} profile`}
             >
               <div className="flex items-center gap-3">

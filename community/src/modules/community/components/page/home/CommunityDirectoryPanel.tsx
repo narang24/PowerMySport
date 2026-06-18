@@ -73,7 +73,7 @@ export default function CommunityDirectoryPanel({ page }: Props) {
 
   return (
     <motion.section
-      className={`flex flex-col h-full min-h-0 border-r border-slate-200 bg-white p-3.5 pb-24 sm:p-4 lg:pb-4 ${workspaceView === "DIRECTORY" ? "flex" : "hidden lg:flex"}`}
+      className={`flex flex-col h-full min-h-0 border-r border-slate-200 bg-white p-3.5 pb-24 sm:p-4 md:pb-4 lg:p-4 ${workspaceView === "DIRECTORY" ? "flex" : "hidden md:flex"}`}
     >
       {/* ── Fixed Header ── */}
       <div className="flex-none">

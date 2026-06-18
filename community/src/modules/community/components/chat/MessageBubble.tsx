@@ -156,8 +156,8 @@ export const MessageBubble = memo(function MessageBubble({
 
   // Shape the tail of the bubble
   const bubbleShapeClass = isOwnMessage
-    ? "rounded-2xl rounded-br-[5px]"
-    : "rounded-2xl rounded-bl-[5px]";
+    ? "rounded-[24px] rounded-br-[6px]"
+    : "rounded-[24px] rounded-bl-[6px]";
 
   const canOpenMobileActions =
     (isOwnMessage && isFailed) || !message.isDeleted || canMutateMessage;
@@ -203,29 +203,29 @@ export const MessageBubble = memo(function MessageBubble({
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 6, scale: 0.97 }}
+      initial={{ opacity: 0, y: 10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      className={`group flex gap-2 ${isOwnMessage ? "justify-end" : "justify-start"} ${isFailed ? "opacity-80" : ""}`}
+      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+      className={`group flex gap-2 sm:gap-2.5 ${isOwnMessage ? "justify-end" : "justify-start"} ${isFailed ? "opacity-80" : ""}`}
     >
       {/* Group avatar (other's messages) */}
       {!isOwnMessage && isGroupConversation && (
-        <div className="mt-auto inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-300 to-slate-400 text-[10px] font-bold uppercase text-white shadow-sm">
+        <div className="mt-auto mb-1 inline-flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-300 text-[11px] font-bold uppercase text-slate-700 shadow-sm ring-2 ring-white">
           {senderAvatarChar}
         </div>
       )}
 
       <div
         className={`${
-          isImageMessage ? "p-1.5" : "px-3 py-2 sm:px-3.5"
-        } max-w-[82%] ${bubbleShapeClass} text-[13.5px] sm:text-sm shadow-[0_1px_3px_rgba(0,0,0,0.08)] sm:max-w-[75%] lg:max-w-[62%] ${
+          isImageMessage ? "p-1.5" : "px-4 py-2.5 sm:px-5 sm:py-3"
+        } max-w-[85%] ${bubbleShapeClass} text-[14px] sm:text-[15px] shadow-sm sm:max-w-[78%] md:max-w-[70%] lg:max-w-[65%] transition-all ${
           isFailed
-            ? "ring-1 ring-red-400/60"
+            ? "ring-2 ring-red-400/60"
             : ""
         } ${
           isOwnMessage
-            ? "bg-[linear-gradient(135deg,#E97316,#F59E0B)] text-white"
-            : "border border-slate-100 bg-white text-slate-800"
+            ? "bg-gradient-to-br from-power-orange to-orange-500 text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_2px_5px_rgba(233,115,22,0.15)]"
+            : "border border-slate-200/60 bg-white text-slate-800 shadow-[0_2px_5px_rgba(0,0,0,0.02)]"
         }`}
         onTouchStart={startLongPress}
         onTouchEnd={clearLongPressTimeout}
