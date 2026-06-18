@@ -339,16 +339,13 @@ export default function BookingInvoicePage() {
         </div>
       </Card>
 
-      <style jsx global>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           body {
             background: #ffffff;
           }
-          .print\:hidden {
-            display: none !important;
-          }
         }
-      `}</style>
+      `}} />
     </div>
   );
 }

@@ -93,10 +93,10 @@ export const pathwayApi = {
         };
       }
       return null;
-    } catch (err: unknown) {
-      // 404 = not a sport — surface that distinction
-      if ((err as { response?: { status?: number } })?.response?.status === 404)
-        return null;
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        throw new Error(err.response.data?.message || "Not found");
+      }
       throw err;
     }
   },

@@ -2,8 +2,6 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Sport } from "../models/Sport";
 import { SportPathway, SportPathwayDocument } from "../models/SportPathway";
 
-const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
-
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
 function toSlug(name: string): string {
@@ -83,7 +81,11 @@ Return ONLY a valid JSON object (no markdown, no code fences) with this exact st
       "name": "Name of a notable tournament in India",
       "level": "e.g. Grassroots, State, National",
       "description": "Brief description of the tournament",
-      "ageGroup": "e.g. Under-14, Under-17, Senior"
+      "ageGroup": "e.g. Under-14, Under-17, Senior",
+      "prerequisiteId": "A unique identifier for the required ID (e.g., BCCI_ID, AITA_ITN)",
+      "prerequisiteName": "The human-readable name of the required ID (e.g., BCCI Player ID)",
+      "prerequisiteGuide": ["Step 1 to get the prerequisite", "Step 2", "Step 3"],
+      "documentChecklist": ["Proof of Age", "Medical Fitness Certificate", "Passport-sized Photographs"]
     }
   ],
   "scholarships": [
@@ -91,7 +93,11 @@ Return ONLY a valid JSON object (no markdown, no code fences) with this exact st
       "name": "Name of the scholarship or support scheme",
       "provider": "e.g. Sports Authority of India, Khelo India, Corporate",
       "description": "Brief description of the financial or training support provided",
-      "eligibility": "e.g. National medalist, Top 10 state rank"
+      "eligibility": "e.g. National medalist, Top 10 state rank",
+      "prerequisiteId": "A unique identifier for the scholarship form (e.g., SAI_FORM_A)",
+      "prerequisiteName": "The human-readable name of the form (e.g., SAI Scholarship Application)",
+      "prerequisiteGuide": ["Step 1 to apply", "Step 2", "Step 3"],
+      "documentChecklist": ["Income Certificate", "Sports Achievement Certificates", "Aadhar Card"]
     }
   ],
   "universities": [
@@ -99,7 +105,11 @@ Return ONLY a valid JSON object (no markdown, no code fences) with this exact st
       "name": "Name of a prominent Indian university offering admission via sports quota for this sport",
       "location": "City, State",
       "admissionCriteria": "e.g. State level participation minimum",
-      "sportsQuotaDetails": "Brief details on what the quota provides (e.g. marks relaxation, fee waiver)"
+      "sportsQuotaDetails": "Brief details on what the quota provides (e.g. marks relaxation, fee waiver)",
+      "prerequisiteId": "A unique identifier for the sports quota application (e.g., SPORTS_QUOTA_APP)",
+      "prerequisiteName": "The human-readable name of the application (e.g., University Sports Quota Form)",
+      "prerequisiteGuide": ["Step 1 to apply for the quota", "Step 2", "Step 3"],
+      "documentChecklist": ["12th Marksheet", "Highest Level Sports Certificate", "Character Certificate"]
     }
   ],
   "equipment": [
@@ -125,8 +135,9 @@ Make all content specific to India's sports ecosystem, governing bodies, and act
 
 export class PathwayService {
   private genAI: GoogleGenerativeAI | null = null;
-
   constructor() {
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
+
     if (apiKey) {
       this.genAI = new GoogleGenerativeAI(apiKey);
     }
@@ -146,21 +157,33 @@ export class PathwayService {
     //    If the sport is already in our DB (verified), skip Gemini validation
     //    and enforce its proper capitalization and consistent slug.
     const knownSport = await Sport.findOne({ slug });
-    
+    console.log(
+      `[PathwayService] getOrGeneratePathway for ${sportName} - slug: ${slug}, knownSport:`,
+      knownSport ? knownSport.name : "null",
+    );
+
     const finalSportName = knownSport ? knownSport.name : sportName;
     slug = knownSport ? knownSport.slug : slug;
 
     // ── 2. Check cache ─────────────────────────────────────────────────────
     const existing = await SportPathway.findOne({ sportSlug: slug });
     if (existing) {
+      console.log(`[PathwayService] Cache hit for ${slug}`);
       // Bump lookup count (fire-and-forget)
-      SportPathway.updateOne({ sportSlug: slug }, { $inc: { lookupCount: 1 } }).exec();
+      SportPathway.updateOne(
+        { sportSlug: slug },
+        { $inc: { lookupCount: 1 } },
+      ).exec();
       return { pathway: existing, source: "db" };
     }
 
     // ── 3. Validate unknown sports via Gemini ──────────────────────────────
     if (!knownSport) {
+      console.log(
+        `[PathwayService] Validating unknown sport ${finalSportName} via Gemini...`,
+      );
       const isValid = await this.validateSport(finalSportName);
+      console.log(`[PathwayService] Validation result:`, isValid);
       if (!isValid) {
         return {
           pathway: null,
@@ -209,16 +232,20 @@ export class PathwayService {
   // ── Private helpers ────────────────────────────────────────────────────────
 
   private async validateSport(sportName: string): Promise<boolean> {
-    if (!this.genAI) return true; // Allow if AI unavailable
-    try {
-      const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-      const prompt = `Is "${sportName}" a real sport or athletic activity? Reply with only "yes" or "no".`;
-      const result = await model.generateContent(prompt);
-      const answer = result.response.text().trim().toLowerCase();
-      return answer.startsWith("yes");
-    } catch {
-      return true; // Fail open — generate anyway
+    const prompt = `Is "${sportName}" a real sport or athletic activity? Reply with only "yes" or "no".`;
+    
+    if (this.genAI) {
+      try {
+        const model = this.genAI.getGenerativeModel({ model: "gemini-3.1-pro" });
+        const result = await model.generateContent(prompt);
+        const answer = result.response.text().trim().toLowerCase();
+        return answer.startsWith("yes");
+      } catch (err) {
+        console.warn("[PathwayService] Gemini validation failed, falling back to OpenAI if available.", err);
+      }
     }
+
+    return true; // Fail open — generate anyway if API fails
   }
 
   private async generatePathway(sportName: string): Promise<{
@@ -241,18 +268,30 @@ export class PathwayService {
       level: string;
       description: string;
       ageGroup: string;
+      prerequisiteId?: string;
+      prerequisiteName?: string;
+      prerequisiteGuide?: string[];
+      documentChecklist?: string[];
     }>;
     scholarships: Array<{
       name: string;
       provider: string;
       description: string;
       eligibility: string;
+      prerequisiteId?: string;
+      prerequisiteName?: string;
+      prerequisiteGuide?: string[];
+      documentChecklist?: string[];
     }>;
     universities: Array<{
       name: string;
       location: string;
       admissionCriteria: string;
       sportsQuotaDetails: string;
+      prerequisiteId?: string;
+      prerequisiteName?: string;
+      prerequisiteGuide?: string[];
+      documentChecklist?: string[];
     }>;
     equipment: Array<{
       level: string;
@@ -269,7 +308,7 @@ export class PathwayService {
 
     const modelCandidates = [
       process.env.GEMINI_MODEL_NAME,
-      "gemini-2.5-flash",
+      "gemini-3.5-flash",
       "gemini-1.5-flash",
     ].filter(Boolean) as string[];
 
@@ -283,11 +322,16 @@ export class PathwayService {
           },
         });
 
-        const result = await model.generateContent(buildPathwayPrompt(sportName));
+        const result = await model.generateContent(
+          buildPathwayPrompt(sportName),
+        );
         const text = result.response.text().trim();
 
         // Strip any accidental markdown fences
-        const jsonText = text.replace(/^```[a-z]*\n?/i, "").replace(/```$/i, "").trim();
+        const jsonText = text
+          .replace(/^```[a-z]*\n?/i, "")
+          .replace(/```$/i, "")
+          .trim();
         const parsed = JSON.parse(jsonText);
 
         if (
@@ -302,12 +346,13 @@ export class PathwayService {
         ) {
           return parsed;
         }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message.toLowerCase() : "";
-        // Try next model only on 404 (model not found)
-        if (!msg.includes("404") && !msg.includes("not found")) throw err;
+      } catch (error) {
+        console.error(`[PathwayService] Error with model ${modelName}:`, error);
+        // Try next model if available
       }
     }
+
+    console.error(`[PathwayService] All Gemini models failed to generate pathway.`);
     return null;
   }
 
@@ -351,13 +396,13 @@ export class PathwayService {
 
     const saved = await SportPathway.findOneAndUpdate(
       { sportSlug: slug },
-      { 
+      {
         $setOnInsert: docData,
-        $inc: { lookupCount: 1 }
+        $inc: { lookupCount: 1 },
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true },
     );
-    
+
     return saved as SportPathwayDocument;
   }
 }

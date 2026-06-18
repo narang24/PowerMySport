@@ -18,6 +18,10 @@ export interface Tournament {
   level: string;
   description: string;
   ageGroup: string;
+  prerequisiteId?: string;
+  prerequisiteName?: string;
+  prerequisiteGuide?: string[];
+  documentChecklist?: string[];
 }
 
 export interface Scholarship {
@@ -25,6 +29,10 @@ export interface Scholarship {
   provider: string;
   description: string;
   eligibility: string;
+  prerequisiteId?: string;
+  prerequisiteName?: string;
+  prerequisiteGuide?: string[];
+  documentChecklist?: string[];
 }
 
 export interface University {
@@ -32,6 +40,10 @@ export interface University {
   location: string;
   admissionCriteria: string;
   sportsQuotaDetails: string;
+  prerequisiteId?: string;
+  prerequisiteName?: string;
+  prerequisiteGuide?: string[];
+  documentChecklist?: string[];
 }
 
 export interface Equipment {
@@ -91,6 +103,10 @@ const tournamentSchema = new Schema<Tournament>(
     level: { type: String, required: true },
     description: { type: String, required: true },
     ageGroup: { type: String, required: true },
+    prerequisiteId: { type: String },
+    prerequisiteName: { type: String },
+    prerequisiteGuide: [{ type: String }],
+    documentChecklist: [{ type: String }],
   },
   { _id: false },
 );
@@ -101,6 +117,10 @@ const scholarshipSchema = new Schema<Scholarship>(
     provider: { type: String, required: true },
     description: { type: String, required: true },
     eligibility: { type: String, required: true },
+    prerequisiteId: { type: String },
+    prerequisiteName: { type: String },
+    prerequisiteGuide: [{ type: String }],
+    documentChecklist: [{ type: String }],
   },
   { _id: false },
 );
@@ -111,6 +131,10 @@ const universitySchema = new Schema<University>(
     location: { type: String, required: true },
     admissionCriteria: { type: String, required: true },
     sportsQuotaDetails: { type: String, required: true },
+    prerequisiteId: { type: String },
+    prerequisiteName: { type: String },
+    prerequisiteGuide: [{ type: String }],
+    documentChecklist: [{ type: String }],
   },
   { _id: false },
 );

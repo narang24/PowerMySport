@@ -66,7 +66,7 @@ export class SportsService {
 
     try {
       const model = this.genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.1-pro",
       });
 
       const prompt = `You are a sports expert. Determine if the following is a real sport or athletic activity that can be taught or coached.
