@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 
 export const guidanceRequestSchema = z.object({
@@ -43,9 +43,9 @@ const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 const configuredModelName = process.env.GEMINI_MODEL_NAME?.trim();
 const guidanceModelCandidates = [
   configuredModelName,
-  "gemini-2.0-flash",
-  "gemini-1.5-flash-latest",
-  "gemini-1.5-flash",
+  "gemini-3.5-flash",
+  "gemini-2.5-flash",
+  "gemini-3.1-flash-lite",
 ].filter((modelName): modelName is string => Boolean(modelName));
 
 const isModelUnavailableError = (errorMessage: string) =>
@@ -64,7 +64,7 @@ const getGuidanceClient = () => {
     );
   }
 
-  return new GoogleGenerativeAI(apiKey);
+  return new GoogleGenAI({ apiKey });
 };
 
 export const generateYouthSportsGuidance = async (
@@ -76,17 +76,17 @@ export const generateYouthSportsGuidance = async (
 
   for (const modelName of guidanceModelCandidates) {
     try {
-      const model = genAI.getGenerativeModel({
+      const response = await genAI.models.generateContent({
         model: modelName,
-        systemInstruction: YOUTH_SPORTS_GUIDANCE_SYSTEM_PROMPT,
-        generationConfig: {
+        contents: JSON.stringify(payload),
+        config: {
+          systemInstruction: YOUTH_SPORTS_GUIDANCE_SYSTEM_PROMPT,
           responseMimeType: "application/json",
           temperature: 0.4,
         },
       });
 
-      const response = await model.generateContent(JSON.stringify(payload));
-      const rawText = response.response.text().trim();
+      const rawText = (response.text ?? "").trim();
 
       if (!rawText) {
         throw new Error("LLM returned an empty guidance response");

@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { Sport } from "../models/Sport";
 import { SportPathway, SportPathwayDocument } from "../models/SportPathway";
 
@@ -154,13 +154,13 @@ If a city was provided, make the "steps" arrays within each level mention local 
 // ─── Service ──────────────────────────────────────────────────────────────────
 
 export class PathwayService {
-  private genAI: GoogleGenerativeAI | null = null;
+  private genAI: GoogleGenAI | null = null;
   constructor() {
     const apiKey =
       process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
 
     if (apiKey) {
-      this.genAI = new GoogleGenerativeAI(apiKey);
+      this.genAI = new GoogleGenAI({ apiKey });
     }
   }
 
@@ -261,11 +261,11 @@ export class PathwayService {
 
     if (this.genAI) {
       try {
-        const model = this.genAI.getGenerativeModel({
+        const result = await this.genAI.models.generateContent({
           model: "gemini-2.0-flash",
+          contents: prompt,
         });
-        const result = await model.generateContent(prompt);
-        const answer = result.response.text().trim().toLowerCase();
+        const answer = (result.text ?? "").trim().toLowerCase();
         return answer.startsWith("yes");
       } catch (err) {
         console.warn(
@@ -342,25 +342,22 @@ export class PathwayService {
 
     const modelCandidates = [
       process.env.GEMINI_MODEL_NAME,
-      "gemini-2.0-flash",
-      "gemini-1.5-flash-latest",
-      "gemini-1.5-flash",
+      "gemini-3.5-flash",
+      "gemini-2.5-flash",
+      "gemini-3.1-flash-lite",
     ].filter(Boolean) as string[];
 
     for (const modelName of modelCandidates) {
       try {
-        const model = this.genAI.getGenerativeModel({
+        const result = await this.genAI.models.generateContent({
           model: modelName,
-          generationConfig: {
+          contents: buildPathwayPrompt(sportName, childAge, childCity),
+          config: {
             responseMimeType: "application/json",
             temperature: 0.4,
           },
         });
-
-        const result = await model.generateContent(
-          buildPathwayPrompt(sportName, childAge, childCity),
-        );
-        const text = result.response.text().trim();
+        const text = (result.text ?? "").trim();
 
         // Strip any accidental markdown fences
         const jsonText = text

@@ -1,7 +1,7 @@
 import axios from "axios";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { SportPathway } from "../shared/models/SportPathway";
 
 dotenv.config();
@@ -63,13 +63,7 @@ async function extractTournamentsWithAI(html: string, sport: any) {
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemma-4-31b-it",
-      generationConfig: {
-        responseMimeType: "application/json",
-      },
-    });
+    const genAI = new GoogleGenAI({ apiKey });
 
     const prompt = `
       You are a web scraping assistant. I will provide you with the raw HTML/text of a sports tournament webpage.
@@ -84,8 +78,14 @@ async function extractTournamentsWithAI(html: string, sport: any) {
       ${html}
     `;
 
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
+    const result = await genAI.models.generateContent({
+      model: "gemma-4-31b-it",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+      },
+    });
+    const text = (result.text ?? "").trim();
 
     // Clean up markdown formatting if any
     const jsonText = text
