@@ -426,6 +426,22 @@ export class S3Service {
   }
 
   /**
+   * Generate presigned download URL for a concierge document
+   * @param key - The S3 key of the document
+   * @returns Presigned download URL (valid for 1 hour)
+   */
+  async generateConciergeDocumentDownloadUrl(key: string): Promise<string> {
+    const getCommand = new GetObjectCommand({
+      Bucket: this.documentsBucket,
+      Key: key,
+    });
+
+    return await getSignedUrl(this.s3Client, getCommand, {
+      expiresIn: 3600, // 1 hour
+    });
+  }
+
+  /**
    * Generate a presigned POST for secure chat image uploads.
    * Security enforced at AWS policy level:
    *  - content-length-range: 1 byte – 5 MB (prevents oversized uploads)
