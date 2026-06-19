@@ -194,9 +194,9 @@ export default function HomePage() {
       {/* ── Hero ── */}
       <Hero
         variant="home"
-        title="Stop Juggling Apps. Manage Your Kids' Sports in One Place."
+        title="Your child's gateway to a dream sports career"
         subtitle="Built for Busy Parents"
-        description="PowerMySport is a sports guidance platform for parents that helps you understand, plan, and execute your child's athletic journey. All this with the help of experts on call."
+        description="PowerMySport is a sports guidance platform for parents that helps you understand, plan, and execute your child's sports journey. All this with the help of experts on call."
         primaryCTA={
           user?.role === "VENUE_LISTER"
             ? { label: "Manage Venues", href: "/venue-lister/inventory" }
@@ -370,7 +370,8 @@ export default function HomePage() {
                 variants={itemVariants}
                 className="mb-10 text-lg text-slate-600"
               >
-                Follow these simple steps to set up your child's athletic journey and get personalised recommendations.
+                Follow these simple steps to set up your child's sports journey
+                and get personalised recommendations.
               </motion.p>
 
               <motion.div variants={sectionVariants} className="space-y-4">

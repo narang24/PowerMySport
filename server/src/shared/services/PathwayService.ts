@@ -136,7 +136,8 @@ Make all content specific to India's sports ecosystem, governing bodies, and act
 export class PathwayService {
   private genAI: GoogleGenerativeAI | null = null;
   constructor() {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
+    const apiKey =
+      process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || "";
 
     if (apiKey) {
       this.genAI = new GoogleGenerativeAI(apiKey);
@@ -233,15 +234,20 @@ export class PathwayService {
 
   private async validateSport(sportName: string): Promise<boolean> {
     const prompt = `Is "${sportName}" a real sport or athletic activity? Reply with only "yes" or "no".`;
-    
+
     if (this.genAI) {
       try {
-        const model = this.genAI.getGenerativeModel({ model: "gemini-3.1-pro" });
+        const model = this.genAI.getGenerativeModel({
+          model: "gemini-2.0-flash",
+        });
         const result = await model.generateContent(prompt);
         const answer = result.response.text().trim().toLowerCase();
         return answer.startsWith("yes");
       } catch (err) {
-        console.warn("[PathwayService] Gemini validation failed, falling back to OpenAI if available.", err);
+        console.warn(
+          "[PathwayService] Gemini validation failed, falling back to OpenAI if available.",
+          err,
+        );
       }
     }
 
@@ -308,8 +314,8 @@ export class PathwayService {
 
     const modelCandidates = [
       process.env.GEMINI_MODEL_NAME,
-      "gemini-3.5-flash",
-      "gemini-1.5-flash",
+      "gemini-2.0-flash",
+      "gemini-2.0-flash",
     ].filter(Boolean) as string[];
 
     for (const modelName of modelCandidates) {
@@ -352,7 +358,9 @@ export class PathwayService {
       }
     }
 
-    console.error(`[PathwayService] All Gemini models failed to generate pathway.`);
+    console.error(
+      `[PathwayService] All Gemini models failed to generate pathway.`,
+    );
     return null;
   }
 

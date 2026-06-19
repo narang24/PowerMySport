@@ -1,8 +1,8 @@
-import axios from 'axios';
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { SportPathway } from '../shared/models/SportPathway';
+import axios from "axios";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { SportPathway } from "../shared/models/SportPathway";
 
 dotenv.config();
 
@@ -10,7 +10,7 @@ dotenv.config();
 
 async function fetchMockHtml(sport: any) {
   // In a real scenario, this would dynamically determine URL or logic based on the sport
-  if (sport.slug === 'tennis') {
+  if (sport.slug === "tennis") {
     return `
       <div class="tournament-row">
         <div class="name">${sport.governingBody} Championship Series (CS7)</div>
@@ -25,7 +25,7 @@ async function fetchMockHtml(sport: any) {
         <div class="age">U-16</div>
       </div>
     `;
-  } else if (sport.slug === 'cricket') {
+  } else if (sport.slug === "cricket") {
     return `
       <div class="tournament-row">
         <div class="name">${sport.governingBody} Vinoo Mankad Trophy</div>
@@ -54,19 +54,21 @@ async function fetchMockHtml(sport: any) {
 
 async function extractTournamentsWithAI(html: string, sport: any) {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  
+
   if (!apiKey) {
-    console.warn("⚠️ No GEMINI_API_KEY or GOOGLE_API_KEY found. Falling back to simple regex matching (Mock Mode).");
+    console.warn(
+      "⚠️ No GEMINI_API_KEY or GOOGLE_API_KEY found. Falling back to simple regex matching (Mock Mode).",
+    );
     return fallbackExtraction(html, sport);
   }
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ 
-      model: "gemini-3.1-pro",
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash",
       generationConfig: {
         responseMimeType: "application/json",
-      }
+      },
     });
 
     const prompt = `
@@ -84,16 +86,19 @@ async function extractTournamentsWithAI(html: string, sport: any) {
 
     const result = await model.generateContent(prompt);
     const text = result.response.text().trim();
-    
+
     // Clean up markdown formatting if any
-    const jsonText = text.replace(/^```[a-z]*\n?/i, "").replace(/```$/i, "").trim();
+    const jsonText = text
+      .replace(/^```[a-z]*\n?/i, "")
+      .replace(/```$/i, "")
+      .trim();
     const parsed = JSON.parse(jsonText);
-    
+
     if (Array.isArray(parsed)) {
-      return parsed.map(t => ({
+      return parsed.map((t) => ({
         ...t,
         prerequisiteId: sport.prerequisiteId,
-        prerequisiteName: sport.prerequisiteName
+        prerequisiteName: sport.prerequisiteName,
       }));
     }
     return fallbackExtraction(html, sport);
@@ -107,22 +112,24 @@ async function extractTournamentsWithAI(html: string, sport: any) {
 function fallbackExtraction(html: string, sport: any) {
   const scrapedTournaments: any[] = [];
   // Dummy logic: Extract basic rows from the mock HTML
-  const matches = html.match(/<div class="name">(.*?)<\/div>[\s\S]*?<div class="location">(.*?)<\/div>[\s\S]*?<div class="age">(.*?)<\/div>/g);
-  
+  const matches = html.match(
+    /<div class="name">(.*?)<\/div>[\s\S]*?<div class="location">(.*?)<\/div>[\s\S]*?<div class="age">(.*?)<\/div>/g,
+  );
+
   if (matches) {
-    matches.forEach(match => {
+    matches.forEach((match) => {
       const nameMatch = match.match(/<div class="name">(.*?)<\/div>/);
       const locMatch = match.match(/<div class="location">(.*?)<\/div>/);
       const ageMatch = match.match(/<div class="age">(.*?)<\/div>/);
-      
+
       if (nameMatch) {
         scrapedTournaments.push({
           name: nameMatch[1],
-          level: 'National',
-          description: `Official tournament held at ${locMatch ? locMatch[1] : 'TBD'}. Requires active ${sport.prerequisiteName}.`,
-          ageGroup: ageMatch ? ageMatch[1] : 'Open',
+          level: "National",
+          description: `Official tournament held at ${locMatch ? locMatch[1] : "TBD"}. Requires active ${sport.prerequisiteName}.`,
+          ageGroup: ageMatch ? ageMatch[1] : "Open",
           prerequisiteId: sport.prerequisiteId,
-          prerequisiteName: sport.prerequisiteName
+          prerequisiteName: sport.prerequisiteName,
         });
       }
     });
@@ -132,16 +139,21 @@ function fallbackExtraction(html: string, sport: any) {
 
 async function scrapeTournaments() {
   try {
-    console.log('Connecting to database...');
-    const dbUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/powermysport';
+    console.log("Connecting to database...");
+    const dbUri =
+      process.env.MONGO_URI ||
+      process.env.MONGODB_URI ||
+      "mongodb://localhost:27017/powermysport";
     await mongoose.connect(dbUri);
-    console.log('Connected to MongoDB.');
+    console.log("Connected to MongoDB.");
 
     // Query all existing pathways instead of hardcoded array
     const pathways = await SportPathway.find({}).lean();
-    
+
     if (!pathways || pathways.length === 0) {
-      console.warn("No sports pathways found in database. Please add a sport first.");
+      console.warn(
+        "No sports pathways found in database. Please add a sport first.",
+      );
       return;
     }
 
@@ -149,61 +161,73 @@ async function scrapeTournaments() {
       const sportName = pathway.sportName || pathway.sportSlug;
       // Infer governing body from the National Level (level 4) or fallback
       const nationalLevel = pathway.levels?.find((l: any) => l.level === 4);
-      const rawGoverningBody = nationalLevel?.governingBody || `${sportName} Federation`;
-      
+      const rawGoverningBody =
+        nationalLevel?.governingBody || `${sportName} Federation`;
+
       // Clean governing body name for Prerequisite ID
       // If it's a long name like "All India Tennis Association", extract acronym "AITA"
       let governingBody = rawGoverningBody;
-      const words = rawGoverningBody.split(' ');
+      const words = rawGoverningBody.split(" ");
       if (words.length > 2) {
-        governingBody = words.map((w: string) => w[0]).join('').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        governingBody = words
+          .map((w: string) => w[0])
+          .join("")
+          .replace(/[^a-zA-Z0-9]/g, "")
+          .toUpperCase();
       } else {
-        governingBody = words[0].replace(/[^a-zA-Z0-9]/g, '');
+        governingBody = words[0].replace(/[^a-zA-Z0-9]/g, "");
       }
-      
+
       const sport = {
         slug: pathway.sportSlug,
         name: sportName,
         governingBody: governingBody,
         prerequisiteId: `${governingBody.toUpperCase()}_ID`,
-        prerequisiteName: `${governingBody} Player ID`
+        prerequisiteName: `${governingBody} Player ID`,
       };
 
-      console.log(`\nFetching tournaments for ${sport.name} (${sport.governingBody})...`);
-      
+      console.log(
+        `\nFetching tournaments for ${sport.name} (${sport.governingBody})...`,
+      );
+
       const html = await fetchMockHtml(sport);
       const scrapedTournaments = await extractTournamentsWithAI(html, sport);
 
       if (scrapedTournaments.length > 0) {
-        console.log(`Scraped ${scrapedTournaments.length} tournaments for ${sport.name}. Updating database...`);
-        
+        console.log(
+          `Scraped ${scrapedTournaments.length} tournaments for ${sport.name}. Updating database...`,
+        );
+
         if (mongoose.connection.readyState === 1) {
           const pathway = await SportPathway.findOne({ sportSlug: sport.slug });
-          
+
           if (pathway) {
             pathway.tournaments = [
               ...scrapedTournaments,
-              ...pathway.tournaments.filter((t:any) => !t.name.includes(sport.governingBody)) 
+              ...pathway.tournaments.filter(
+                (t: any) => !t.name.includes(sport.governingBody),
+              ),
             ];
             await pathway.save();
             console.log(`Successfully updated ${sport.name} pathway.`);
           } else {
-            console.log(`${sport.name} pathway not found in database. Skipping.`);
+            console.log(
+              `${sport.name} pathway not found in database. Skipping.`,
+            );
           }
         } else {
-           console.log(`Dry run data for ${sport.name}:`, scrapedTournaments);
+          console.log(`Dry run data for ${sport.name}:`, scrapedTournaments);
         }
       } else {
         console.log(`No tournaments found for ${sport.name}.`);
       }
     }
-
   } catch (error) {
-    console.error('Error during scraping process:', error);
+    console.error("Error during scraping process:", error);
   } finally {
     if (mongoose.connection.readyState === 1) {
       await mongoose.disconnect();
-      console.log('\nDisconnected from database.');
+      console.log("\nDisconnected from database.");
     }
   }
 }

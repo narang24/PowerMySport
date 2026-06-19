@@ -44,9 +44,9 @@ const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 const configuredModelName = process.env.GEMINI_MODEL_NAME?.trim();
 const guidanceModelCandidates = [
   configuredModelName,
-  "gemini-3.1-pro",
-  "gemini-3.1-pro",
-  "gemini-3.1-pro-lite",
+  "gemini-2.0-flash",
+  "gemini-2.0-flash",
+  "gemini-2.0-flash-lite",
 ].filter((modelName): modelName is string => Boolean(modelName));
 
 const isModelUnavailableError = (errorMessage: string) =>

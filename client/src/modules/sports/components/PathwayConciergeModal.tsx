@@ -66,9 +66,13 @@ export function PathwayConciergeModal({
     }
   };
 
-  const documentChecklist = (item?.documentChecklist && item.documentChecklist.length > 0)
-    ? item.documentChecklist
-    : ["Proof of Age (Birth Certificate or Passport)", "Medical Fitness Certificate"];
+  const documentChecklist =
+    item?.documentChecklist && item.documentChecklist.length > 0
+      ? item.documentChecklist
+      : [
+          "Proof of Age (Birth Certificate or Passport)",
+          "Medical Fitness Certificate",
+        ];
 
   const handleUploadSubmit = async () => {
     // Check if all files are selected
@@ -83,7 +87,7 @@ export function PathwayConciergeModal({
     try {
       const uploadPromises = documentChecklist.map(async (docName: string) => {
         const file = uploadedFiles[docName];
-        
+
         // 1. Get Presigned URL
         const res = await axiosInstance.post("/concierge/presigned-url", {
           fileName: file.name,
@@ -127,71 +131,134 @@ export function PathwayConciergeModal({
 
   const unlockedContent = hasPrerequisite ? (
     <div className="space-y-4">
+      {/* Success banner */}
       <div className="flex items-start gap-3 rounded-xl bg-emerald-50 p-4 border border-emerald-100">
         <CheckCircle2 className="h-6 w-6 text-emerald-600 shrink-0" />
         <div>
           <h4 className="font-bold text-emerald-800">
-            Perfect! You are ready to apply.
+            You're ready to proceed!
           </h4>
           <p className="text-sm text-emerald-600 mt-1">
-            Here are the details you requested for {item.name}.
+            Here's everything you need for <strong>{item.name}</strong>.
           </p>
         </div>
       </div>
-      <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-3">
-        {item.level && (
-          <p className="text-sm text-slate-700">
-            <strong>Level:</strong> {item.level}
-          </p>
-        )}
-        {item.ageGroup && (
-          <p className="text-sm text-slate-700">
-            <strong>Age Group:</strong> {item.ageGroup}
-          </p>
-        )}
-        <p className="text-sm text-slate-700">
-          <strong>Registration Info:</strong> Check the official
-          website for the entry link.
+
+      {/* Meta fields */}
+      {(item.level || item.ageGroup) && (
+        <div className="flex flex-wrap gap-2">
+          {item.level && (
+            <span className="rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
+              Level: {item.level}
+            </span>
+          )}
+          {item.ageGroup && (
+            <span className="rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
+              Age Group: {item.ageGroup}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Registration / How to Apply steps */}
+      {item.prerequisiteGuide && item.prerequisiteGuide.length > 0 && (
+        <div className="rounded-xl border border-slate-200 bg-white p-5">
+          <h5 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+            How to Register / Apply
+          </h5>
+          <ol className="space-y-2.5">
+            {item.prerequisiteGuide.map((step: string, i: number) => (
+              <li key={i} className="flex items-start gap-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-700">
+                  {i + 1}
+                </span>
+                <span className="text-sm leading-relaxed text-slate-700">
+                  {step}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {/* Documents checklist */}
+      {item.documentChecklist && item.documentChecklist.length > 0 && (
+        <div className="rounded-xl border border-slate-200 bg-white p-5">
+          <h5 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+            Documents You'll Need
+          </h5>
+          <ul className="space-y-2">
+            {item.documentChecklist.map((doc: string, i: number) => (
+              <li key={i} className="flex items-start gap-2.5">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                <span className="text-sm text-slate-700">{doc}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Prerequisite reminder note */}
+      {prerequisiteName && (
+        <p className="rounded-lg bg-amber-50 border border-amber-100 px-4 py-2.5 text-xs text-amber-700">
+          💡 Remember to mention your <strong>{prerequisiteName}</strong> during
+          the application process.
         </p>
-        <p className="text-sm text-slate-700">
-          <strong>Notes:</strong> Please mention your {prerequisiteName} during
-          application.
-        </p>
-      </div>
+      )}
+
       <button
         onClick={onClose}
         className="w-full rounded-xl bg-slate-900 py-3.5 text-sm font-bold text-white shadow-md hover:bg-slate-800 transition-colors"
       >
-        Got it, thanks!
+        Got it, I'm ready!
       </button>
     </div>
   ) : (
     <div className="space-y-4">
+      {/* Success banner */}
       <div className="flex items-start gap-3 rounded-xl bg-emerald-50 p-4 border border-emerald-100">
         <CheckCircle2 className="h-6 w-6 text-emerald-600 shrink-0" />
         <div>
-          <h4 className="font-bold text-emerald-800">Awesome!</h4>
+          <h4 className="font-bold text-emerald-800">You're all set!</h4>
           <p className="text-sm text-emerald-600 mt-1">
-            Here is the detailed information for {item.name}.
+            Here's the full detail for <strong>{item.name}</strong>.
           </p>
         </div>
       </div>
-      <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-3">
-        {item.level && (
-          <p className="text-sm text-slate-700">
-            <strong>Level:</strong> {item.level}
-          </p>
-        )}
-        {item.ageGroup && (
-          <p className="text-sm text-slate-700">
-            <strong>Age Group:</strong> {item.ageGroup}
-          </p>
-        )}
-        <p className="text-sm text-slate-700">
-          <strong>Registration Info:</strong> Check the official website for
-          the entry link.
-        </p>
-      </div>
+
+      {/* Meta fields */}
+      {(item.level || item.ageGroup) && (
+        <div className="flex flex-wrap gap-2">
+          {item.level && (
+            <span className="rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
+              Level: {item.level}
+            </span>
+          )}
+          {item.ageGroup && (
+            <span className="rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600">
+              Age Group: {item.ageGroup}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Documents checklist */}
+      {item.documentChecklist && item.documentChecklist.length > 0 && (
+        <div className="rounded-xl border border-slate-200 bg-white p-5">
+          <h5 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+            Bring These Documents
+          </h5>
+          <ul className="space-y-2">
+            {item.documentChecklist.map((doc: string, i: number) => (
+              <li key={i} className="flex items-start gap-2.5">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                <span className="text-sm text-slate-700">{doc}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <button
         onClick={onClose}
         className="w-full rounded-xl bg-slate-900 py-3.5 text-sm font-bold text-white shadow-md hover:bg-slate-800 transition-colors"
@@ -210,39 +277,42 @@ export function PathwayConciergeModal({
             No problem! Let's get that sorted.
           </h4>
           <p className="text-sm text-amber-600 mt-1">
-            You cannot apply for this yet, but getting a{" "}
-            {prerequisiteName} is straightforward. Follow this general guide.
+            You cannot apply for this yet, but getting a {prerequisiteName} is
+            straightforward. Follow this general guide.
           </p>
         </div>
       </div>
       <div className="rounded-xl border border-slate-200 bg-white p-5">
         <ol className="list-decimal list-inside space-y-3 text-sm text-slate-700">
-            {item.prerequisiteGuide && item.prerequisiteGuide.length > 0 ? (
-              item.prerequisiteGuide.map((step: string, index: number) => (
-                <li key={index}>{step}</li>
-              ))
-            ) : type === "tournament" ? (
-              <>
-                <li>Visit the official governing body's registration portal.</li>
-                <li>Pay the annual registration fee.</li>
-                <li>Upload your child's birth certificate and medical fitness certificate.</li>
-                <li>Wait for the ID to be generated.</li>
-              </>
-            ) : type === "university" ? (
-              <>
-                <li>Visit the university's official admission portal.</li>
-                <li>Check the specific eligibility for the sports quota.</li>
-                <li>Gather your sports certificates and academic transcripts.</li>
-                <li>Submit the application before the deadline.</li>
-              </>
-            ) : (
-              <>
-                <li>Review the official guidelines for this scholarship.</li>
-                <li>Gather the necessary financial and sports certificates.</li>
-                <li>Submit your application through the provider's portal.</li>
-                <li>Wait for the review process to complete.</li>
-              </>
-            )}
+          {item.prerequisiteGuide && item.prerequisiteGuide.length > 0 ? (
+            item.prerequisiteGuide.map((step: string, index: number) => (
+              <li key={index}>{step}</li>
+            ))
+          ) : type === "tournament" ? (
+            <>
+              <li>Visit the official governing body's registration portal.</li>
+              <li>Pay the annual registration fee.</li>
+              <li>
+                Upload your child's birth certificate and medical fitness
+                certificate.
+              </li>
+              <li>Wait for the ID to be generated.</li>
+            </>
+          ) : type === "university" ? (
+            <>
+              <li>Visit the university's official admission portal.</li>
+              <li>Check the specific eligibility for the sports quota.</li>
+              <li>Gather your sports certificates and academic transcripts.</li>
+              <li>Submit the application before the deadline.</li>
+            </>
+          ) : (
+            <>
+              <li>Review the official guidelines for this scholarship.</li>
+              <li>Gather the necessary financial and sports certificates.</li>
+              <li>Submit your application through the provider's portal.</li>
+              <li>Wait for the review process to complete.</li>
+            </>
+          )}
         </ol>
       </div>
       <button
@@ -342,7 +412,7 @@ export function PathwayConciergeModal({
         You'll need those first!
       </h3>
       <p className="text-sm text-slate-600 leading-relaxed px-4">
-        Please procure the required documents ({documentChecklist.join(", ")}). 
+        Please procure the required documents ({documentChecklist.join(", ")}).
         Once you have them ready, come back here to continue your registration.
       </p>
       <button
@@ -390,7 +460,10 @@ export function PathwayConciergeModal({
                   onChange={(e) => {
                     const selectedFile = e.target.files?.[0];
                     if (selectedFile) {
-                      setUploadedFiles(prev => ({ ...prev, [docName]: selectedFile }));
+                      setUploadedFiles((prev) => ({
+                        ...prev,
+                        [docName]: selectedFile,
+                      }));
                     }
                   }}
                 />

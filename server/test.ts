@@ -7,7 +7,7 @@ const genAI = new GoogleGenerativeAI(
 );
 
 async function test() {
-  const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
   const prompt =
     'Is "Tennis" a real sport or athletic activity? Reply with only "yes" or "no".';
   const result = await model.generateContent(prompt);
