@@ -231,8 +231,8 @@ function HomeHero({
             }}
           >
             <Image
-              src="https://images.unsplash.com/photo-1763639700393-40dce26b6eb4?auto=format&fit=crop&w=1400&q=80"
-              alt="Two women help a toddler walk across yellow hurdles"
+              src="https://images.unsplash.com/photo-1526232761682-d26e03ac148e?fm=jpg&q=60&w=3000&auto=format&fit=crop"
+              alt="Young children practicing soccer on a turf field with a coach"
               fill
               priority
               sizes="(max-width: 1280px) 50vw, 680px"
@@ -243,7 +243,7 @@ function HomeHero({
           </motion.div>
 
           {/* Floating badge chip over the image */}
-          <motion.div
+          {/* <motion.div
             initial={{ opacity: 0, y: 16, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{
@@ -273,7 +273,7 @@ function HomeHero({
               <p className="text-xs font-bold text-slate-900">0% Commission</p>
               <p className="text-[10px] text-slate-500">On all bookings now</p>
             </div>
-          </motion.div>
+          </motion.div> */}
 
           {/* Live badge top right */}
           <motion.div

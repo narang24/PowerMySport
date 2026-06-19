@@ -19,6 +19,12 @@ export interface PlayerDocument extends Document {
     amount: number;
     date: Date;
   }>;
+  pathwayState?: {
+    satisfiedPrerequisites?: string[];
+    currentGpa?: number;
+    targetDivision?: string;
+    graduationYear?: number;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,6 +91,12 @@ const playerSchema = new Schema<PlayerDocument>(
         date: Date,
       },
     ],
+    pathwayState: {
+      satisfiedPrerequisites: { type: [String], default: [] },
+      currentGpa: { type: Number, min: 0, max: 4.0 },
+      targetDivision: { type: String },
+      graduationYear: { type: Number },
+    },
   },
   { timestamps: true }
 );

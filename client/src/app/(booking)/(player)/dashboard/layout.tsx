@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { authApi } from "@/modules/auth/services/auth";
 import { useAuthStore } from "@/modules/auth/store/authStore";
@@ -63,6 +63,12 @@ export default function DashboardLayout({
       href: "/dashboard/my-bookings",
       label: "My Bookings",
       icon: Calendar,
+      section: "Activity",
+    },
+    {
+      href: "/dashboard/concierge-requests",
+      label: "Concierge Requests",
+      icon: Users, // Or a better icon if imported, maybe FileText
       section: "Activity",
     },
     {

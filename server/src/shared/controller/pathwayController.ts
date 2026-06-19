@@ -10,7 +10,7 @@ export const getPathway = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { sport } = req.query;
+    const { sport, age, city } = req.query;
 
     if (!sport || typeof sport !== "string" || sport.trim().length < 2) {
       res.status(400).json({
@@ -20,7 +20,16 @@ export const getPathway = async (
       return;
     }
 
-    const result = await pathwayService.getOrGeneratePathway(sport.trim());
+    const childAge =
+      age && typeof age === "string" ? parseInt(age, 10) : undefined;
+    const childCity =
+      city && typeof city === "string" ? city.trim() : undefined;
+
+    const result = await pathwayService.getOrGeneratePathway(
+      sport.trim(),
+      !isNaN(childAge as number) ? childAge : undefined,
+      childCity,
+    );
 
     if (result.source === "not_a_sport") {
       res.status(404).json({

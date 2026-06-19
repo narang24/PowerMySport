@@ -10,6 +10,7 @@ import {
   PathwayLevel,
 } from "@/modules/sports/services/pathway";
 import { sportsApi, Sport } from "@/modules/sports/services/sports";
+import { PathwayConciergeModal } from "@/modules/sports/components/PathwayConciergeModal";
 import Fuse from "fuse.js";
 import { motion, Variants, AnimatePresence } from "framer-motion";
 import {
@@ -561,6 +562,7 @@ function PathwayExplorerSection() {
     | "equipment"
     | "careers"
   >("pathway");
+  const [modalData, setModalData] = useState<{ item: any; type: "tournament" | "scholarship" | "university" } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Fetch all sports on mount
@@ -612,8 +614,8 @@ function PathwayExplorerSection() {
         );
         setStatus("error");
       }
-    } catch {
-      setErrorMsg("Something went wrong. Please try again.");
+    } catch (err: any) {
+      setErrorMsg(err.message || "Something went wrong. Please try again.");
       setStatus("error");
     }
   };
@@ -1121,11 +1123,12 @@ function PathwayExplorerSection() {
                       result.pathway.tournaments.map((t: any, i: number) => (
                         <div
                           key={i}
-                          className="flex flex-col justify-between rounded-2xl border border-slate-200/60 bg-white/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-orange-200 group"
+                          onClick={() => setModalData({ item: t, type: "tournament" })}
+                          className="flex flex-col justify-between rounded-2xl border border-slate-200/60 bg-white/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-power-orange hover:ring-1 hover:ring-power-orange group cursor-pointer"
                         >
                           <div>
                             <div className="mb-3 flex items-start justify-between gap-2">
-                              <h3 className="font-title font-bold text-slate-800 break-words">
+                              <h3 className="font-title font-bold text-slate-800 break-words group-hover:text-power-orange transition-colors">
                                 {t.name}
                               </h3>
                               <span className="shrink-0 max-w-[50%] truncate rounded-full bg-orange-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-power-orange">
@@ -1136,9 +1139,14 @@ function PathwayExplorerSection() {
                               {t.description}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2 border-t border-slate-100 pt-3 text-xs font-semibold text-slate-500">
-                            <Users className="h-4 w-4 text-slate-400 shrink-0" />
-                            <span className="truncate">{t.ageGroup}</span>
+                          <div className="flex items-center justify-between border-t border-slate-100 pt-3 gap-2">
+                            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 min-w-0 flex-1">
+                              <Users className="h-4 w-4 text-slate-400 shrink-0" />
+                              <span className="truncate">{t.ageGroup}</span>
+                            </div>
+                            <span className="text-xs font-bold text-power-orange flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 whitespace-nowrap">
+                              View Details <ArrowRight className="h-3 w-3" />
+                            </span>
                           </div>
                         </div>
                       ))
@@ -1163,7 +1171,8 @@ function PathwayExplorerSection() {
                       result.pathway.scholarships.map((s: any, i: number) => (
                         <div
                           key={i}
-                          className="flex flex-col rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white/60 to-slate-50/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-emerald-200"
+                          onClick={() => setModalData({ item: s, type: "scholarship" })}
+                          className="flex flex-col rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white/60 to-slate-50/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-emerald-200 group cursor-pointer"
                         >
                           <div className="mb-4 flex items-center gap-3">
                             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 shadow-inner">
@@ -1181,16 +1190,21 @@ function PathwayExplorerSection() {
                           <p className="text-sm text-slate-600 leading-relaxed mb-4 flex-1">
                             {s.description}
                           </p>
-                          <div className="mt-auto border-t border-slate-100 pt-4">
-                            <div className="flex items-center gap-1.5 mb-1.5">
-                              <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">
-                                Eligibility
-                              </span>
+                          <div className="mt-auto border-t border-slate-100 pt-4 flex items-center justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <CheckCircle className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">
+                                  Eligibility
+                                </span>
+                              </div>
+                              <p className="text-sm font-medium text-slate-700 leading-relaxed truncate">
+                                {s.eligibility}
+                              </p>
                             </div>
-                            <p className="text-sm font-medium text-slate-700 leading-relaxed">
-                              {s.eligibility}
-                            </p>
+                            <span className="text-xs font-bold text-emerald-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 whitespace-nowrap">
+                              View Details <ArrowRight className="h-3 w-3" />
+                            </span>
                           </div>
                         </div>
                       ))
@@ -1215,7 +1229,8 @@ function PathwayExplorerSection() {
                       result.pathway.universities.map((u: any, i: number) => (
                         <div
                           key={i}
-                          className="flex flex-col rounded-2xl border border-slate-200/60 bg-white/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-indigo-200"
+                          onClick={() => setModalData({ item: u, type: "university" })}
+                          className="flex flex-col rounded-2xl border border-slate-200/60 bg-white/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-indigo-200 group cursor-pointer"
                         >
                           <div className="mb-4 flex items-center gap-3">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
@@ -1248,6 +1263,11 @@ function PathwayExplorerSection() {
                                 {u.sportsQuotaDetails}
                               </p>
                             </div>
+                          </div>
+                          <div className="mt-4 border-t border-slate-100 pt-3 flex items-center justify-end">
+                            <span className="text-xs font-bold text-indigo-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 whitespace-nowrap">
+                              View Details <ArrowRight className="h-3 w-3" />
+                            </span>
                           </div>
                         </div>
                       ))
@@ -1360,6 +1380,15 @@ function PathwayExplorerSection() {
             </motion.div>
           )}
         </AnimatePresence>
+        
+        {modalData && (
+          <PathwayConciergeModal 
+            isOpen={!!modalData} 
+            onClose={() => setModalData(null)} 
+            item={modalData.item} 
+            type={modalData.type} 
+          />
+        )}
       </div>
     </section>
   );

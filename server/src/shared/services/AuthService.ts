@@ -459,6 +459,12 @@ export interface UpdateProfilePayload {
     primaryObjective?: "Recreational" | "Health" | "Social" | "Competitive";
     weeklyTimeCommitment?: number;
     budgetTier?: "Budget" | "Moderate" | "Premium";
+    pathwayState?: {
+      satisfiedPrerequisites?: string[];
+      currentGpa?: string;
+      targetDivision?: string;
+      graduationYear?: number;
+    };
   };
 }
 
@@ -510,6 +516,11 @@ export const updateProfile = async (
     if (payload.playerProfile.primaryObjective) selfPlayer.primaryObjective = payload.playerProfile.primaryObjective;
     if (payload.playerProfile.weeklyTimeCommitment !== undefined) selfPlayer.weeklyTimeCommitment = payload.playerProfile.weeklyTimeCommitment;
     if (payload.playerProfile.budgetTier) selfPlayer.budgetTier = payload.playerProfile.budgetTier;
+    
+    if (payload.playerProfile.pathwayState) {
+      if (!selfPlayer.pathwayState) selfPlayer.pathwayState = {};
+      Object.assign(selfPlayer.pathwayState, payload.playerProfile.pathwayState);
+    }
     
     await selfPlayer.save();
   }

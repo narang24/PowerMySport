@@ -18,6 +18,10 @@ export interface Tournament {
   level: string;
   description: string;
   ageGroup: string;
+  prerequisiteId?: string;
+  prerequisiteName?: string;
+  prerequisiteGuide?: string[];
+  documentChecklist?: string[];
 }
 
 export interface Scholarship {
@@ -25,6 +29,10 @@ export interface Scholarship {
   provider: string;
   description: string;
   eligibility: string;
+  prerequisiteId?: string;
+  prerequisiteName?: string;
+  prerequisiteGuide?: string[];
+  documentChecklist?: string[];
 }
 
 export interface University {
@@ -32,6 +40,10 @@ export interface University {
   location: string;
   admissionCriteria: string;
   sportsQuotaDetails: string;
+  prerequisiteId?: string;
+  prerequisiteName?: string;
+  prerequisiteGuide?: string[];
+  documentChecklist?: string[];
 }
 
 export interface Equipment {
@@ -51,6 +63,8 @@ export interface SportPathwayDocument extends Document {
   sportSlug: string;
   /** Display name, e.g. "Cricket" */
   sportName: string;
+  /** Composite cache key: sportSlug_age_city e.g. "cricket_12_ludhiana" */
+  cacheKey?: string;
   /** Category the AI determined */
   category?: string;
   /** Short intro for the sport pathway */
@@ -91,6 +105,10 @@ const tournamentSchema = new Schema<Tournament>(
     level: { type: String, required: true },
     description: { type: String, required: true },
     ageGroup: { type: String, required: true },
+    prerequisiteId: { type: String },
+    prerequisiteName: { type: String },
+    prerequisiteGuide: [{ type: String }],
+    documentChecklist: [{ type: String }],
   },
   { _id: false },
 );
@@ -101,6 +119,10 @@ const scholarshipSchema = new Schema<Scholarship>(
     provider: { type: String, required: true },
     description: { type: String, required: true },
     eligibility: { type: String, required: true },
+    prerequisiteId: { type: String },
+    prerequisiteName: { type: String },
+    prerequisiteGuide: [{ type: String }],
+    documentChecklist: [{ type: String }],
   },
   { _id: false },
 );
@@ -111,6 +133,10 @@ const universitySchema = new Schema<University>(
     location: { type: String, required: true },
     admissionCriteria: { type: String, required: true },
     sportsQuotaDetails: { type: String, required: true },
+    prerequisiteId: { type: String },
+    prerequisiteName: { type: String },
+    prerequisiteGuide: [{ type: String }],
+    documentChecklist: [{ type: String }],
   },
   { _id: false },
 );
@@ -138,11 +164,14 @@ const sportPathwaySchema = new Schema<SportPathwayDocument>(
     sportSlug: {
       type: String,
       required: true,
-      unique: true,
+      // NOTE: unique index removed to allow per-age/city variants of the same sport.
+      // Run migration: db.sportpathways.dropIndex("sportSlug_1") in production.
       lowercase: true,
       index: true,
     },
     sportName: { type: String, required: true, trim: true },
+    // Composite cache key: sportSlug_age_city — unique per age+city combo
+    cacheKey: { type: String, index: true, sparse: true },
     category: { type: String, default: "Other" },
     overview: { type: String, default: "" },
     levels: [pathwayLevelSchema],

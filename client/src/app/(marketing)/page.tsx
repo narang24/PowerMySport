@@ -1,6 +1,6 @@
 "use client";
-import { useAuthStore } from "@/modules/auth/store/authStore";
 import { getCommunityAppUrl } from "@/lib/community/url";
+import { useAuthStore } from "@/modules/auth/store/authStore";
 import { getDashboardPathByRole } from "@/utils/roleDashboard";
 
 import { CTA } from "@/modules/marketing/components/marketing/CTA";
@@ -9,26 +9,23 @@ import {
   Features,
 } from "@/modules/marketing/components/marketing/Features";
 import { Hero } from "@/modules/marketing/components/marketing/Hero";
-import { Testimonials } from "@/modules/marketing/components/marketing/Testimonials";
 import { SectionLabel } from "@/modules/marketing/components/marketing/SectionLabel";
-import { Button } from "@/modules/shared/ui/Button";
+import { Testimonials } from "@/modules/marketing/components/marketing/Testimonials";
 import {
+  ArrowRight,
   Building2,
   Check,
   GraduationCap,
-  TicketPercent,
   Trophy,
   User as UserIcon,
   Users,
   Users2,
-  Zap,
-  ArrowRight,
+  Zap
 } from "lucide-react";
 
-import Script from "next/script";
-import Link from "next/link";
-import Image from "next/image";
 import { motion, Variants } from "framer-motion";
+import Image from "next/image";
+import Link from "next/link";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://powermysport.com";
 
@@ -180,25 +177,23 @@ export default function HomePage() {
 
   return (
     <main>
-      <Script
+      <script
         id="organization-jsonld"
         type="application/ld+json"
-        strategy="afterInteractive"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
       />
-      <Script
+      <script
         id="website-jsonld"
         type="application/ld+json"
-        strategy="afterInteractive"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
       />
 
       {/* ── Hero ── */}
       <Hero
         variant="home"
-        title="Stop Juggling Apps. Manage Your Kids' Sports in One Place."
+        title="Your child's gateway to a dream sports career"
         subtitle="Built for Busy Parents"
-        description="PowerMySport is a sports guidance platform for parents that helps you understand, plan, and execute your child's athletic journey. All this with the help of experts on call."
+        description="PowerMySport is a sports guidance platform for parents that helps you understand, plan, and execute your child's sports journey. All this with the help of experts on call."
         primaryCTA={
           user?.role === "VENUE_LISTER"
             ? { label: "Manage Venues", href: "/venue-lister/inventory" }
@@ -372,7 +367,8 @@ export default function HomePage() {
                 variants={itemVariants}
                 className="mb-10 text-lg text-slate-600"
               >
-                Follow these simple steps to set up your child's athletic journey and get personalised recommendations.
+                Follow these simple steps to set up your child's sports journey
+                and get personalised recommendations.
               </motion.p>
 
               <motion.div variants={sectionVariants} className="space-y-4">

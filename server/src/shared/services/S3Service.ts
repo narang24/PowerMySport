@@ -378,6 +378,68 @@ export class S3Service {
     };
   }
 
+  /**
+   * Generate presigned upload URL for concierge documents (birth certs, medical certs)
+   * @param fileName - Original file name
+   * @param contentType - MIME type for document
+   * @param userId - User ID for folder organization
+   * @param documentType - Type of document (e.g. BIRTH_CERTIFICATE, MEDICAL_CERTIFICATE)
+   * @returns Presigned URL and metadata
+   */
+  async generateConciergeDocumentUploadUrl(
+    fileName: string,
+    contentType: string,
+    userId: string,
+    documentType: string
+  ): Promise<UploadUrlResponse> {
+    const fileExtension = fileName.split(".").pop();
+    const cleanDocType = documentType.toLowerCase().replace(/[^a-z0-9]/g, "_");
+    const sanitizedFileName = `${cleanDocType}_${Date.now()}.${fileExtension}`;
+    const key = `concierge/${userId}/${sanitizedFileName}`;
+
+    const putCommand = new PutObjectCommand({
+      Bucket: this.documentsBucket,
+      Key: key,
+      ContentType: contentType,
+    });
+
+    const uploadUrl = await getSignedUrl(this.s3Client, putCommand, {
+      expiresIn: 3600, // 1 hour
+    });
+
+    // Generate presigned download URL for private bucket
+    const getCommand = new GetObjectCommand({
+      Bucket: this.documentsBucket,
+      Key: key,
+    });
+
+    const downloadUrl = await getSignedUrl(this.s3Client, getCommand, {
+      expiresIn: 604800, // 7 days
+    });
+
+    return {
+      uploadUrl,
+      downloadUrl,
+      fileName: sanitizedFileName,
+      key,
+    };
+  }
+
+  /**
+   * Generate presigned download URL for a concierge document
+   * @param key - The S3 key of the document
+   * @returns Presigned download URL (valid for 1 hour)
+   */
+  async generateConciergeDocumentDownloadUrl(key: string): Promise<string> {
+    const getCommand = new GetObjectCommand({
+      Bucket: this.documentsBucket,
+      Key: key,
+    });
+
+    return await getSignedUrl(this.s3Client, getCommand, {
+      expiresIn: 3600, // 1 hour
+    });
+  }
 
   /**
    * Generate a presigned POST for secure chat image uploads.

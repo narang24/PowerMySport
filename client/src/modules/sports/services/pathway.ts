@@ -81,10 +81,15 @@ export const pathwayApi = {
    */
   getPathway: async (
     sportName: string,
+    childAge?: number,
+    childCity?: string,
   ): Promise<{ pathway: SportPathway; source: "db" | "generated" } | null> => {
     try {
+      const params = new URLSearchParams({ sport: sportName });
+      if (childAge) params.append("age", String(childAge));
+      if (childCity) params.append("city", childCity.trim());
       const resp = await axiosInstance.get<ApiResponse<SportPathway>>(
-        `/pathways?sport=${encodeURIComponent(sportName)}`,
+        `/pathways?${params.toString()}`,
       );
       if (resp.data.success && resp.data.data) {
         return {
@@ -93,10 +98,10 @@ export const pathwayApi = {
         };
       }
       return null;
-    } catch (err: unknown) {
-      // 404 = not a sport — surface that distinction
-      if ((err as { response?: { status?: number } })?.response?.status === 404)
-        return null;
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        throw new Error(err.response.data?.message || "Not found");
+      }
       throw err;
     }
   },

@@ -1,15 +1,15 @@
 import { Sport, SportDocument } from "../models/Sport";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 export class SportsService {
-  private genAI: GoogleGenerativeAI | null = null;
+  private genAI: GoogleGenAI | null = null;
 
   constructor() {
     if (GEMINI_API_KEY) {
       try {
-        this.genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        this.genAI = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
         console.log("✅ Gemini API initialized successfully");
       } catch (error) {
         console.error("❌ Failed to initialize Gemini API:", error);
@@ -65,10 +65,6 @@ export class SportsService {
     }
 
     try {
-      const model = this.genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
-      });
-
       const prompt = `You are a sports expert. Determine if the following is a real sport or athletic activity that can be taught or coached.
 
 Sport name: "${sportName}"
@@ -83,8 +79,11 @@ Examples of valid sports: Cricket, Football, Badminton, Tennis, Yoga, CrossFit, 
 Examples of invalid: "xyz123", "not a sport", nonsensical words`;
 
       console.log(`🔍 Verifying sport: "${sportName}"`);
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const result = await this.genAI.models.generateContent({
+        model: "gemma-4-31b-it",
+        contents: prompt,
+      });
+      const text = result.text ?? "";
 
       console.log(`✅ Gemini response: ${text}`);
 
