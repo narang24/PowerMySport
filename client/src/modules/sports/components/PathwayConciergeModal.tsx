@@ -9,7 +9,7 @@ import {
   Loader2,
   UploadCloud,
 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import axiosInstance from "@/lib/api/axios";
 
 interface PathwayConciergeModalProps {
@@ -17,6 +17,7 @@ interface PathwayConciergeModalProps {
   onClose: () => void;
   item: any;
   type: "tournament" | "scholarship" | "university";
+  satisfiedPrerequisites?: string[];
 }
 
 export function PathwayConciergeModal({
@@ -24,6 +25,7 @@ export function PathwayConciergeModal({
   onClose,
   item,
   type,
+  satisfiedPrerequisites = [],
 }: PathwayConciergeModalProps) {
   const [step, setStep] = useState<
     | "question"
@@ -36,6 +38,24 @@ export function PathwayConciergeModal({
     | "guide"
   >("question");
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, File>>({});
+  const [reminderSent, setReminderSent] = useState(false);
+  const [reminderLoading, setReminderLoading] = useState(false);
+  const [uploadError, setUploadError] = useState<string>("");
+
+  // FIX 7: auto-skip question if prerequisite already satisfied
+  useEffect(() => {
+    if (
+      isOpen &&
+      item?.prerequisiteId &&
+      satisfiedPrerequisites.includes(item.prerequisiteId)
+    ) {
+      setStep("unlocked");
+    }
+    if (!isOpen) {
+      setStep("question");
+      setUploadError("");
+    }
+  }, [isOpen]);
 
   if (!isOpen || !item) return null;
 
@@ -74,11 +94,29 @@ export function PathwayConciergeModal({
           "Medical Fitness Certificate",
         ];
 
+  const handleReminder = async () => {
+    setReminderLoading(true);
+    try {
+      await axiosInstance.post("/reminders", {
+        type: "PATHWAY_DOCUMENT_REMINDER",
+        itemName: item.name,
+        itemType: type,
+        daysFromNow: 7,
+      });
+      setReminderSent(true);
+    } catch {
+      // Silent fail — non-critical action, just hide the button
+      setReminderSent(true);
+    } finally {
+      setReminderLoading(false);
+    }
+  };
+
   const handleUploadSubmit = async () => {
     // Check if all files are selected
     for (const doc of documentChecklist) {
       if (!uploadedFiles[doc]) {
-        alert(`Please upload the required document: ${doc}`);
+        setUploadError(`Please upload the required document: ${doc}`);
         return;
       }
     }
@@ -124,13 +162,21 @@ export function PathwayConciergeModal({
       setStep("success");
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("An error occurred while uploading. Please try again.");
+      setUploadError("An error occurred while uploading. Please try again.");
       setStep("upload");
     }
   };
 
   const unlockedContent = hasPrerequisite ? (
     <div className="space-y-4">
+      {/* Back navigation */}
+      <button
+        onClick={() => setStep("question")}
+        className="text-sm text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-1"
+      >
+        ← Go back
+      </button>
+
       {/* Success banner */}
       <div className="flex items-start gap-3 rounded-xl bg-emerald-50 p-4 border border-emerald-100">
         <CheckCircle2 className="h-6 w-6 text-emerald-600 shrink-0" />
@@ -215,6 +261,14 @@ export function PathwayConciergeModal({
     </div>
   ) : (
     <div className="space-y-4">
+      {/* Back navigation */}
+      <button
+        onClick={() => setStep("question")}
+        className="text-sm text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-1"
+      >
+        ← Go back
+      </button>
+
       {/* Success banner */}
       <div className="flex items-start gap-3 rounded-xl bg-emerald-50 p-4 border border-emerald-100">
         <CheckCircle2 className="h-6 w-6 text-emerald-600 shrink-0" />
@@ -270,6 +324,14 @@ export function PathwayConciergeModal({
 
   const guideContent = hasPrerequisite ? (
     <div className="space-y-4">
+      {/* Back navigation */}
+      <button
+        onClick={() => setStep("question")}
+        className="text-sm text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-1"
+      >
+        ← Go back
+      </button>
+
       <div className="flex items-start gap-3 rounded-xl bg-amber-50 p-4 border border-amber-100">
         <ShieldAlert className="h-6 w-6 text-amber-600 shrink-0" />
         <div>
@@ -324,6 +386,14 @@ export function PathwayConciergeModal({
     </div>
   ) : (
     <div className="space-y-4">
+      {/* Back navigation */}
+      <button
+        onClick={() => setStep("question")}
+        className="text-sm text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-1"
+      >
+        ← Go back
+      </button>
+
       <div className="flex items-start gap-3 rounded-xl bg-amber-50 p-4 border border-amber-100">
         <ShieldAlert className="h-6 w-6 text-amber-600 shrink-0" />
         <div>
@@ -369,6 +439,14 @@ export function PathwayConciergeModal({
 
   const docCheckContent = (
     <div className="space-y-6">
+      {/* Back navigation */}
+      <button
+        onClick={() => setStep("question")}
+        className="text-sm text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-1"
+      >
+        ← Go back
+      </button>
+
       <div className="flex gap-4">
         <div className="h-10 w-10 shrink-0 rounded-full bg-orange-100 flex items-center justify-center">
           <Sparkles className="h-5 w-5 text-power-orange" />
@@ -404,28 +482,93 @@ export function PathwayConciergeModal({
   );
 
   const noDocsContent = (
-    <div className="space-y-5 text-center py-4">
-      <div className="mx-auto h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-        <ShieldAlert className="h-8 w-8 text-slate-400" />
+    <div className="space-y-4">
+      {/* Back navigation */}
+      <button
+        onClick={() => setStep(hasPrerequisite ? "doc_check" : "question")}
+        className="text-sm text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-1"
+      >
+        ← Go back
+      </button>
+
+      {/* Header */}
+      <div className="flex items-start gap-3 rounded-xl bg-amber-50 p-4 border border-amber-100">
+        <ShieldAlert className="h-6 w-6 text-amber-500 shrink-0 mt-0.5" />
+        <div>
+          <h3 className="font-bold text-amber-800">
+            You'll need these documents first.
+          </h3>
+          <p className="text-sm text-amber-700 mt-1">
+            Gather them and come back — we'll be right here.
+          </p>
+        </div>
       </div>
-      <h3 className="font-bold text-slate-800 text-lg">
-        You'll need those first!
-      </h3>
-      <p className="text-sm text-slate-600 leading-relaxed px-4">
-        Please procure the required documents ({documentChecklist.join(", ")}).
-        Once you have them ready, come back here to continue your registration.
-      </p>
+
+      {/* Document checklist */}
+      <div className="rounded-xl border border-slate-200 bg-white p-5">
+        <h5 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-500">
+          Required Documents
+        </h5>
+        <ul className="space-y-2.5">
+          {documentChecklist.map((doc: string, i: number) => (
+            <li key={i} className="flex items-start gap-2.5">
+              <div className="mt-0.5 h-4 w-4 shrink-0 rounded border-2 border-slate-300" />
+              <span className="text-sm text-slate-700">{doc}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Reminder button */}
+      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-slate-700">
+            Want a reminder?
+          </p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            We'll ping you in 7 days to check if you're ready.
+          </p>
+        </div>
+        {reminderSent ? (
+          <span className="shrink-0 flex items-center gap-1.5 rounded-lg bg-emerald-100 border border-emerald-200 px-3 py-1.5 text-xs font-semibold text-emerald-700">
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            Reminder set!
+          </span>
+        ) : (
+          <button
+            onClick={handleReminder}
+            disabled={reminderLoading}
+            className="shrink-0 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
+          >
+            {reminderLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+            Remind me in 7 days
+          </button>
+        )}
+      </div>
+
+      {/* Close */}
       <button
         onClick={onClose}
-        className="w-full max-w-[200px] mt-4 rounded-xl bg-slate-900 py-3 text-sm font-bold text-white shadow hover:bg-slate-800 transition-colors"
+        className="w-full rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
       >
-        Sounds good
+        Close
       </button>
     </div>
   );
 
   const uploadContent = (
     <div className="space-y-6">
+      {/* Back navigation */}
+      <button
+        onClick={() => {
+          setUploadError("");
+          setStep("doc_check");
+        }}
+        className="text-sm text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-1"
+      >
+        ← Go back
+      </button>
+
       <div className="flex gap-4">
         <div className="h-10 w-10 shrink-0 rounded-full bg-orange-100 flex items-center justify-center">
           <Sparkles className="h-5 w-5 text-power-orange" />
@@ -464,6 +607,7 @@ export function PathwayConciergeModal({
                         ...prev,
                         [docName]: selectedFile,
                       }));
+                      setUploadError("");
                     }
                   }}
                 />
@@ -472,6 +616,13 @@ export function PathwayConciergeModal({
           );
         })}
       </div>
+
+      {/* Inline upload error — FIX 5 */}
+      {uploadError && (
+        <p className="text-sm text-red-600 bg-red-50 rounded-lg p-3 border border-red-100">
+          {uploadError}
+        </p>
+      )}
 
       <button
         onClick={handleUploadSubmit}
@@ -521,6 +672,31 @@ export function PathwayConciergeModal({
     </div>
   );
 
+  // FIX 4: progress dot computation
+  const getProgressDots = (): { current: number; total: number } | null => {
+    if (step === "loading") return null;
+    if (hasPrerequisite) {
+      const map: Record<string, number> = {
+        question: 0,
+        unlocked: 1,
+        doc_check: 1,
+        no_docs: 1,
+        upload: 2,
+        success: 3,
+      };
+      return { current: map[step] ?? 0, total: 4 };
+    } else {
+      const map: Record<string, number> = {
+        question: 0,
+        guide: 1,
+        unlocked: 1,
+      };
+      return { current: map[step] ?? 0, total: 2 };
+    }
+  };
+
+  const progressDots = getProgressDots();
+
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
@@ -542,14 +718,29 @@ export function PathwayConciergeModal({
           <div className="bg-gradient-to-r from-power-orange to-amber-500 p-5 text-white flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-amber-200" />
-              <h3 className="font-bold font-title">AI Pathway Concierge</h3>
+              <h3 className="font-bold font-title">Sports Pathway Guide</h3>
             </div>
-            <button
-              onClick={onClose}
-              className="rounded-full bg-white/20 p-1.5 hover:bg-white/30 transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-3">
+              {/* FIX 4: progress dots */}
+              {progressDots && (
+                <div className="flex items-center gap-1.5">
+                  {Array.from({ length: progressDots.total }).map((_, i) => (
+                    <div
+                      key={i}
+                      className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
+                        i === progressDots.current ? "bg-white" : "bg-white/30"
+                      }`}
+                    />
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={onClose}
+                className="rounded-full bg-white/20 p-1.5 hover:bg-white/30 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
           </div>
 
           <div className="p-6 sm:p-8">

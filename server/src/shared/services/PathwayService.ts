@@ -8,11 +8,27 @@ function toSlug(name: string): string {
   return name.trim().toLowerCase().replace(/\s+/g, "-");
 }
 
+function normalizeCity(city?: string): string {
+  if (!city) return "";
+  return city.trim().toLowerCase().replace(/\s+/g, "-");
+}
+
 // ─── Prompt ───────────────────────────────────────────────────────────────────
 
-function buildPathwayPrompt(sportName: string): string {
-  return `You are an expert Indian sports development consultant advising an average Indian parent. Generate a detailed, highly actionable, and realistic sports development pathway for their child in "${sportName}" within India. The tone should be encouraging, deeply rooted in the Indian sports ecosystem, and easy for a parent without a sports background to understand.
+function buildPathwayPrompt(
+  sportName: string,
+  childAge?: number,
+  childCity?: string,
+): string {
+  const ageContext = childAge
+    ? `The parent's child is ${childAge} years old.`
+    : "";
+  const cityContext = childCity
+    ? `The family is based in ${childCity.trim()}, India.`
+    : "";
 
+  return `You are an expert Indian sports development consultant advising an average Indian parent. Generate a detailed, highly actionable, and realistic sports development pathway for their child in "${sportName}" within India. The tone should be encouraging, deeply rooted in the Indian sports ecosystem, and easy for a parent without a sports background to understand.
+${ageContext ? `\n${ageContext}` : ""}${cityContext ? `\n${cityContext}` : ""}
 Return ONLY a valid JSON object (no markdown, no code fences) with this exact structure:
 {
   "sportName": "Proper name of the sport",
@@ -128,7 +144,11 @@ Return ONLY a valid JSON object (no markdown, no code fences) with this exact st
   ]
 }
 
-Make all content specific to India's sports ecosystem, governing bodies, and actual competitions. Focus on giving parents practical advice and clear expectations. Be accurate and informative.`;
+Make all content specific to India's sports ecosystem, governing bodies, and actual competitions. Focus on giving parents practical advice and clear expectations. Be accurate and informative.
+
+If a child's age was provided, only include tournaments and scholarship entries relevant to that age group. For the pathway levels array, lead the "steps" of the most age-appropriate level with the most actionable next step for a child of that age — but always include all 5 levels in the output.
+
+If a city was provided, make the "steps" arrays within each level mention local or regional resources where possible — for example, state sports authority centres, local federation bodies, or well-known academies in or near that city. For the universities array, prioritise universities in the same state as the city provided.`;
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────
@@ -147,7 +167,11 @@ export class PathwayService {
   /**
    * Main entry point: get pathway from DB or generate + cache it.
    */
-  async getOrGeneratePathway(sportName: string): Promise<{
+  async getOrGeneratePathway(
+    sportName: string,
+    childAge?: number,
+    childCity?: string,
+  ): Promise<{
     pathway: SportPathwayDocument | null;
     source: "db" | "generated" | "not_a_sport";
     message?: string;
@@ -155,8 +179,6 @@ export class PathwayService {
     let slug = toSlug(sportName);
 
     // ── 1. Validate with existing Sport collection FIRST ───────────────────
-    //    If the sport is already in our DB (verified), skip Gemini validation
-    //    and enforce its proper capitalization and consistent slug.
     const knownSport = await Sport.findOne({ slug });
     console.log(
       `[PathwayService] getOrGeneratePathway for ${sportName} - slug: ${slug}, knownSport:`,
@@ -166,15 +188,14 @@ export class PathwayService {
     const finalSportName = knownSport ? knownSport.name : sportName;
     slug = knownSport ? knownSport.slug : slug;
 
-    // ── 2. Check cache ─────────────────────────────────────────────────────
-    const existing = await SportPathway.findOne({ sportSlug: slug });
+    // ── 2. Build composite cache key ───────────────────────────────────────
+    const cacheKey = `${slug}_${childAge ?? "any"}_${normalizeCity(childCity)}`;
+
+    // ── 3. Check cache by cacheKey ─────────────────────────────────────────
+    const existing = await SportPathway.findOne({ cacheKey });
     if (existing) {
-      console.log(`[PathwayService] Cache hit for ${slug}`);
-      // Bump lookup count (fire-and-forget)
-      SportPathway.updateOne(
-        { sportSlug: slug },
-        { $inc: { lookupCount: 1 } },
-      ).exec();
+      console.log(`[PathwayService] Cache hit for ${cacheKey}`);
+      SportPathway.updateOne({ cacheKey }, { $inc: { lookupCount: 1 } }).exec();
       return { pathway: existing, source: "db" };
     }
 
@@ -195,7 +216,11 @@ export class PathwayService {
     }
 
     // ── 4. Generate pathway with Gemini ────────────────────────────────────
-    const generated = await this.generatePathway(finalSportName);
+    const generated = await this.generatePathway(
+      finalSportName,
+      childAge,
+      childCity,
+    );
     if (!generated) {
       return {
         pathway: null,
@@ -206,14 +231,13 @@ export class PathwayService {
 
     // ── 5. Store in DB ─────────────────────────────────────────────────────
     if (knownSport) {
-      // Force name and category consistency if we generated from a known sport
       generated.sportName = knownSport.name;
       if (knownSport.category && knownSport.category !== "Other") {
         generated.category = knownSport.category;
       }
     }
 
-    const saved = await this.savePathway(slug, generated);
+    const saved = await this.savePathway(slug, cacheKey, generated);
     return { pathway: saved, source: "generated" };
   }
 
@@ -245,7 +269,7 @@ export class PathwayService {
         return answer.startsWith("yes");
       } catch (err) {
         console.warn(
-          "[PathwayService] Gemini validation failed, falling back to OpenAI if available.",
+          "[PathwayService] Gemini validation failed, falling back.",
           err,
         );
       }
@@ -254,7 +278,11 @@ export class PathwayService {
     return true; // Fail open — generate anyway if API fails
   }
 
-  private async generatePathway(sportName: string): Promise<{
+  private async generatePathway(
+    sportName: string,
+    childAge?: number,
+    childCity?: string,
+  ): Promise<{
     sportName: string;
     category: string;
     overview: string;
@@ -315,7 +343,8 @@ export class PathwayService {
     const modelCandidates = [
       process.env.GEMINI_MODEL_NAME,
       "gemini-2.0-flash",
-      "gemini-2.0-flash",
+      "gemini-1.5-flash-latest",
+      "gemini-1.5-flash",
     ].filter(Boolean) as string[];
 
     for (const modelName of modelCandidates) {
@@ -329,7 +358,7 @@ export class PathwayService {
         });
 
         const result = await model.generateContent(
-          buildPathwayPrompt(sportName),
+          buildPathwayPrompt(sportName, childAge, childCity),
         );
         const text = result.response.text().trim();
 
@@ -366,6 +395,7 @@ export class PathwayService {
 
   private async savePathway(
     slug: string,
+    cacheKey: string,
     data: {
       sportName: string;
       category: string;
@@ -390,6 +420,7 @@ export class PathwayService {
   ): Promise<SportPathwayDocument> {
     const docData = {
       sportSlug: slug,
+      cacheKey,
       sportName: data.sportName || slug,
       category: data.category || "Other",
       overview: data.overview || "",
@@ -403,7 +434,7 @@ export class PathwayService {
     };
 
     const saved = await SportPathway.findOneAndUpdate(
-      { sportSlug: slug },
+      { cacheKey },
       {
         $setOnInsert: docData,
         $inc: { lookupCount: 1 },

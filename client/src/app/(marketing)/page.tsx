@@ -1,819 +1,1769 @@
 "use client";
-import { useAuthStore } from "@/modules/auth/store/authStore";
-import { getCommunityAppUrl } from "@/lib/community/url";
-import { getDashboardPathByRole } from "@/utils/roleDashboard";
 
 import { CTA } from "@/modules/marketing/components/marketing/CTA";
-import {
-  FeatureIcons,
-  Features,
-} from "@/modules/marketing/components/marketing/Features";
 import { Hero } from "@/modules/marketing/components/marketing/Hero";
-import { Testimonials } from "@/modules/marketing/components/marketing/Testimonials";
 import { SectionLabel } from "@/modules/marketing/components/marketing/SectionLabel";
-import { Button } from "@/modules/shared/ui/Button";
+import { getCommunityAppUrl } from "@/lib/community/url";
 import {
-  Building2,
-  Check,
-  GraduationCap,
-  TicketPercent,
+  pathwayApi,
+  SportPathway,
+  PathwayLevel,
+} from "@/modules/sports/services/pathway";
+import { sportsApi, Sport } from "@/modules/sports/services/sports";
+import { PathwayConciergeModal } from "@/modules/sports/components/PathwayConciergeModal";
+import Fuse from "fuse.js";
+import { motion, Variants, AnimatePresence } from "framer-motion";
+import {
   Trophy,
-  User as UserIcon,
-  Users,
-  Users2,
-  Zap,
+  Target,
+  Star,
+  Globe,
+  MapPin,
+  Award,
+  Flame,
+  Dumbbell,
+  Swords,
+  Bike,
+  Waves,
+  ChevronDown,
   ArrowRight,
+  Shield,
+  Medal,
+  Zap,
+  Flag,
+  Users,
+  TrendingUp,
+  CheckCircle,
+  Search,
+  Loader2,
+  Sparkles,
+  Database,
+  X,
+  Wallet,
+  Clock,
+  Map,
+  HeartHandshake,
+  GraduationCap,
+  Landmark,
+  Compass,
+  ShoppingBag,
+  Briefcase,
 } from "lucide-react";
-
-import Script from "next/script";
 import Link from "next/link";
-import Image from "next/image";
-import { motion, Variants } from "framer-motion";
+import { useState, useRef, useEffect, useCallback } from "react";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://powermysport.com";
+// ─── Design Tokens ────────────────────────────────────────────────────────────
 
-// ─── Motion variants ──────────────────────────────────────────────────────────
+const SPRING_STIFF = { type: "spring", stiffness: 260, damping: 22 } as const;
+const SPRING_SOFT = { type: "spring", stiffness: 200, damping: 28 } as const;
 
-const sectionVariants: Variants = {
+// ─── Motion Variants ──────────────────────────────────────────────────────────
+
+const orchestrator: Variants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.1, delayChildren: 0.08 } },
+  show: { transition: { staggerChildren: 0.1, delayChildren: 0.06 } },
 };
 
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 24 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { type: "spring", stiffness: 270, damping: 22 },
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 28 },
+  show: { opacity: 1, y: 0, transition: SPRING_STIFF },
+};
+
+const cardReveal: Variants = {
+  hidden: { opacity: 0, y: 32, scale: 0.96 },
+  show: { opacity: 1, y: 0, scale: 1, transition: SPRING_STIFF },
+};
+
+const scaleIn: Variants = {
+  hidden: { opacity: 0, scale: 0.88 },
+  show: { opacity: 1, scale: 1, transition: SPRING_SOFT },
+};
+
+// ─── Pathway Levels ───────────────────────────────────────────────────────────
+
+const pathwayLevels = [
+  {
+    id: "grassroots",
+    level: 1,
+    label: "Grassroots",
+    title: "Neighbourhood & Club Level",
+    description:
+      "Every sporting legend starts here. Grassroots sport focuses on participation, fun, and building fundamental movement skills. Local clubs, school sport, and community programs form the foundation of every athlete's journey.",
+    icon: <MapPin className="h-6 w-6" />,
+    color: "from-emerald-500 to-teal-500",
+    bgLight: "from-emerald-50 to-teal-50",
+    border: "border-emerald-200",
+    accent: "text-emerald-600",
+    badge: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    glowColor: "bg-emerald-400/10",
+    steps: [
+      "Join a local club or school sports program",
+      "Learn the basics under structured coaching",
+      "Participate in intra-school or club competitions",
+      "Build fitness, teamwork, and sports IQ",
+    ],
+    keyFocus: "Participation & Fundamentals",
+    ageRange: "5 – 14 years",
+    competitions: "School meets, local clubs, area leagues",
+    parentalCommitment: {
+      time: "2-3 days a week",
+      financial: "Low (Basic gear & club fees)",
+      travel: "Local neighbourhood only",
+      role: "Cheerleader & Chauffeur",
+    },
+  },
+  {
+    id: "district",
+    level: 2,
+    label: "District",
+    title: "District & Zonal Level",
+    description:
+      "Talented players step up to compete across their district. Selection trials, zonal tournaments, and inter-district championships mark this level. Specialised coaching becomes crucial and consistent training schedules are essential.",
+    icon: <Shield className="h-6 w-6" />,
+    color: "from-blue-500 to-indigo-500",
+    bgLight: "from-blue-50 to-indigo-50",
+    border: "border-blue-200",
+    accent: "text-blue-600",
+    badge: "bg-blue-100 text-blue-700 border-blue-200",
+    glowColor: "bg-blue-400/10",
+    steps: [
+      "Attend district-level selection trials",
+      "Train under district coaches 5–6 days/week",
+      "Compete in inter-district & zonal championships",
+      "Obtain a Sports Authority registration ID",
+    ],
+    keyFocus: "Technical Skills & Competition",
+    ageRange: "12 – 18 years",
+    competitions: "District championships, Zonal leagues, Sub-junior meets",
+    parentalCommitment: {
+      time: "4-6 days a week",
+      financial: "Moderate (Coaching fees, kit, district travel)",
+      travel: "Inter-district & regional",
+      role: "Schedule Manager & Motivator",
+    },
+  },
+  {
+    id: "state",
+    level: 3,
+    label: "State",
+    title: "State Level",
+    description:
+      "Representing your state is a milestone of serious athletic achievement. State-level athletes train at dedicated academies, receive structured coaching support, and compete in national-qualifying tournaments.",
+    icon: <Flag className="h-6 w-6" />,
+    color: "from-violet-500 to-purple-600",
+    bgLight: "from-violet-50 to-purple-50",
+    border: "border-violet-200",
+    accent: "text-violet-600",
+    badge: "bg-violet-100 text-violet-700 border-violet-200",
+    glowColor: "bg-violet-400/10",
+    steps: [
+      "Pass state selection / qualifying trials",
+      "Enrol in a state sports academy or SAI programme",
+      "Represent your state in national-level meets",
+      "Build a competition portfolio & ranking",
+    ],
+    keyFocus: "Performance & State Representation",
+    ageRange: "14 – 22 years",
+    competitions: "State championships, National-qualifying meets, SAF Games",
+    parentalCommitment: {
+      time: "Daily training, often twice a day",
+      financial: "High (Academy fees, specialized gear, state travel)",
+      travel: "State-wide & some national",
+      role: "Financial Sponsor & Emotional Anchor",
+    },
+  },
+  {
+    id: "national",
+    level: 4,
+    label: "National",
+    title: "National Level",
+    description:
+      "The pinnacle of domestic sport. National-level athletes compete in premier domestic leagues, national championships, and attract selection for international squads. This requires full-time athletic commitment, elite coaching, and sports science support.",
+    icon: <Trophy className="h-6 w-6" />,
+    color: "from-orange-500 to-amber-500",
+    bgLight: "from-orange-50 to-amber-50",
+    border: "border-orange-200",
+    accent: "text-orange-600",
+    badge: "bg-orange-100 text-orange-700 border-orange-200",
+    glowColor: "bg-orange-400/10",
+    steps: [
+      "Clear national selection trials / ranking cutoff",
+      "Join a national academy or elite sports programme",
+      "Compete in National Games, Senior Nationals",
+      "Get access to SAI nutrition & physio support",
+    ],
+    keyFocus: "Elite Performance & National Ranking",
+    ageRange: "16 – 30+ years",
+    competitions: "National Games, Senior Nationals, Premier League",
+    parentalCommitment: {
+      time: "Full-time athletic commitment",
+      financial: "Very High (Nutrition, physio, elite camps)",
+      travel: "Extensive national travel",
+      role: "Support Team Coordinator",
+    },
+  },
+  {
+    id: "international",
+    level: 5,
+    label: "International",
+    title: "International Level",
+    description:
+      "Representing India on the world stage — the ultimate goal. International athletes compete at the Asian Games, Commonwealth Games, World Championships, and the Olympics. Sustained excellence, peak conditioning, and mental fortitude separate the world's best.",
+    icon: <Globe className="h-6 w-6" />,
+    color: "from-rose-500 to-pink-600",
+    bgLight: "from-rose-50 to-pink-50",
+    border: "border-rose-200",
+    accent: "text-rose-600",
+    badge: "bg-rose-100 text-rose-700 border-rose-200",
+    glowColor: "bg-rose-400/10",
+    steps: [
+      "Achieve top national ranking / merit selection",
+      "Train under a national coaching programme (NIS/SAI)",
+      "Compete in continental & world-level events",
+      "Pursue Olympic / Paralympic qualification",
+    ],
+    keyFocus: "World-Class Excellence & Olympic Pathway",
+    ageRange: "18 – 35 years",
+    competitions: "Asian Games, CWG, World Championships, Olympics",
+    parentalCommitment: {
+      time: "Life centers around the sport",
+      financial: "Sponsorships usually take over",
+      travel: "Global",
+      role: "Trusted Advisor & Biggest Fan",
+    },
+  },
+];
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function AmbientBlob({ className }: { className: string }) {
+  return (
+    <div
+      aria-hidden
+      className={`pointer-events-none absolute rounded-full blur-3xl will-change-transform ${className}`}
+    />
+  );
+}
+
+// ─── Search result level icons ────────────────────────────────────────────────
+
+const levelIconMap: Record<number, React.ReactNode> = {
+  1: <MapPin className="h-5 w-5" />,
+  2: <Shield className="h-5 w-5" />,
+  3: <Flag className="h-5 w-5" />,
+  4: <Trophy className="h-5 w-5" />,
+  5: <Globe className="h-5 w-5" />,
+};
+
+const levelColorMap: Record<
+  number,
+  { gradient: string; bg: string; border: string; text: string; badge: string }
+> = {
+  1: {
+    gradient: "from-emerald-500 to-teal-500",
+    bg: "from-emerald-50 to-teal-50",
+    border: "border-emerald-200",
+    text: "text-emerald-600",
+    badge: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  },
+  2: {
+    gradient: "from-blue-500 to-indigo-500",
+    bg: "from-blue-50 to-indigo-50",
+    border: "border-blue-200",
+    text: "text-blue-600",
+    badge: "bg-blue-100 text-blue-700 border-blue-200",
+  },
+  3: {
+    gradient: "from-violet-500 to-purple-600",
+    bg: "from-violet-50 to-purple-50",
+    border: "border-violet-200",
+    text: "text-violet-600",
+    badge: "bg-violet-100 text-violet-700 border-violet-200",
+  },
+  4: {
+    gradient: "from-orange-500 to-amber-500",
+    bg: "from-orange-50 to-amber-50",
+    border: "border-orange-200",
+    text: "text-orange-600",
+    badge: "bg-orange-100 text-orange-700 border-orange-200",
+  },
+  5: {
+    gradient: "from-rose-500 to-pink-600",
+    bg: "from-rose-50 to-pink-50",
+    border: "border-rose-200",
+    text: "text-rose-600",
+    badge: "bg-rose-100 text-rose-700 border-rose-200",
   },
 };
 
-const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 28, scale: 0.97 },
-  show: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { type: "spring", stiffness: 260, damping: 22 },
-  },
-};
+// ─── Dynamic pathway level card ────────────────────────────────────────────────
 
-export default function HomePage() {
-  const { user } = useAuthStore();
-  const communityUrl = getCommunityAppUrl();
+function PathwayLevelCard({
+  level,
+  isActive,
+  onClick,
+}: {
+  level: any;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  const colors = levelColorMap[level.level] ?? levelColorMap[1];
+  return (
+    <motion.button
+      variants={cardReveal}
+      onClick={onClick}
+      whileHover={{ y: -3, scale: 1.02 }}
+      transition={SPRING_STIFF}
+      className={`group relative w-full overflow-hidden rounded-2xl border p-4 text-left transition-all duration-300 will-change-transform ${
+        isActive
+          ? `bg-gradient-to-br ${colors.bg} ${colors.border} shadow-lg`
+          : "border-white/70 bg-white/80 backdrop-blur-sm hover:border-white/90 hover:bg-white/90 premium-shadow"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${colors.gradient} text-white shadow-md transition-transform duration-300 group-hover:scale-110`}
+        >
+          {levelIconMap[level.level]}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p
+            className={`text-[10px] font-bold uppercase tracking-widest ${colors.text}`}
+          >
+            Level {level.level}
+          </p>
+          <p className="font-bold text-slate-900 truncate text-sm">
+            {level.label}
+          </p>
+          <p className="text-xs text-slate-500 truncate">{level.keyFocus}</p>
+        </div>
+        <motion.div
+          animate={{ rotate: isActive ? 180 : 0 }}
+          transition={{ duration: 0.22 }}
+          className={`shrink-0 lg:hidden ${colors.text}`}
+        >
+          <ChevronDown className="h-4 w-4" />
+        </motion.div>
+      </div>
+    </motion.button>
+  );
+}
 
-  const organizationSchema = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    name: "PowerMySport",
-    url: siteUrl,
-    logo: `${siteUrl}/icon.svg`,
-    sameAs: [],
-  };
+// ─── Dynamic pathway detail ────────────────────────────────────────────────────
 
-  const websiteSchema = {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    name: "PowerMySport",
-    url: siteUrl,
-    potentialAction: {
-      "@type": "SearchAction",
-      target: `${siteUrl}/venues?search={search_term_string}`,
-      "query-input": "required name=search_term_string",
-    },
-  };
-
-  const features = [
-    {
-      label: "Scattered schedules",
-      title: "Everything in One Place",
-      description:
-        "Manage all your kids' sessions, coach chats, and venue bookings from a single dashboard. No more switching between WhatsApp groups and calendar apps.",
-      icon: <Users2 className="h-6 w-6" />,
-    },
-    {
-      label: "Unreliable coaches",
-      title: "Tested & Trusted Coaches",
-      description:
-        "Don't guess who is training your child. Read real, verified feedback from other parents in your city before you book any coach.",
-      icon: <GraduationCap className="h-6 w-6" />,
-    },
-    {
-      label: "Endless phone calls",
-      title: "Book Venues Instantly",
-      description:
-        "Find and secure top-rated local sports venues instantly. No phone calls, no waiting for confirmations.",
-      icon: <Zap className="h-6 w-6" />,
-    },
-    {
-      label: "Hidden costs & surprise fees",
-      title: "100% Transparent Pricing",
-      description:
-        "Compare costs upfront. Pay securely through the platform with a full breakdown—zero hidden charges.",
-      icon: FeatureIcons.Shield,
-    },
-    {
-      label: "Missed sessions & last-minute changes",
-      title: "Never Miss a Session",
-      description:
-        "Get instant notifications the moment a coach reschedules a session or a venue updates its availability.",
-      icon: FeatureIcons.Lightning,
-    },
-    {
-      label: "Guessing the right sport",
-      title: "Smart Sports Plans",
-      description:
-        "Not sure which sport fits your child best? Our AI creates a personalised plan based on your child's age, interests, and goals.",
-      icon: <Trophy className="h-6 w-6" />,
-    },
-  ];
-
-  const communityFeatures = [
-    {
-      title: "Talk to Other Parents",
-      description:
-        "Get recommendations from parents in your city who have already sent their kids to specific venues and coaches.",
-      icon: FeatureIcons.Users,
-    },
-    {
-      title: "Read Honest Reviews",
-      description:
-        "See what other parents are saying about coach quality, training style, and whether a venue is safe.",
-      icon: FeatureIcons.Star,
-    },
-    {
-      title: "Help from Real People",
-      description:
-        "Stop relying on guesswork. Use real community advice to pick the right sport, coach, and venue.",
-      icon: FeatureIcons.Calendar,
-    },
-  ];
-
-  const testimonials = [
-    {
-      quote:
-        "Before PowerMySport I was juggling three WhatsApp groups, two spreadsheets, and constant phone calls just to manage my kids' cricket and badminton training. Now I handle everything from one screen in minutes.",
-      author: "Anjali Patel",
-      role: "Mother of 2 · Cricket & Badminton",
-      rating: 5,
-    },
-    {
-      quote:
-        "I was really nervous about hiring a coach online  you never know who you're trusting with your child. Reading detailed parent reviews on PowerMySport gave me the confidence to book. Best decision we made.",
-      author: "Meera Krishnan",
-      role: "Parent · Bengaluru",
-      rating: 5,
-    },
-    {
-      quote:
-        "My son wanted to try four different sports before we figured out swimming was his thing. The AI roadmap actually helped me understand what suited his age and temperament. Saved us months of trial and error.",
-      author: "Rohit Malhotra",
-      role: "Father of 1 · Swimming",
-      rating: 5,
-    },
-  ];
-
-  const getDashboardLink = () => {
-    if (!user) return "/register?role=PLAYER";
-    return getDashboardPathByRole(user.role);
-  };
+function PathwayLevelDetail({
+  level,
+  sportName,
+}: {
+  level: any;
+  sportName?: string;
+}) {
+  const colors = levelColorMap[level.level] ?? levelColorMap[1];
+  const commitment = (level as any).parentalCommitment ||
+    pathwayLevels.find((l) => l.level === level.level)?.parentalCommitment || {
+      time: "Varies",
+      financial: "Varies",
+      travel: "Varies",
+      role: "Supportive Parent",
+    };
 
   return (
-    <main>
-      <script
-        id="organization-jsonld"
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
-      />
-      <script
-        id="website-jsonld"
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
-      />
-
-      {/* ── Hero ── */}
-      <Hero
-        variant="home"
-        title="Your child's gateway to a dream sports career"
-        subtitle="Built for Busy Parents"
-        description="PowerMySport is a sports guidance platform for parents that helps you understand, plan, and execute your child's sports journey. All this with the help of experts on call."
-        primaryCTA={
-          user?.role === "VENUE_LISTER"
-            ? { label: "Manage Venues", href: "/venue-lister/inventory" }
-            : {
-                label: user ? "Go to Dashboard" : "Build a Sports Plan",
-                href: getDashboardLink(),
-              }
-        }
-        secondaryCTA={{
-          label: "Explore the Community",
-          href: communityUrl,
-        }}
-        gradient
-      />
-
-      {/* ── Features ── */}
-      <Features
-        title="Real Solutions for Real Parenting Frustrations"
-        subtitle="Why Parents Choose Us"
-        description="We know how hard it is to manage youth sports. We built PowerMySport to solve the exact problems that make sports logistics a headache."
-        features={features}
-        columns={3}
-        variant="centered"
-      />
-
-      {/* ── Community Features ── */}
-      <Features
-        title="Don't Guess. Ask the Parents Who Know."
-        subtitle="Parent-to-Parent Support"
-        description="Connect with local parents who have already navigated the sports landscape. Get honest recommendations on the best coaches, safest venues, and right programs for your child's age group."
-        features={communityFeatures}
-        columns={3}
-        variant="centered"
-      />
-
-      {/* ── How It Works ── */}
-      <section className="relative py-16 sm:py-20 lg:py-24">
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute left-1/2 top-0 h-72 w-full -translate-x-1/2 bg-gradient-to-b from-orange-50/40 to-transparent" />
+    <motion.div
+      key={level.level}
+      initial={{ opacity: 0, y: 18, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -10, scale: 0.98 }}
+      transition={SPRING_STIFF}
+      className={`relative flex-1 flex flex-col overflow-hidden rounded-3xl border bg-gradient-to-br ${colors.bg} ${colors.border} p-5 sm:p-6 lg:p-8 shadow-xl`}
+    >
+      <div className="flex items-start gap-3 sm:gap-5 mb-6">
+        <div
+          className={`flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${colors.gradient} text-white shadow-lg`}
+        >
+          {levelIconMap[level.level]}
         </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-2 mb-1">
+            <span
+              className={`inline-block max-w-full break-words rounded-full border px-3 py-0.5 text-xs font-bold uppercase tracking-widest ${colors.badge}`}
+            >
+              Level {level.level}
+            </span>
+            <span
+              className={`inline-block max-w-full break-words rounded-full border px-3 py-0.5 text-xs font-semibold ${colors.badge}`}
+            >
+              {level.ageRange}
+            </span>
+            {level.governingBody && (
+              <span className="inline-block max-w-full break-words rounded-full border border-slate-200 bg-slate-100 px-3 py-0.5 text-xs font-semibold text-slate-600">
+                {level.governingBody}
+              </span>
+            )}
+          </div>
+          <h3 className="text-lg sm:text-xl font-bold text-slate-900 lg:text-2xl break-words">
+            {level.title}
+          </h3>
+        </div>
+      </div>
+      <p className="mb-6 text-sm leading-relaxed text-slate-600">
+        {level.description}
+      </p>
 
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <motion.div
-            variants={sectionVariants}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-80px" }}
-            className="mb-12 text-center sm:mb-16"
-          >
-            <motion.div
-              variants={itemVariants}
-              className="mb-4 flex justify-center"
+      {/* Parent's Corner */}
+      <div
+        className={
+          "mb-8 rounded-2xl border bg-white/90 p-4 sm:p-6 " +
+          colors.border +
+          " shadow-sm backdrop-blur-md transition-all duration-300 hover:shadow-md"
+        }
+      >
+        <h4 className="mb-5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-800">
+          <HeartHandshake className={"h-5 w-5 " + colors.text} />
+          Parent's Corner
+        </h4>
+        <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2">
+          <div className="flex items-start gap-3">
+            <div
+              className={
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow " +
+                colors.gradient
+              }
             >
-              <SectionLabel label="Simple Process" color="orange" />
-            </motion.div>
-            <motion.h2
-              variants={itemVariants}
-              className="font-title mb-4 text-3xl font-bold text-slate-900 sm:text-4xl lg:text-5xl"
-            >
-              Up and Running in 3 Steps
-            </motion.h2>
-            <motion.p
-              variants={itemVariants}
-              className="text-lg text-slate-600"
-            >
-              Get personalised AI guidance and community support before you book
-              your child's first session
-            </motion.p>
-          </motion.div>
-
-          {/* Steps grid with SVG connecting line */}
-          <div className="relative">
-            {/* Dashed connector line (desktop only) */}
-            <div className="pointer-events-none absolute inset-0 hidden lg:flex items-center justify-center">
-              <svg
-                viewBox="0 0 800 40"
-                className="w-full max-w-2xl"
-                aria-hidden
-              >
-                <motion.line
-                  x1="80"
-                  y1="20"
-                  x2="720"
-                  y2="20"
-                  stroke="rgba(233,115,22,0.3)"
-                  strokeWidth="2"
-                  strokeDasharray="6 6"
-                  initial={{ pathLength: 0 }}
-                  whileInView={{ pathLength: 1 }}
-                  viewport={{ once: true, margin: "-80px" }}
-                  transition={{ duration: 1.2, ease: "easeInOut", delay: 0.3 }}
-                />
-              </svg>
+              <Clock className="h-4 w-4" />
             </div>
-
-            <motion.div
-              variants={sectionVariants}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, margin: "-80px" }}
-              className="grid grid-cols-1 gap-8 md:grid-cols-3"
+            <div className="flex-1 min-w-0">
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                Time Investment
+              </p>
+              <p className="text-sm font-semibold text-slate-800">
+                {commitment.time}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div
+              className={
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow " +
+                colors.gradient
+              }
             >
-              {[
-                {
-                  step: 1,
-                  title: "Add Your Child's Profile",
-                  desc: "Tell us your child's age, sports interests, and how many hours a week they can commit. Takes 2 minutes.",
-                },
-                {
-                  step: 2,
-                  title: "Get an AI Sports Roadmap",
-                  desc: "Our AI generates a customised sports roadmap  which sports suit your child, which coaches to look for, and what to prioritise.",
-                },
-                {
-                  step: 3,
-                  title: "Ask & Book with Confidence",
-                  desc: "Validate your plan with other parents in the community, then book a vetted coach or venue in a few taps.",
-                },
-              ].map(({ step, title, desc }) => (
-                <motion.div
-                  key={step}
-                  variants={cardVariants}
-                  whileHover={{ y: -6, scale: 1.015 }}
-                  transition={{ type: "spring", stiffness: 280, damping: 20 }}
-                  className="group relative rounded-2xl border border-white/70 bg-white/80 p-8 text-center backdrop-blur-sm premium-shadow will-change-transform hover:border-white/90 hover:bg-white/90"
-                >
-                  <motion.div
-                    className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-power-orange text-2xl font-bold text-white shadow-[0_6px_24px_-4px_rgba(233,115,22,0.45)]"
-                    whileHover={{ scale: 1.12, rotate: 3 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 16 }}
-                  >
-                    {step}
-                  </motion.div>
-                  <h3 className="mb-3 text-lg font-bold text-slate-900">
-                    {title}
-                  </h3>
-                  <p className="text-sm leading-relaxed text-slate-600">
-                    {desc}
-                  </p>
-                </motion.div>
-              ))}
-            </motion.div>
+              <Wallet className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                Financial Impact
+              </p>
+              <p className="text-sm font-semibold text-slate-800">
+                {commitment.financial}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div
+              className={
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow " +
+                colors.gradient
+              }
+            >
+              <Map className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                Travel
+              </p>
+              <p className="text-sm font-semibold text-slate-800">
+                {commitment.travel}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div
+              className={
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow " +
+                colors.gradient
+              }
+            >
+              <Compass className="h-4 w-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                Your Role
+              </p>
+              <p className="text-sm font-semibold text-slate-800">
+                {commitment.role}
+              </p>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* ── Parent Section: Split with clipped image ── */}
-      <section className="relative overflow-hidden py-16 sm:py-20 lg:py-24">
-        <div className="pointer-events-none absolute -left-32 top-1/4 h-80 w-80 rounded-full bg-indigo-100/30 blur-3xl" />
-        <div className="pointer-events-none absolute -right-32 bottom-1/4 h-80 w-80 rounded-full bg-amber-100/25 blur-3xl" />
+      <div className="mb-6 mt-6 lg:mt-auto">
+        <h4 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500">
+          <TrendingUp className="h-3.5 w-3.5" />
+          Key Objectives
+        </h4>
+        <ul className="space-y-2">
+          {level.steps.map((step: string, i: number) => (
+            <li key={i} className="flex items-start gap-2.5">
+              <CheckCircle
+                className={"mt-0.5 h-4 w-4 shrink-0 " + colors.text}
+              />
+              <span className="flex-1 min-w-0 text-sm leading-relaxed text-slate-700">
+                {step}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
 
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid items-center gap-12 lg:grid-cols-[1fr_1fr]">
-            {/* Left: Cards */}
-            <motion.div
-              variants={sectionVariants}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, margin: "-100px" }}
-            >
-              <motion.div variants={itemVariants} className="mb-3">
-                <SectionLabel label="Get Started" color="blue" />
-              </motion.div>
-              <motion.h2
-                variants={itemVariants}
-                className="font-title mb-4 text-3xl font-bold text-slate-900 sm:text-4xl lg:text-5xl"
-              >
-                Build your child&apos;s Sports Plan
-              </motion.h2>
-              <motion.p
-                variants={itemVariants}
-                className="mb-10 text-lg text-slate-600"
-              >
-                Follow these simple steps to set up your child's sports journey
-                and get personalised recommendations.
-              </motion.p>
+      {/* Actionable CTAs */}
+      <div className="mt-2 flex flex-col sm:flex-row gap-3">
+        <Link
+          href={`${getCommunityAppUrl()}/discover?tab=COMMUNITIES`}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white shadow-sm transition-all hover:opacity-90 bg-gradient-to-r ${colors.gradient}`}
+        >
+          <Users className="h-4 w-4" />
+          Find Local Communities
+        </Link>
+        <Link
+          href={`${getCommunityAppUrl()}/discover?tab=COACHES`}
+          className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50"
+        >
+          <Trophy className="h-4 w-4" />
+          Find Coaches
+        </Link>
+      </div>
+    </motion.div>
+  );
+}
 
-              <motion.div variants={sectionVariants} className="space-y-4">
-                {[
-                  {
-                    icon: <UserIcon size={22} />,
-                    title: "Create Profile",
-                    desc: "Set up your child's profile with their details and sports interests to get started.",
-                    color: "bg-indigo-100 text-indigo-600",
-                  },
-                  {
-                    icon: <Trophy size={22} />,
-                    title: "Build Customised Plans",
-                    desc: "Build customised plans for the selected sport tailored specifically to your child.",
-                    color: "bg-orange-100 text-power-orange",
-                  },
-                  {
-                    icon: <Zap size={22} />,
-                    title: "Get Recommendations",
-                    desc: "Get recommendation to start coaching / Book Trial session.",
-                    color: "bg-emerald-100 text-emerald-600",
-                  },
-                  {
-                    icon: <Users size={22} />,
-                    title: "Need Assistance?",
-                    desc: "Need assistance to build a sports plan? Reach out to our community or experts.",
-                    color: "bg-blue-100 text-blue-600",
-                  },
-                ].map((item) => (
-                  <motion.div
-                    key={item.title}
-                    variants={cardVariants}
-                    whileHover={{ y: -4, scale: 1.01 }}
-                    transition={{ type: "spring", stiffness: 280, damping: 20 }}
-                    className="flex items-start gap-4 rounded-2xl border border-white/70 bg-white/80 p-5 backdrop-blur-sm premium-shadow will-change-transform"
-                  >
-                    <div
-                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${item.color}`}
-                    >
-                      {item.icon}
-                    </div>
-                    <div>
-                      <h3 className="mb-1 font-bold text-slate-900">
-                        {item.title}
-                      </h3>
-                      <p className="text-sm leading-relaxed text-slate-600">
-                        {item.desc}
-                      </p>
-                    </div>
-                  </motion.div>
-                ))}
-              </motion.div>
-            </motion.div>
+// ─── Sport search section ──────────────────────────────────────────────────────
 
-            {/* Right: Clipped image */}
-            <motion.div
-              initial={{ opacity: 0, x: 40, scale: 0.96 }}
-              whileInView={{ opacity: 1, x: 0, scale: 1 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{
-                type: "spring",
-                stiffness: 200,
-                damping: 26,
-                delay: 0.15,
-              }}
-              className="relative hidden h-[520px] lg:block"
-            >
-              {/* Glow behind */}
-              <div className="absolute inset-4 rounded-3xl bg-gradient-to-br from-indigo-400/15 via-transparent to-orange-400/10 blur-2xl" />
-              {/* Geometric accent */}
-              <svg
-                viewBox="0 0 200 200"
-                className="pointer-events-none absolute -left-6 -top-6 h-40 w-40 opacity-50"
+function PathwayExplorerSection() {
+  const [query, setQuery] = useState("");
+  const [allSports, setAllSports] = useState<Sport[]>([]);
+  const [fuse, setFuse] = useState<Fuse<Sport> | null>(null);
+  const [suggestions, setSuggestions] = useState<Sport[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
+  const [result, setResult] = useState<{
+    pathway: SportPathway;
+    source: "db" | "generated";
+  } | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [activeTab, setActiveTab] = useState<
+    | "pathway"
+    | "tournaments"
+    | "scholarships"
+    | "universities"
+    | "equipment"
+    | "careers"
+  >("pathway");
+  const [modalData, setModalData] = useState<{
+    item: any;
+    type: "tournament" | "scholarship" | "university";
+  } | null>(null);
+  const [childAge, setChildAge] = useState<number | null>(null);
+  const [childCity, setChildCity] = useState<string>("");
+  const [showProfileStep, setShowProfileStep] = useState(false);
+  const [pendingSport, setPendingSport] = useState<string>("");
+  const [profileError, setProfileError] = useState<string>("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch all sports on mount
+  useEffect(() => {
+    const fetchSports = async () => {
+      try {
+        const sports = await sportsApi.getAllSports();
+        setAllSports(sports);
+        setFuse(new Fuse(sports, { keys: ["name"], threshold: 0.3 }));
+      } catch (error) {
+        console.error("Failed to fetch sports:", error);
+      }
+    };
+    fetchSports();
+  }, []);
+
+  // FIX 8: restore child profile from localStorage on mount
+  useEffect(() => {
+    const savedAge = localStorage.getItem("pms_child_age");
+    const savedCity = localStorage.getItem("pms_child_city");
+    if (savedAge) setChildAge(Number(savedAge));
+    if (savedCity) setChildCity(savedCity);
+  }, []);
+
+  // Filter suggestions instantly
+  useEffect(() => {
+    if (!fuse || query.trim().length < 1) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setActiveTab("pathway");
+      return;
+    }
+    const results = fuse.search(query).map((r) => r.item);
+    setSuggestions(results.slice(0, 5));
+    setShowSuggestions(results.length > 0);
+  }, [query, fuse]);
+
+  // FIX 8 + FIX 11: map child age to the most relevant pathway level index
+  const getDefaultLevelIndex = (age: number | null): number => {
+    if (!age) return 0;
+    if (age <= 11) return 0; // Grassroots
+    if (age <= 14) return 1; // District
+    if (age <= 17) return 2; // State
+    if (age <= 22) return 3; // National
+    return 4; // International
+  };
+
+  // FIX 8: called when parent submits child profile
+  const handleProfileSubmit = () => {
+    if (!childAge || childAge < 4 || childAge > 25) {
+      setProfileError("Please enter a valid age between 4 and 25.");
+      return;
+    }
+    if (!childCity || childCity.trim().length < 2) {
+      setProfileError("Please enter your city (at least 2 characters).");
+      return;
+    }
+    localStorage.setItem("pms_child_age", String(childAge));
+    localStorage.setItem("pms_child_city", childCity.trim());
+    setShowProfileStep(false);
+    setProfileError("");
+    handleSearch(pendingSport);
+  };
+
+  // FIX 8: called when parent clicks "edit" on the profile chip
+  const handleEditProfile = () => {
+    setChildAge(null);
+    setChildCity("");
+    localStorage.removeItem("pms_child_age");
+    localStorage.removeItem("pms_child_city");
+    setPendingSport(result?.pathway.sportName ?? "");
+    setShowProfileStep(true);
+  };
+
+  const handleSearch = async (sportName: string) => {
+    const name = sportName.trim();
+    if (!name || name.length < 2) return;
+
+    // FIX 8: intercept if child profile not yet collected
+    if (!childAge || !childCity) {
+      setPendingSport(name);
+      setShowProfileStep(true);
+      return;
+    }
+
+    setShowProfileStep(false);
+    setQuery(name);
+    setStatus("loading");
+    setResult(null);
+    setErrorMsg("");
+    setActiveTab("pathway");
+    try {
+      const res = await pathwayApi.getPathway(name, childAge, childCity);
+      if (res) {
+        setResult(res);
+        setQuery(res.pathway.sportName);
+        setStatus("success");
+        setActiveIdx(getDefaultLevelIndex(childAge));
+      } else {
+        setErrorMsg(
+          `"${name}" doesn't appear to be a recognised sport. Please try a different name.`,
+        );
+        setStatus("error");
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Something went wrong. Please try again.");
+      setStatus("error");
+    }
+  };
+
+  const clearSearch = () => {
+    setQuery("");
+    setResult(null);
+    setStatus("idle");
+    setErrorMsg("");
+    setSuggestions([]);
+    setShowSuggestions(false);
+    inputRef.current?.focus();
+  };
+
+  const currentLevels = result ? result.pathway.levels : pathwayLevels;
+  const selectedLevel = currentLevels[activeIdx] || currentLevels[0];
+
+  return (
+    <section className="relative overflow-hidden py-12 sm:py-16 md:py-20 lg:py-28">
+      <AmbientBlob className="h-96 w-96 bg-orange-100/40 -left-40 top-10" />
+      <AmbientBlob className="h-80 w-80 bg-indigo-100/30 -right-40 top-20" />
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <motion.div
+          variants={orchestrator}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true, margin: "-60px" }}
+          className="mb-10 text-center"
+        >
+          <motion.div variants={fadeUp} className="mb-4 flex justify-center">
+            <SectionLabel label="For Parents" color="orange" />
+          </motion.div>
+          <motion.h2
+            variants={fadeUp}
+            className="font-title mx-auto max-w-2xl text-2xl font-bold text-slate-900 sm:text-3xl md:text-4xl lg:text-5xl"
+          >
+            Find the Right Pathway.
+            <span className="relative ml-2 inline-block">
+              Instantly.
+              <span
                 aria-hidden
-              >
-                <polygon
-                  points="8,0 200,0 200,192 192,200 0,200 0,8"
-                  fill="none"
-                  stroke="rgba(99,102,241,0.2)"
-                  strokeWidth="1.5"
-                />
-              </svg>
+                className="absolute -bottom-1 left-0 h-1 w-full rounded-full bg-gradient-to-r from-orange-400 to-orange-200"
+              />
+            </span>
+          </motion.h2>
+          <motion.p
+            variants={fadeUp}
+            className="mx-auto mt-4 max-w-lg text-base text-slate-600 sm:text-lg"
+          >
+            Type any sport to see what it takes for your child to excel. We
+            break down the timeline, requirements, and steps needed.
+          </motion.p>
+        </motion.div>
 
-              <div
-                className="relative h-full w-full overflow-hidden rounded-[2.5rem]"
-                style={{
-                  clipPath:
-                    "polygon(8% 0, 100% 0, 100% 92%, 92% 100%, 0 100%, 0 8%)",
-                }}
+        {/* Search bar */}
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: true }}
+          className="mx-auto max-w-2xl relative"
+        >
+          <div className="relative flex items-center gap-1.5 rounded-2xl border border-white/70 bg-white/90 p-1.5 sm:gap-3 sm:p-2 sm:pr-3 shadow-xl backdrop-blur-sm">
+            <div className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-power-orange text-white sm:flex sm:h-12 sm:w-12">
+              {status === "loading" ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <Search className="h-5 w-5" />
+              )}
+            </div>
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setStatus("idle");
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSearch(query);
+                }
+                if (e.key === "Escape") setShowSuggestions(false);
+              }}
+              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+              placeholder="e.g. Cricket, Badminton..."
+              className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm font-medium text-slate-900 placeholder-slate-400 outline-none sm:px-0 sm:text-base"
+              aria-label="Search sport pathway"
+            />
+            {query && (
+              <button
+                onClick={clearSearch}
+                className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full hover:bg-slate-100 transition-colors"
               >
-                <Image
-                  src="https://images.unsplash.com/photo-1484863137850-59afcfe05386?auto=format&fit=crop&w=900&q=80"
-                  alt="Parent managing kids sports activities"
-                  fill
-                  sizes="(max-width: 1280px) 50vw, 600px"
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/20 via-transparent to-transparent" />
-              </div>
+                <X className="h-4 w-4 text-slate-400" />
+              </button>
+            )}
+            <button
+              onClick={() => handleSearch(query)}
+              disabled={status === "loading" || !query.trim()}
+              className="shrink-0 rounded-xl bg-power-orange px-3 py-2.5 text-xs font-bold text-white shadow transition-all hover:bg-orange-600 disabled:opacity-50 sm:px-5 sm:text-sm"
+            >
+              Search
+            </button>
+          </div>
 
-              {/* Floating badge */}
+          {/* Autocomplete dropdown */}
+          <AnimatePresence>
+            {showSuggestions && status === "idle" && (
               <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{
-                  delay: 0.6,
-                  type: "spring",
-                  stiffness: 260,
-                  damping: 20,
-                }}
-                className="absolute -right-4 bottom-8 flex items-center gap-3 rounded-2xl border border-white/70 bg-white/90 px-4 py-3 shadow-xl backdrop-blur-md"
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.15 }}
+                className="absolute left-0 right-0 top-full z-20 mt-2 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-100 text-indigo-600">
-                  <Users2 size={18} />
+                <div className="h-0.5 w-full bg-gradient-to-r from-power-orange/60 via-power-orange to-power-orange/60" />
+                <div className="py-1.5">
+                  {suggestions.map((s) => (
+                    <button
+                      key={s.slug || s.name}
+                      onClick={() => handleSearch(s.name)}
+                      className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-orange-50"
+                    >
+                      <Database className="h-4 w-4 shrink-0 text-power-orange" />
+                      <span className="text-sm font-medium text-slate-800">
+                        {s.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* FIX 8: Child profile collection step */}
+        <AnimatePresence>
+          {showProfileStep && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2 }}
+              className="mx-auto mt-6 max-w-2xl rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50 p-6 shadow-lg"
+            >
+              <div className="mb-4 flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-power-orange text-white">
+                  <Target className="h-4 w-4" />
                 </div>
                 <div>
-                  <p className="text-xs font-bold text-slate-900">
-                    Family Dashboard
-                  </p>
-                  <p className="text-[10px] text-slate-500">
-                    Manage all profiles in one place
+                  <h3 className="font-bold text-slate-900 text-sm">
+                    Tell us about your child
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    We'll show you the most relevant pathway and requirements.
                   </p>
                 </div>
-              </motion.div>
-            </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Testimonials ── */}
-      <Testimonials
-        title="What Our Users Say"
-        subtitle="Testimonials"
-        testimonials={testimonials}
-      />
-
-      {/* ── Multi-Role Join Section ── */}
-      {!user && (
-        <section className="relative py-16 sm:py-20 lg:py-24">
-          <div className="pointer-events-none absolute -right-32 top-0 h-96 w-96 rounded-full bg-orange-100/25 blur-3xl" />
-          <div className="pointer-events-none absolute -left-32 bottom-0 h-96 w-96 rounded-full bg-blue-100/20 blur-3xl" />
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <motion.div
-              variants={sectionVariants}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, margin: "-80px" }}
-              className="mb-12 text-center"
-            >
-              <motion.div
-                variants={itemVariants}
-                className="mb-4 flex justify-center"
-              >
-                <SectionLabel label="Join the platform" color="slate" />
-              </motion.div>
-              <motion.h2
-                variants={itemVariants}
-                className="font-title mb-4 text-3xl font-bold text-slate-900 sm:text-4xl"
-              >
-                Join Other Parents Today
-              </motion.h2>
-              <motion.p
-                variants={itemVariants}
-                className="text-lg text-slate-600"
-              >
-                Whether you&apos;re a parent booking for your kids, a coach
-                finding students, or a venue owner growing bookings start today.
-              </motion.p>
-            </motion.div>
-
-            <motion.div
-              variants={sectionVariants}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, margin: "-80px" }}
-              className="grid grid-cols-1 gap-6 md:grid-cols-3"
-            >
-              {/* Parent Card  Featured */}
-              <motion.div
-                variants={cardVariants}
-                whileHover={{ y: -6, scale: 1.015 }}
-                transition={{ type: "spring", stiffness: 280, damping: 20 }}
-                className="group relative flex flex-col rounded-2xl border-2 border-power-orange/60 bg-gradient-to-b from-orange-50/60 to-white/80 p-8 backdrop-blur-md shadow-[0_8px_40px_-8px_rgba(233,115,22,0.25)] will-change-transform scale-100 md:scale-105"
-              >
-                <div className="absolute right-0 top-0 rounded-bl-lg rounded-tr-xl bg-power-orange px-4 py-1 text-xs font-bold text-white">
-                  FOR PARENTS
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    Child's Age
+                  </label>
+                  <input
+                    type="number"
+                    min={4}
+                    max={25}
+                    value={childAge ?? ""}
+                    onChange={(e) => {
+                      setChildAge(
+                        e.target.value ? Number(e.target.value) : null,
+                      );
+                      setProfileError("");
+                    }}
+                    placeholder="e.g. 12"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-900 placeholder-slate-400 outline-none focus:border-power-orange focus:ring-2 focus:ring-power-orange/20 transition-all"
+                  />
                 </div>
-                <motion.div
-                  className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-power-orange text-white shadow-[0_6px_24px_-4px_rgba(233,115,22,0.55)]"
-                  whileHover={{ scale: 1.1, rotate: 4 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 16 }}
+                <div>
+                  <label className="mb-1.5 block text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    Your City
+                  </label>
+                  <input
+                    type="text"
+                    value={childCity}
+                    onChange={(e) => {
+                      setChildCity(e.target.value);
+                      setProfileError("");
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleProfileSubmit();
+                    }}
+                    placeholder="e.g. Ludhiana, Chandigarh"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-900 placeholder-slate-400 outline-none focus:border-power-orange focus:ring-2 focus:ring-power-orange/20 transition-all"
+                  />
+                </div>
+              </div>
+              {profileError && (
+                <p className="mt-2 text-xs text-red-600 font-medium">
+                  {profileError}
+                </p>
+              )}
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  onClick={handleProfileSubmit}
+                  className="rounded-xl bg-power-orange px-5 py-2.5 text-sm font-bold text-white shadow transition-all hover:bg-orange-600"
                 >
-                  <Users2 size={30} />
-                </motion.div>
-                <h3 className="mb-4 text-center text-xl font-bold text-slate-900">
-                  Parents & Guardians
-                </h3>
-                <ul className="mb-8 grow space-y-3 text-sm text-slate-600">
-                  {[
-                    "Manage all your children's profiles",
-                    "Book vetted coaches & premium venues",
-                    "AI roadmap for your child's sport journey",
-                    "Get smart alerts for every session",
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-2.5">
-                      <Check
-                        size={14}
-                        className="mt-0.5 shrink-0 text-power-orange"
-                      />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/register?role=PLAYER"
-                  className="block w-full rounded-xl bg-power-orange px-6 py-3 text-center font-semibold text-white transition-colors hover:bg-orange-600"
+                  Show my pathway →
+                </button>
+                <button
+                  onClick={() => {
+                    setShowProfileStep(false);
+                    setProfileError("");
+                  }}
+                  className="text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors"
                 >
-                  Create a Family Account
-                </Link>
-              </motion.div>
-
-              {/* Venue Owner Card */}
-              <motion.div
-                variants={cardVariants}
-                whileHover={{ y: -6, scale: 1.015 }}
-                transition={{ type: "spring", stiffness: 280, damping: 20 }}
-                className="group flex flex-col rounded-2xl border border-white/60 bg-white/80 p-8 backdrop-blur-md premium-shadow will-change-transform"
-              >
-                <motion.div
-                  className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-600 text-white shadow-[0_6px_28px_-4px_rgba(99,102,241,0.4)]"
-                  whileHover={{ scale: 1.1, rotate: 4 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 16 }}
-                >
-                  <Building2 size={30} />
-                </motion.div>
-                <h3 className="mb-4 text-center text-xl font-bold text-slate-900">
-                  Venue Owners
-                </h3>
-                <ul className="mb-8 grow space-y-3 text-sm text-slate-600">
-                  {[
-                    "Reach families actively searching for venues",
-                    "Automated booking management",
-                    "Real-time availability tracking",
-                    "Instant payouts & analytics",
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-2.5">
-                      <Check
-                        size={14}
-                        className="mt-0.5 shrink-0 text-indigo-600"
-                      />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/register?role=VENUE_LISTER"
-                  className="block w-full rounded-xl bg-slate-900 px-6 py-3 text-center font-semibold text-white transition-colors hover:bg-slate-700"
-                >
-                  List Your Venue
-                </Link>
-              </motion.div>
-
-              {/* Coach Card */}
-              <motion.div
-                variants={cardVariants}
-                whileHover={{ y: -6, scale: 1.015 }}
-                transition={{ type: "spring", stiffness: 280, damping: 20 }}
-                className="group flex flex-col rounded-2xl border border-white/60 bg-white/80 p-8 backdrop-blur-md premium-shadow will-change-transform"
-              >
-                <motion.div
-                  className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-turf-green text-white shadow-[0_6px_24px_-4px_rgba(34,197,94,0.4)]"
-                  whileHover={{ scale: 1.1, rotate: 4 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 16 }}
-                >
-                  <Trophy size={30} />
-                </motion.div>
-                <h3 className="mb-4 text-center text-xl font-bold text-slate-900">
-                  Coaches & Trainers
-                </h3>
-                <ul className="mb-8 grow space-y-3 text-sm text-slate-600">
-                  {[
-                    "Build your coaching profile",
-                    "Connect with serious athletes",
-                    "Set your own rates & schedule",
-                    "Grow your coaching business",
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-2.5">
-                      <Check
-                        size={14}
-                        className="mt-0.5 shrink-0 text-turf-green"
-                      />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href="/register?role=COACH"
-                  className="block w-full rounded-xl bg-turf-green px-6 py-3 text-center font-semibold text-white transition-colors hover:bg-green-700"
-                >
-                  Become a Coach
-                </Link>
-              </motion.div>
+                  Skip for now
+                </button>
+              </div>
             </motion.div>
-          </div>
-        </section>
-      )}
+          )}
+        </AnimatePresence>
 
-      {/* ── Explore Section  photo-backed cards ── */}
-      <section className="py-12 sm:py-16 lg:py-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Popular quick-picks */}
+        {status === "idle" && !result && (
           <motion.div
-            variants={sectionVariants}
+            variants={fadeUp}
             initial="hidden"
             whileInView="show"
-            viewport={{ once: true, margin: "-80px" }}
-            className="mb-10 text-center"
-          >
-            <motion.div
-              variants={itemVariants}
-              className="mb-4 flex justify-center"
-            >
-              <SectionLabel label="Ready to Explore?" color="orange" />
-            </motion.div>
-            <motion.h2
-              variants={itemVariants}
-              className="font-title mb-2 text-3xl font-bold text-slate-900"
-            >
-              Your Child&apos;s Next Training Session Starts Here
-            </motion.h2>
-            <motion.p variants={itemVariants} className="text-slate-600">
-              Browse venues, academies, and coaches to plan your child&apos;s
-              next session with confidence
-            </motion.p>
-          </motion.div>
-
-          <motion.div
-            variants={sectionVariants}
-            initial="hidden"
-            whileInView="show"
-            viewport={{ once: true, margin: "-80px" }}
-            className="grid gap-5 md:grid-cols-3"
+            viewport={{ once: true }}
+            className="mt-5 flex flex-wrap justify-center gap-2 px-2"
           >
             {[
-              {
-                href: "/venues",
-                img: "https://images.unsplash.com/photo-1519861531473-9200262188bf?auto=format&fit=crop&w=900&q=80",
-                icon: <Building2 size={22} />,
-                title: "Browse Venues",
-                sub: "Explore premium sports venues in your area",
-                cta: "View All Venues",
-                accent: "from-orange-900/70 via-orange-800/40 to-transparent",
-                badge: "bg-power-orange",
-              },
-              {
-                href: "/academies",
-                img: "https://images.unsplash.com/photo-1555597673-b21d5c935865?auto=format&fit=crop&w=900&q=80",
-                icon: <GraduationCap size={22} />,
-                title: "Browse Academies",
-                sub: "Explore academies built for training, batches, and development",
-                cta: "View All Academies",
-                accent: "from-indigo-900/70 via-indigo-800/40 to-transparent",
-                badge: "bg-indigo-600",
-              },
-              {
-                href: "/coaches",
-                img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=900&q=80",
-                icon: <Users size={22} />,
-                title: "Find Coaches",
-                sub: "Discover expert coaches for professional training",
-                cta: "View All Coaches",
-                accent: "from-emerald-900/70 via-emerald-800/40 to-transparent",
-                badge: "bg-turf-green",
-              },
-            ].map((card) => (
-              <motion.div
-                key={card.href}
-                variants={cardVariants}
-                whileHover={{ y: -6, scale: 1.015 }}
-                transition={{ type: "spring", stiffness: 280, damping: 20 }}
-                className="will-change-transform"
+              "Cricket",
+              "Badminton",
+              "Football",
+              "Kabaddi",
+              "Wrestling",
+              "Archery",
+              "Table Tennis",
+              "Boxing",
+            ].map((s) => (
+              <button
+                key={s}
+                onClick={() => handleSearch(s)}
+                className="rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition-all hover:border-orange-200 hover:bg-orange-50 hover:text-power-orange sm:px-4"
               >
-                <Link
-                  href={card.href}
-                  className="group relative block h-56 overflow-hidden rounded-2xl shadow-lg premium-shadow sm:h-64 md:h-72"
-                >
-                  {/* Background image */}
-                  <Image
-                    src={card.img}
-                    alt={card.title}
-                    fill
-                    sizes="(max-width: 768px) 100vw, 33vw"
-                    className="object-cover transition-transform duration-700 group-hover:scale-106"
-                  />
-                  {/* Gradient overlay */}
-                  <div
-                    className={`absolute inset-0 bg-gradient-to-t ${card.accent}`}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                {s}
+              </button>
+            ))}
+          </motion.div>
+        )}
 
-                  {/* Content */}
-                  <div className="absolute inset-0 flex flex-col justify-end p-5">
-                    <div
-                      className={`mb-3 inline-flex w-fit items-center gap-1.5 rounded-lg ${card.badge} px-2.5 py-1 text-xs font-bold text-white`}
-                    >
-                      {card.icon}
-                      {card.title}
-                    </div>
-                    <p className="mb-3 text-sm text-white/85">{card.sub}</p>
-                    <div className="flex items-center gap-1.5 text-sm font-semibold text-white">
-                      {card.cta}
-                      <ArrowRight
-                        size={14}
-                        className="transition-transform group-hover:translate-x-1"
-                      />
-                    </div>
+        {/* ── Loading state ── */}
+        <AnimatePresence>
+          {status === "loading" && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="mx-auto mt-12 max-w-lg rounded-3xl border border-orange-100 bg-gradient-to-br from-orange-50 to-amber-50 p-6 sm:p-10 text-center shadow-lg"
+            >
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-power-orange text-white shadow-lg">
+                <Sparkles className="h-8 w-8 animate-pulse" />
+              </div>
+              <p className="text-lg font-bold text-slate-900">
+                Generating Pathway…
+              </p>
+              <p className="mt-2 text-sm text-slate-500 break-words">
+                Our AI is researching the{" "}
+                <span className="font-semibold text-power-orange">{query}</span>{" "}
+                development pathway in India.
+              </p>
+              <div className="mt-6 flex items-center justify-center gap-1.5">
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="h-2 w-2 rounded-full bg-power-orange"
+                    style={{
+                      animation: "bounce 1.2s " + i * 0.2 + "s infinite",
+                    }}
+                  />
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Error state ── */}
+        <AnimatePresence>
+          {status === "error" && (
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="mx-auto mt-12 max-w-lg rounded-3xl border border-red-100 bg-red-50 p-6 sm:p-8 text-center shadow"
+            >
+              <p className="text-lg font-bold text-red-700">Not Found</p>
+              <p className="mt-2 text-sm text-red-600 break-words">
+                {errorMsg}
+              </p>
+              <button
+                onClick={clearSearch}
+                className="mt-5 rounded-xl bg-red-600 px-6 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+              >
+                Try Another Sport
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Explorer View (Default or Result) ── */}
+        <AnimatePresence mode="wait">
+          {(status === "idle" || status === "success") && (
+            <motion.div
+              key={result ? "result" : "default"}
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={SPRING_STIFF}
+              className="mt-12 sm:mt-16"
+            >
+              {/* Header logic */}
+              {result ? (
+                <div className="mb-8">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    {/* We no longer show "From Database" to keep the experience unified */}
+                    {result.source === "generated" && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-100 px-3 py-1 text-xs font-bold text-power-orange border border-orange-200">
+                        <Sparkles className="h-3 w-3" /> AI Generated
+                      </span>
+                    )}
+                    {result.pathway.category && (
+                      <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 border border-slate-200">
+                        {result.pathway.category}
+                      </span>
+                    )}
                   </div>
-                </Link>
+                  <h2 className="font-title text-2xl font-bold text-slate-900 break-words sm:text-3xl md:text-4xl">
+                    {result.pathway.sportName} Pathway
+                  </h2>
+                  {result.pathway.overview && (
+                    <p className="mt-2 max-w-2xl text-slate-600">
+                      {result.pathway.overview}
+                    </p>
+                  )}
+                  {/* FIX 8: editable child profile chip */}
+                  {childAge && childCity && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                        <Target className="h-3 w-3 text-power-orange" />
+                        Age {childAge} · {childCity}
+                        <button
+                          onClick={handleEditProfile}
+                          className="ml-1 text-slate-400 underline underline-offset-2 hover:text-power-orange transition-colors"
+                        >
+                          edit
+                        </button>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="mb-8 text-center sm:text-left">
+                  <h2 className="font-title text-xl font-bold text-slate-900 sm:text-2xl md:text-3xl">
+                    The General Sports Pathway
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-slate-600 mx-auto sm:mx-0">
+                    Discover the five universal stages of athletic development
+                    in India. Search for a specific sport above to see tailored
+                    insights.
+                  </p>
+                </div>
+              )}
+
+              {/* Tabs */}
+              {result && (
+                <div className="mb-10 grid grid-cols-2 gap-1.5 rounded-2xl border border-slate-200/50 bg-slate-100/50 p-1.5 backdrop-blur-sm sm:grid-cols-3 sm:gap-2 sm:p-2 lg:flex lg:flex-wrap">
+                  {[
+                    {
+                      id: "pathway",
+                      label: "Pathway",
+                      icon: <Flag className="h-4 w-4" />,
+                    },
+                    {
+                      id: "tournaments",
+                      label: "Tournaments",
+                      icon: <Trophy className="h-4 w-4" />,
+                    },
+                    {
+                      id: "scholarships",
+                      label: "Scholarships",
+                      icon: <Wallet className="h-4 w-4" />,
+                    },
+                    {
+                      id: "universities",
+                      label: "Universities",
+                      icon: <Landmark className="h-4 w-4" />,
+                    },
+                    {
+                      id: "equipment",
+                      label: "Equipment",
+                      icon: <ShoppingBag className="h-4 w-4" />,
+                    },
+                    {
+                      id: "careers",
+                      label: "Careers",
+                      icon: <Briefcase className="h-4 w-4" />,
+                    },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`relative flex items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[11px] font-semibold transition-all sm:gap-2 sm:text-sm lg:flex-1 lg:px-4 ${
+                        activeTab === tab.id
+                          ? "text-power-orange shadow-sm"
+                          : "text-slate-600 hover:bg-slate-200/50 hover:text-slate-900"
+                      }`}
+                    >
+                      {activeTab === tab.id && (
+                        <motion.div
+                          layoutId="activeTab"
+                          className="absolute inset-0 rounded-xl bg-white shadow-sm ring-1 ring-slate-200/50"
+                          transition={{
+                            type: "spring",
+                            bounce: 0.2,
+                            duration: 0.6,
+                          }}
+                        />
+                      )}
+                      <span className="relative z-10 flex items-center gap-1.5 sm:gap-2">
+                        {tab.icon}
+                        <span className="truncate">{tab.label}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Tab Content */}
+              <AnimatePresence mode="wait">
+                {(!result || activeTab === "pathway") && (
+                  <motion.div
+                    key="pathway"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="grid grid-cols-1 gap-6 lg:gap-8 lg:grid-cols-[340px_1fr] xl:grid-cols-[380px_1fr]"
+                  >
+                    {/* Left: level pills */}
+                    <div className="space-y-3">
+                      {/* Visual Pyramid Indicator for Desktop */}
+                      <motion.div
+                        variants={scaleIn}
+                        className="mb-6 hidden lg:block"
+                      >
+                        <svg
+                          viewBox="0 0 300 160"
+                          className="w-full"
+                          aria-hidden
+                        >
+                          {[
+                            {
+                              y: 130,
+                              width: 280,
+                              fill: "rgba(16,185,129,0.12)",
+                              stroke: "rgba(16,185,129,0.4)",
+                              label: "Grassroots",
+                            },
+                            {
+                              y: 104,
+                              width: 224,
+                              fill: "rgba(59,130,246,0.12)",
+                              stroke: "rgba(59,130,246,0.4)",
+                              label: "District",
+                            },
+                            {
+                              y: 78,
+                              width: 168,
+                              fill: "rgba(139,92,246,0.12)",
+                              stroke: "rgba(139,92,246,0.4)",
+                              label: "State",
+                            },
+                            {
+                              y: 52,
+                              width: 112,
+                              fill: "rgba(249,115,22,0.12)",
+                              stroke: "rgba(249,115,22,0.4)",
+                              label: "National",
+                            },
+                            {
+                              y: 26,
+                              width: 56,
+                              fill: "rgba(244,63,94,0.12)",
+                              stroke: "rgba(244,63,94,0.4)",
+                              label: "International",
+                            },
+                          ].map((tier, i) => (
+                            <g
+                              key={i}
+                              onClick={() => setActiveIdx(i)}
+                              className="cursor-pointer transition-opacity hover:opacity-80"
+                            >
+                              <rect
+                                x={(300 - tier.width) / 2}
+                                y={tier.y - 22}
+                                width={tier.width}
+                                height={22}
+                                rx={4}
+                                fill={
+                                  i === activeIdx
+                                    ? tier.fill.replace("0.12", "0.3")
+                                    : tier.fill
+                                }
+                                stroke={tier.stroke}
+                                strokeWidth={i === activeIdx ? 1.5 : 1}
+                                style={{ transition: "fill 0.3s" }}
+                              />
+                              <text
+                                x="150"
+                                y={130 - i * 26 - 8}
+                                textAnchor="middle"
+                                fontSize="8"
+                                fontWeight={i === activeIdx ? "700" : "500"}
+                                fill={i === activeIdx ? "#0f172a" : "#94a3b8"}
+                                style={{ transition: "fill 0.3s" }}
+                              >
+                                {tier.label}
+                              </text>
+                            </g>
+                          ))}
+                        </svg>
+                      </motion.div>
+
+                      {currentLevels.map((lv, i) => (
+                        <div key={lv.level} className="flex flex-col gap-3">
+                          <PathwayLevelCard
+                            level={lv}
+                            isActive={i === activeIdx}
+                            onClick={() => {
+                              if (
+                                typeof window !== "undefined" &&
+                                window.innerWidth < 1024
+                              ) {
+                                setActiveIdx(activeIdx === i ? -1 : i);
+                              } else {
+                                setActiveIdx(i);
+                              }
+                            }}
+                          />
+                          <AnimatePresence initial={false}>
+                            {i === activeIdx && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{
+                                  height: {
+                                    type: "spring",
+                                    stiffness: 300,
+                                    damping: 30,
+                                  },
+                                  opacity: { duration: 0.2 },
+                                }}
+                                className="lg:hidden overflow-hidden origin-top"
+                              >
+                                <div className="pt-1 pb-2">
+                                  <PathwayLevelDetail
+                                    level={lv}
+                                    sportName={
+                                      result
+                                        ? result.pathway.sportName
+                                        : "General"
+                                    }
+                                  />
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Right: detail (Desktop Only) */}
+                    <div className="hidden h-full lg:flex lg:flex-col">
+                      <AnimatePresence mode="wait">
+                        {selectedLevel && (
+                          <PathwayLevelDetail
+                            key={selectedLevel.level}
+                            level={selectedLevel}
+                            sportName={
+                              result ? result.pathway.sportName : "General"
+                            }
+                          />
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </motion.div>
+                )}
+
+                {result && activeTab === "tournaments" && (
+                  <motion.div
+                    key="tournaments"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                  >
+                    {result.pathway.tournaments?.length > 0 ? (
+                      result.pathway.tournaments.map((t: any, i: number) => (
+                        <div
+                          key={i}
+                          onClick={() =>
+                            setModalData({ item: t, type: "tournament" })
+                          }
+                          className="flex flex-col justify-between rounded-2xl border border-slate-200/60 bg-white/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-power-orange hover:ring-1 hover:ring-power-orange group cursor-pointer"
+                        >
+                          <div>
+                            <div className="mb-3 flex items-start justify-between gap-2">
+                              <h3 className="font-title font-bold text-slate-800 break-words group-hover:text-power-orange transition-colors">
+                                {t.name}
+                              </h3>
+                              <span className="shrink-0 max-w-[50%] truncate rounded-full bg-orange-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-power-orange">
+                                {t.level}
+                              </span>
+                            </div>
+                            <p className="mb-4 text-sm text-slate-600 line-clamp-3">
+                              {t.description}
+                            </p>
+                          </div>
+                          <div className="flex items-center justify-between border-t border-slate-100 pt-3 gap-2">
+                            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 min-w-0 flex-1">
+                              <Users className="h-4 w-4 text-slate-400 shrink-0" />
+                              <span className="truncate">{t.ageGroup}</span>
+                            </div>
+                            <span className="text-xs font-bold text-power-orange flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 whitespace-nowrap">
+                              View Details <ArrowRight className="h-3 w-3" />
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-full rounded-2xl border border-dashed border-slate-300 py-12 text-center text-slate-500">
+                        No specific tournaments found for this sport.
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+
+                {result && activeTab === "scholarships" && (
+                  <motion.div
+                    key="scholarships"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                  >
+                    {result.pathway.scholarships?.length > 0 ? (
+                      result.pathway.scholarships.map((s: any, i: number) => (
+                        <div
+                          key={i}
+                          onClick={() =>
+                            setModalData({ item: s, type: "scholarship" })
+                          }
+                          className="flex flex-col rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white/60 to-slate-50/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-emerald-200 group cursor-pointer"
+                        >
+                          <div className="mb-4 flex items-center gap-3">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 shadow-inner">
+                              <Wallet className="h-6 w-6" />
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="font-title font-bold text-slate-800 text-lg leading-tight break-words">
+                                {s.name}
+                              </h3>
+                              <p className="text-xs font-semibold text-emerald-600 mt-1">
+                                {s.provider}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="text-sm text-slate-600 leading-relaxed mb-4 flex-1">
+                            {s.description}
+                          </p>
+                          <div className="mt-auto border-t border-slate-100 pt-4 flex items-center justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-1.5">
+                                <CheckCircle className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">
+                                  Eligibility
+                                </span>
+                              </div>
+                              <p className="text-sm font-medium text-slate-700 leading-relaxed truncate">
+                                {s.eligibility}
+                              </p>
+                            </div>
+                            <span className="text-xs font-bold text-emerald-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 whitespace-nowrap">
+                              View Details <ArrowRight className="h-3 w-3" />
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-full rounded-2xl border border-dashed border-slate-300 py-12 text-center text-slate-500">
+                        No specific scholarships found for this sport.
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+
+                {result && activeTab === "universities" && (
+                  <motion.div
+                    key="universities"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                  >
+                    {result.pathway.universities?.length > 0 ? (
+                      result.pathway.universities.map((u: any, i: number) => (
+                        <div
+                          key={i}
+                          onClick={() =>
+                            setModalData({ item: u, type: "university" })
+                          }
+                          className="flex flex-col rounded-2xl border border-slate-200/60 bg-white/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-indigo-200 group cursor-pointer"
+                        >
+                          <div className="mb-4 flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-indigo-600">
+                              <Landmark className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="font-title font-bold leading-tight text-slate-800 break-words">
+                                {u.name}
+                              </h3>
+                              <p className="text-xs font-medium text-slate-500 flex items-center gap-1 mt-1">
+                                <MapPin className="h-3 w-3 shrink-0" />{" "}
+                                <span className="truncate">{u.location}</span>
+                              </p>
+                            </div>
+                          </div>
+                          <div className="space-y-3 flex-1">
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                Admission Criteria
+                              </p>
+                              <p className="text-sm text-slate-700">
+                                {u.admissionCriteria}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                Sports Quota Details
+                              </p>
+                              <p className="text-sm text-slate-700">
+                                {u.sportsQuotaDetails}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-4 border-t border-slate-100 pt-3 flex items-center justify-end">
+                            <span className="text-xs font-bold text-indigo-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 whitespace-nowrap">
+                              View Details <ArrowRight className="h-3 w-3" />
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-full rounded-2xl border border-dashed border-slate-300 py-12 text-center text-slate-500">
+                        No specific universities found for this sport.
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+
+                {result && activeTab === "equipment" && (
+                  <motion.div
+                    key="equipment"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                  >
+                    {result.pathway.equipment?.length > 0 ? (
+                      result.pathway.equipment.map((e: any, i: number) => (
+                        <div
+                          key={i}
+                          className="flex flex-col rounded-2xl border border-slate-200/60 bg-white/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-power-orange/30"
+                        >
+                          <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+                            <span className="inline-block rounded-lg bg-slate-100 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 border border-slate-200 text-left leading-snug max-w-full break-words">
+                              {e.level}
+                            </span>
+                            <div className="flex shrink-0 items-center gap-1.5 text-power-orange bg-orange-50 px-3 py-1.5 rounded-full border border-orange-100">
+                              <Wallet className="h-3.5 w-3.5 shrink-0" />
+                              <span className="text-xs font-bold whitespace-nowrap">
+                                {e.estimatedCost}
+                              </span>
+                            </div>
+                          </div>
+                          <h4 className="mb-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                            Essential Gear
+                          </h4>
+                          <ul className="space-y-2.5 flex-1 mt-1">
+                            {e.items.map((item: string, j: number) => (
+                              <li key={j} className="flex items-start gap-2.5">
+                                <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-slate-300" />
+                                <span className="text-sm font-medium text-slate-700 leading-relaxed">
+                                  {item}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-full rounded-2xl border border-dashed border-slate-300 py-12 text-center text-slate-500">
+                        No equipment data found for this sport.
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+
+                {result && activeTab === "careers" && (
+                  <motion.div
+                    key="careers"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                  >
+                    {result.pathway.careers?.length > 0 ? (
+                      result.pathway.careers.map((c: any, i: number) => (
+                        <div
+                          key={i}
+                          className="flex flex-col rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white/60 to-slate-50/60 p-5 shadow-sm backdrop-blur-md transition-all hover:shadow-md hover:border-blue-200 group"
+                        >
+                          <div className="mb-4 flex items-center gap-3">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600 shadow-inner">
+                              <Briefcase className="h-6 w-6" />
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="font-title font-bold text-slate-800 text-lg leading-tight break-words">
+                                {c.role}
+                              </h3>
+                            </div>
+                          </div>
+                          <p className="text-sm text-slate-600 leading-relaxed mb-4 flex-1">
+                            {c.description}
+                          </p>
+                          <div className="mt-auto border-t border-slate-100 pt-4">
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500">
+                                Demand
+                              </span>
+                            </div>
+                            <p className="text-sm font-medium text-slate-700 leading-relaxed">
+                              {c.demand}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-full rounded-2xl border border-dashed border-slate-300 py-12 text-center text-slate-500">
+                        No alternative career paths found for this sport.
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {modalData && (
+          <PathwayConciergeModal
+            isOpen={!!modalData}
+            onClose={() => setModalData(null)}
+            item={modalData.item}
+            type={modalData.type}
+          />
+        )}
+      </div>
+    </section>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+export default function PathwaysPage() {
+  const communityUrl = getCommunityAppUrl();
+  const [activeLevel, setActiveLevel] = useState(0);
+  const selected = pathwayLevels[activeLevel];
+
+  const statCards = [
+    {
+      icon: <Users className="h-6 w-6" />,
+      value: "500M+",
+      label: "Sports Participants in India",
+      color: "bg-orange-100 text-power-orange",
+    },
+    {
+      icon: <Medal className="h-6 w-6" />,
+      value: "28",
+      label: "Olympic Medals (All-time)",
+      color: "bg-indigo-100 text-indigo-600",
+    },
+    {
+      icon: <Trophy className="h-6 w-6" />,
+      value: "40+",
+      label: "National Federations",
+      color: "bg-amber-100 text-amber-600",
+    },
+    {
+      icon: <Star className="h-6 w-6" />,
+      value: "5 Levels",
+      label: "From Grassroots to World Stage",
+      color: "bg-emerald-100 text-emerald-600",
+    },
+  ];
+
+  return (
+    <main className="overflow-x-hidden">
+      {/* ── Hero ── */}
+      <Hero
+        variant="page"
+        title="Plan Your Child's Sports Journey"
+        subtitle="A Simple Guide for Parents"
+        description="From playing in the local park to reaching the highest level in sports. Find out exactly how much time, money, and effort it takes to support your child's dream."
+      />
+
+      {/* ── AI Search Section ── */}
+      <PathwayExplorerSection />
+
+      {/* ── Stats Banner ── */}
+      <section className="relative py-10 sm:py-16">
+        <div className="pointer-events-none absolute inset-0 -z-10">
+          <div className="absolute left-1/2 top-0 h-64 w-full -translate-x-1/2 bg-gradient-to-b from-orange-50/40 to-transparent" />
+        </div>
+
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <motion.div
+            variants={orchestrator}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: "-60px" }}
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4"
+          >
+            {statCards.map((stat) => (
+              <motion.div
+                key={stat.label}
+                variants={cardReveal}
+                whileHover={{ y: -4, scale: 1.02 }}
+                transition={SPRING_STIFF}
+                className="group flex flex-col items-center rounded-2xl border border-white/70 bg-white/80 p-5 sm:p-6 text-center backdrop-blur-sm premium-shadow will-change-transform"
+              >
+                <div
+                  className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110 ${stat.color}`}
+                >
+                  {stat.icon}
+                </div>
+                <p className="font-title text-2xl font-extrabold text-slate-900 sm:text-3xl">
+                  {stat.value}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">{stat.label}</p>
               </motion.div>
             ))}
           </motion.div>
         </div>
       </section>
 
-      {/* ── Final CTA ── */}
+      {/* ── How PowerMySport Helps ── */}
+      <section className="relative overflow-hidden py-12 sm:py-16 md:py-20 lg:py-28">
+        <AmbientBlob className="h-80 w-80 bg-orange-100/40 -right-24 top-16" />
+        <AmbientBlob className="h-72 w-72 bg-emerald-100/30 -left-32 bottom-20" />
+
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <motion.div
+            variants={orchestrator}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: "-80px" }}
+            className="mb-14 text-center"
+          >
+            <motion.div variants={fadeUp} className="mb-4 flex justify-center">
+              <SectionLabel
+                label="We Support You at Every Step"
+                color="green"
+              />
+            </motion.div>
+            <motion.h2
+              variants={fadeUp}
+              className="font-title mx-auto max-w-2xl text-2xl font-bold text-slate-900 sm:text-3xl md:text-4xl lg:text-5xl"
+            >
+              PowerMySport Helps You Grow Faster
+            </motion.h2>
+            <motion.p
+              variants={fadeUp}
+              className="mx-auto mt-4 max-w-xl text-base text-slate-600 sm:text-lg"
+            >
+              No matter where you start, we provide the tools, coaches, and
+              places you need to reach the next level.
+            </motion.p>
+          </motion.div>
+
+          <motion.div
+            variants={orchestrator}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: "-60px" }}
+            className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            {[
+              {
+                icon: <Dumbbell className="h-7 w-7" />,
+                title: "Expert Coaches",
+                description:
+                  "Connect with verified coaches who have played at top levels. Learn from people who know exactly what it takes to succeed.",
+                color: "bg-orange-100 text-power-orange",
+                accent: "text-power-orange",
+              },
+              {
+                icon: <MapPin className="h-7 w-7" />,
+                title: "Top Training Grounds",
+                description:
+                  "Book the best training grounds used by top athletes. Get access to the same great facilities the pros use, whenever you need them.",
+                color: "bg-indigo-100 text-indigo-600",
+                accent: "text-indigo-600",
+              },
+              {
+                icon: <Award className="h-7 w-7" />,
+                title: "Smart AI Planning",
+                description:
+                  "Our AI creates a custom plan based on your child's age, sport, and current skill level — showing you exactly what to do next.",
+                color: "bg-emerald-100 text-emerald-600",
+                accent: "text-emerald-600",
+              },
+            ].map((item) => (
+              <motion.div
+                key={item.title}
+                variants={cardReveal}
+                whileHover={{ y: -6, scale: 1.015 }}
+                transition={SPRING_STIFF}
+                className="group relative overflow-hidden rounded-2xl border border-white/70 bg-white/80 p-6 sm:p-8 backdrop-blur-sm premium-shadow will-change-transform hover:border-white/90"
+              >
+                {/* decorative circle */}
+                <div
+                  aria-hidden
+                  className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-slate-50 opacity-60 transition-transform duration-500 group-hover:scale-150"
+                />
+                <div
+                  className={`relative mb-5 flex h-14 w-14 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 ${item.color}`}
+                >
+                  {item.icon}
+                </div>
+                <h3 className="relative mb-3 text-lg font-bold text-slate-900">
+                  {item.title}
+                </h3>
+                <p className="relative text-sm leading-relaxed text-slate-600">
+                  {item.description}
+                </p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
       <CTA
         variant="gradient"
-        title={
-          user
-            ? "Ready for Your Next Game?"
-            : "Ready to Start Your Sports Journey?"
-        }
-        description={
-          user
-            ? "Book your next venue or coach session and stay in rhythm."
-            : "Join players, coaches, and venue partners who are building better sports experiences with PowerMySport."
-        }
+        title="Ready to Support Their Dream?"
+        description="Find the right coach, book the right ground, and get a smart plan that shows exactly how to help your child grow in sports."
         primaryCTA={{
-          label: user ? "Go to Dashboard" : "Get Started Free",
-          href: getDashboardLink(),
+          label: "Get Your Parent Guide",
+          href: "/register?role=PARENT",
         }}
-        secondaryCTA={{ label: "Learn More", href: "/how-it-works" }}
+        secondaryCTA={{
+          label: "Join Parent Community",
+          href: communityUrl,
+        }}
       />
     </main>
   );

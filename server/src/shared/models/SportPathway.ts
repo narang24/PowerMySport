@@ -63,6 +63,8 @@ export interface SportPathwayDocument extends Document {
   sportSlug: string;
   /** Display name, e.g. "Cricket" */
   sportName: string;
+  /** Composite cache key: sportSlug_age_city e.g. "cricket_12_ludhiana" */
+  cacheKey?: string;
   /** Category the AI determined */
   category?: string;
   /** Short intro for the sport pathway */
@@ -162,11 +164,14 @@ const sportPathwaySchema = new Schema<SportPathwayDocument>(
     sportSlug: {
       type: String,
       required: true,
-      unique: true,
+      // NOTE: unique index removed to allow per-age/city variants of the same sport.
+      // Run migration: db.sportpathways.dropIndex("sportSlug_1") in production.
       lowercase: true,
       index: true,
     },
     sportName: { type: String, required: true, trim: true },
+    // Composite cache key: sportSlug_age_city — unique per age+city combo
+    cacheKey: { type: String, index: true, sparse: true },
     category: { type: String, default: "Other" },
     overview: { type: String, default: "" },
     levels: [pathwayLevelSchema],

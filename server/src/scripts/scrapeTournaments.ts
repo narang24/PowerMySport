@@ -65,7 +65,7 @@ async function extractTournamentsWithAI(html: string, sport: any) {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash",
+      model: "gemma-4-31b-it",
       generationConfig: {
         responseMimeType: "application/json",
       },
