@@ -647,11 +647,9 @@ export const getCoachAvailability = async (
       targetDate.getMonth() === now.getMonth() &&
       targetDate.getDate() === now.getDate();
 
-    const availableSlots = candidateSlots.filter((slot) => {
-      const [slotStart = "00:00", slotEnd = "00:00"] = slot.split("-");
-
-      // Filter out past time slots for today
+    const futureCandidateSlots = candidateSlots.filter((slot) => {
       if (isToday) {
+        const [slotStart = "00:00"] = slot.split("-");
         const [startHour = "0", startMinute = "0"] = slotStart.split(":");
         const slotStartDateTime = new Date(targetDate);
         slotStartDateTime.setHours(
@@ -660,13 +658,13 @@ export const getCoachAvailability = async (
           0,
           0,
         );
-
-        // If the slot has already started, don't show it
-        if (slotStartDateTime <= now) {
-          return false;
-        }
+        return slotStartDateTime > now;
       }
+      return true;
+    });
 
+    const availableSlots = futureCandidateSlots.filter((slot) => {
+      const [slotStart = "00:00", slotEnd = "00:00"] = slot.split("-");
       return !bookedSlots.some((booked) =>
         doTimesOverlap(slotStart, slotEnd, booked.startTime, booked.endTime),
       );
@@ -676,6 +674,7 @@ export const getCoachAvailability = async (
       success: true,
       message: "Availability retrieved successfully",
       data: {
+        allSlots: futureCandidateSlots,
         availableSlots,
         bookedSlots,
       },

@@ -220,7 +220,7 @@ export const findVenuesNearby = async (
           spherical: true,
           query: {
             approvalStatus: "APPROVED",
-            ...(sport ? { sports: sport } : {}),
+            ...(sport ? { sports: { $regex: new RegExp(`^${sport}$`, "i") } } : {}),
           },
         },
       },
@@ -289,7 +289,9 @@ export const getAllVenues = async (
   const query: any = {};
 
   if (filters?.sports && filters.sports.length > 0) {
-    query.sports = { $in: filters.sports };
+    query.sports = {
+      $in: filters.sports.map((s) => new RegExp(`^${s}$`, "i")),
+    };
   }
 
   if (filters?.approvalStatus) {

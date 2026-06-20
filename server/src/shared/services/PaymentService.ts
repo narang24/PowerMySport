@@ -368,34 +368,41 @@ export class PaymentService {
 
     let transaction: PaymentTransactionDocument | null = null;
 
+    // PhonePe uses state-based events: pg.order.completed / checkout.order.completed
     if (
-      eventType === "payment.authorized" ||
-      eventType === "payment.captured"
+      eventType === "pg.order.completed" ||
+      eventType === "checkout.order.completed"
     ) {
-      const payment = payload.payload.payment;
+      const data = payload.data || payload;
+      const merchantOrderId = data.merchantTransactionId || data.transactionId;
+      const providerReferenceId = data.providerReferenceId || merchantOrderId;
 
       transaction = await PaymentTransactionModel.findOneAndUpdate(
         {
-          gatewayOrderId: payment.order_id,
-          gatewayPaymentId: payment.id,
+          gatewayOrderId: merchantOrderId,
         },
         {
+          gatewayPaymentId: providerReferenceId,
           status: PaymentStatus.CAPTURED,
           webhookData: payload,
-          idempotencyKey: `webhook-${eventId}`, // Update idempotency key
+          idempotencyKey: `webhook-${eventId}`,
         },
         { new: true },
       );
 
       if (!transaction) {
-        throw new Error("Payment transaction not found");
+        throw new Error(`Payment transaction not found for merchantOrderId: ${merchantOrderId}`);
       }
-    } else if (eventType === "payment.failed") {
-      const payment = payload.payload.payment;
+    } else if (
+      eventType === "pg.order.failed" ||
+      eventType === "checkout.order.failed"
+    ) {
+      const data = payload.data || payload;
+      const merchantOrderId = data.merchantTransactionId || data.transactionId;
 
       transaction = await PaymentTransactionModel.findOneAndUpdate(
         {
-          gatewayOrderId: payment.order_id,
+          gatewayOrderId: merchantOrderId,
         },
         {
           status: PaymentStatus.FAILED,
@@ -406,7 +413,7 @@ export class PaymentService {
       );
 
       if (!transaction) {
-        throw new Error("Payment transaction not found");
+        throw new Error(`Payment transaction not found for merchantOrderId: ${merchantOrderId}`);
       }
     } else {
       throw new Error(`Unknown webhook event type: ${eventType}`);

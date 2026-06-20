@@ -20,7 +20,7 @@ import {
   BookingWaitlist,
   BookingWaitlistDocument,
 } from "../models/BookingWaitlist";
-import { calculateGroupPaymentSplits } from "../../utils/payment";
+import { calculateGroupPaymentSplits, calculateSplitAmounts } from "../../utils/payment";
 import { generateDynamicSlots } from "../../utils/booking";
 import { emitSlotLocked } from "../sockets/bookingSocket";
 import { NotificationService } from "./NotificationService";
@@ -76,6 +76,12 @@ const COACH_SUBSCRIPTIONS_ENFORCE_BOOKING =
   process.env.COACH_SUBSCRIPTIONS_ENFORCE_BOOKING === "true";
 const SERVICE_FEE_RATE = Number(process.env.SERVICE_FEE_RATE ?? 0);
 const TAX_RATE = Number(process.env.TAX_RATE ?? 0.05);
+/**
+ * Platform commission deducted from vendor payouts (0 = 0%, 0.10 = 10%).
+ * Currently 0% — change via PLATFORM_COMMISSION_RATE env var when ready.
+ * This is separate from SERVICE_FEE_RATE which is charged to the customer.
+ */
+const PLATFORM_COMMISSION_RATE = Number(process.env.PLATFORM_COMMISSION_RATE ?? 0);
 
 interface BookingCreatePayload {
   userId: string;
@@ -194,18 +200,29 @@ const hasConflictingVenueBooking = async (
       $gte: start,
       $lt: end,
     },
-    status: {
-      $in: [
-        "PENDING_CONFIRMATION",
-        "PENDING_INVITES",
-        "CONFIRMED",
-        "IN_PROGRESS",
-      ],
-    },
-    $or: [
-      { startTime: { $lte: startTime }, endTime: { $gt: startTime } },
-      { startTime: { $lt: endTime }, endTime: { $gte: endTime } },
-      { startTime: { $gte: startTime }, endTime: { $lte: endTime } },
+    $and: [
+      {
+        $or: [
+          {
+            status: {
+              $in: [
+                "PENDING_CONFIRMATION",
+                "PENDING_INVITES",
+                "CONFIRMED",
+                "IN_PROGRESS",
+              ],
+            },
+          },
+          { status: "PENDING_PAYMENT", expiresAt: { $gt: new Date() } },
+        ],
+      },
+      {
+        $or: [
+          { startTime: { $lte: startTime }, endTime: { $gt: startTime } },
+          { startTime: { $lt: endTime }, endTime: { $gte: endTime } },
+          { startTime: { $gte: startTime }, endTime: { $lte: endTime } },
+        ],
+      },
     ],
   });
 
@@ -231,18 +248,29 @@ const hasConflictingCoachBooking = async (
       $gte: start,
       $lt: end,
     },
-    status: {
-      $in: [
-        "PENDING_CONFIRMATION",
-        "PENDING_INVITES",
-        "CONFIRMED",
-        "IN_PROGRESS",
-      ],
-    },
-    $or: [
-      { startTime: { $lte: startTime }, endTime: { $gt: startTime } },
-      { startTime: { $lt: endTime }, endTime: { $gte: endTime } },
-      { startTime: { $gte: startTime }, endTime: { $lte: endTime } },
+    $and: [
+      {
+        $or: [
+          {
+            status: {
+              $in: [
+                "PENDING_CONFIRMATION",
+                "PENDING_INVITES",
+                "CONFIRMED",
+                "IN_PROGRESS",
+              ],
+            },
+          },
+          { status: "PENDING_PAYMENT", expiresAt: { $gt: new Date() } },
+        ],
+      },
+      {
+        $or: [
+          { startTime: { $lte: startTime }, endTime: { $gt: startTime } },
+          { startTime: { $lt: endTime }, endTime: { $gte: endTime } },
+          { startTime: { $gte: startTime }, endTime: { $lte: endTime } },
+        ],
+      },
     ],
   });
 
@@ -360,7 +388,8 @@ const createBookingAtomically = async (
           ...(payload.discountAmount
             ? { discountAmount: payload.discountAmount }
             : {}),
-          status: "PENDING_CONFIRMATION",
+          status: "PENDING_PAYMENT",
+          expiresAt: new Date(Date.now() + 15 * 60 * 1000),
           checkInCode: payload.checkInCode,
           // Awaiting provider confirmation before booking is confirmed
           participantName: payload.participantName,
@@ -559,6 +588,19 @@ export const initiateBooking = async (
     const requestedEndAt = combineDateAndTime(payload.date, normalizedEndTime);
     const now = new Date();
 
+    // Clean up any stuck pending bookings by this user for the exact same slot
+    // to allow them to retry payment without being blocked by their own previous attempt.
+    const { start, end } = toDayRange(payload.date);
+    await Booking.deleteMany({
+      userId: payload.userId,
+      status: { $in: ["PENDING_CONFIRMATION", "PENDING_PAYMENT"] },
+      date: { $gte: start, $lt: end },
+      startTime: normalizedStartTime,
+      endTime: normalizedEndTime,
+      ...(payload.venueId ? { venueId: payload.venueId } : {}),
+      ...(payload.coachId ? { coachId: payload.coachId } : {}),
+    });
+
     if (requestedEndAt <= requestedStartAt) {
       throw new Error("End time must be after start time");
     }
@@ -677,6 +719,13 @@ export const initiateBooking = async (
     }
 
     let coachPrice = 0;
+    let coachOwnerId: string | undefined;
+    let venueOwnerId: string | undefined;
+
+    // Capture the venue owner ID for payout records
+    if (venue && venue.ownerId) {
+      venueOwnerId = (venue.ownerId as any)._id?.toString() || venue.ownerId.toString();
+    }
 
     // If coach is requested, validate and calculate coach price
     if (payload.coachId) {
@@ -764,6 +813,7 @@ export const initiateBooking = async (
           : coach.hourlyRate;
 
       coachPrice = hours * effectiveCoachRate;
+      coachOwnerId = (coach.userId as any)?._id?.toString();
     }
 
     const subtotal = venuePrice + coachPrice;
@@ -843,7 +893,8 @@ export const initiateBooking = async (
             ...(bookingPayload.discountAmount
               ? { discountAmount: bookingPayload.discountAmount }
               : {}),
-            status: "PENDING_CONFIRMATION",
+            status: "PENDING_PAYMENT",
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000),
             checkInCode: bookingPayload.checkInCode,
             // Awaiting provider confirmation before booking is confirmed
             participantName: bookingPayload.participantName,
@@ -863,6 +914,26 @@ export const initiateBooking = async (
         null,
         discountAmount,
       );
+    }
+
+    // --- Generate vendor payout records for ALL booking types ---
+    // This ensures the admin payout pipeline has records for individual bookings,
+    // not just group/split ones.
+    if (venueOwnerId && (!booking.payments || booking.payments.length === 0)) {
+      const vendorPayouts = calculateSplitAmounts(
+        venuePrice,
+        venueOwnerId,
+        coachPrice > 0 ? coachPrice : undefined,
+        coachOwnerId,
+        PLATFORM_COMMISSION_RATE,
+      );
+
+      booking.payments = vendorPayouts.map((payment) => ({
+        ...payment,
+        userId: new mongoose.Types.ObjectId(payment.userId),
+      }));
+
+      await booking.save();
     }
 
     return {
@@ -1237,35 +1308,58 @@ const initiateBookingRefunds = async (
       continue;
     }
 
-    if (transaction.refundState) {
-      hasPending = true;
+    // Skip if refund already in progress or completed for this transaction
+    if (transaction.refundState && transaction.refundState !== "FAILED") {
+      if (transaction.refundState === "COMPLETED") {
+        totalRefundPaise += transaction.refundAmount || 0;
+      } else {
+        hasPending = true;
+      }
       continue;
     }
 
-    const refundMerchantId = `rf_${booking._id.toString()}_${target.userId}_${Date.now()}_${randomBytes(3).toString("hex")}`;
-    const refundResponse = await initiatePhonePeRefund({
-      merchantRefundId: refundMerchantId,
-      originalMerchantOrderId: transaction.merchantOrderId,
-      amount: target.amountPaise / 100, // initiatePhonePeRefund expects rupees, but amountPaise is in paise
-    });
-    const refundState = refundResponse.state || "PENDING";
-    const refundId = refundResponse.refundId ?? transaction.refundId;
+    // Use deterministic refund ID: bookingId + userId + attempt nonce
+    // This prevents duplicate refunds if the same request is retried
+    const refundMerchantId = `rf_${booking._id.toString()}_${target.userId}_${randomBytes(4).toString("hex")}`;
 
-    transaction.refundMerchantId = refundMerchantId;
-    if (refundId) {
-      transaction.refundId = refundId;
-    }
-    transaction.refundState = refundState;
-    transaction.refundAmount = target.amountPaise;
-    transaction.refundResponse = refundResponse.raw;
-    await transaction.save();
+    try {
+      const refundResponse = await initiatePhonePeRefund({
+        merchantRefundId: refundMerchantId,
+        originalMerchantOrderId: transaction.merchantOrderId,
+        amount: target.amountPaise / 100, // initiatePhonePeRefund expects rupees
+      });
+      const refundState = refundResponse.state || "PENDING";
+      const refundId = refundResponse.refundId ?? transaction.refundId;
 
-    totalRefundPaise += target.amountPaise;
+      transaction.refundMerchantId = refundMerchantId;
+      if (refundId) {
+        transaction.refundId = refundId;
+      }
+      transaction.refundState = refundState;
+      transaction.refundAmount = target.amountPaise;
+      transaction.refundResponse = refundResponse.raw;
+      await transaction.save();
 
-    if (refundState === "FAILED") {
+      totalRefundPaise += target.amountPaise;
+
+      if (refundState === "FAILED") {
+        hasFailure = true;
+      } else if (refundState !== "COMPLETED") {
+        hasPending = true;
+      }
+    } catch (refundError) {
+      // Log but don't throw — continue processing other targets
+      console.error(
+        `Failed to initiate refund for user ${target.userId} on booking ${booking._id}:`,
+        refundError,
+      );
+      // Mark this transaction as FAILED so it can be retried later
+      transaction.refundMerchantId = refundMerchantId;
+      transaction.refundState = "FAILED";
+      transaction.refundAmount = target.amountPaise;
+      transaction.refundResponse = { error: String(refundError) };
+      await transaction.save().catch(() => {});
       hasFailure = true;
-    } else if (refundState !== "COMPLETED") {
-      hasPending = true;
     }
   }
 
@@ -1295,32 +1389,57 @@ export const processBookingRefund = async (
   refundPercentage: number;
   refundStatus: "PENDING" | "PROCESSED" | "REJECTED";
 }> => {
-  const booking = await Booking.findById(bookingId);
-
-  if (!booking) {
-    throw new Error("Booking not found");
-  }
-
-  if (booking.refundStatus === "PROCESSED") {
-    throw new Error("Refund already processed for this booking");
-  }
-
-  const refundResult = await initiateBookingRefunds(
-    booking,
-    refundPercentage,
-    reason,
+  // Atomically claim the refund — prevents TOCTOU race where two concurrent
+  // requests both pass the "not yet processed" check and initiate duplicate refunds.
+  const booking = await Booking.findOneAndUpdate(
+    {
+      _id: bookingId,
+      refundStatus: { $nin: ["PROCESSED", "PROCESSING"] },
+    },
+    {
+      $set: { refundStatus: "PROCESSING" as any },
+    },
+    { new: true },
   );
 
-  booking.refundAmount = refundResult.refundAmount;
-  booking.refundStatus = refundResult.refundStatus;
-  await booking.save();
+  if (!booking) {
+    // Either booking doesn't exist or refund is already in progress/completed
+    const existing = await Booking.findById(bookingId).select("refundStatus").lean();
+    if (!existing) {
+      throw new Error("Booking not found");
+    }
+    throw new Error(
+      existing.refundStatus === "PROCESSED"
+        ? "Refund already processed for this booking"
+        : "Refund is already being processed for this booking",
+    );
+  }
 
-  return {
-    booking,
-    refundAmount: refundResult.refundAmount,
-    refundPercentage,
-    refundStatus: refundResult.refundStatus,
-  };
+  try {
+    const refundResult = await initiateBookingRefunds(
+      booking,
+      refundPercentage,
+      reason,
+    );
+
+    booking.refundAmount = refundResult.refundAmount;
+    booking.refundStatus = refundResult.refundStatus;
+    await booking.save();
+
+    return {
+      booking,
+      refundAmount: refundResult.refundAmount,
+      refundPercentage,
+      refundStatus: refundResult.refundStatus,
+    };
+  } catch (error) {
+    // If refund initiation fails, reset status so it can be retried
+    await Booking.updateOne(
+      { _id: bookingId },
+      { $set: { refundStatus: "PENDING" } },
+    );
+    throw error;
+  }
 };
 
 export const getBookingPhonePeRefundStatus = async (
@@ -2088,6 +2207,11 @@ export const updatePaymentStatus = async (
       booking.payments.every((payment) => payment.status === "PAID"))
   ) {
     booking.paymentConfirmedAt = new Date();
+    booking.status = "CONFIRMED";
+    booking.expiresAt = undefined as any;
+  } else if (status === "FAILED") {
+    booking.status = "PAYMENT_FAILED";
+    booking.expiresAt = undefined as any;
   }
 
   if (session) {
@@ -2217,38 +2341,19 @@ export const initiateGroupBooking = async (
 
     // Calculate payment splits if split payment
     if (payload.paymentType === "SPLIT") {
-      // Get venue and coach info for payments
-      let venueOwnerId: string | undefined;
-      let venuePrice = 0;
-      let coachUserId: string | undefined;
-      let coachPrice = 0;
+      // Read the exact vendor payout records already created by initiateBooking
+      // instead of reverse-engineering prices with the 60/40 heuristic
+      const existingVenuePayout = booking.payments?.find(
+        (p: any) => p.userType === "VENUE_LISTER",
+      );
+      const existingCoachPayout = booking.payments?.find(
+        (p: any) => p.userType === "COACH",
+      );
 
-      if (booking.venueId) {
-        const venue = await Venue.findById(booking.venueId).populate("ownerId");
-        if (venue && venue.ownerId) {
-          venueOwnerId = (venue.ownerId as any)._id.toString();
-          // Calculate venue price from booking
-          const subtotal =
-            booking.totalAmount -
-            (booking.serviceFee || 0) -
-            (booking.taxAmount || 0) +
-            (booking.discountAmount || 0);
-          if (booking.coachId) {
-            const coach = await Coach.findById(booking.coachId).populate(
-              "userId",
-            );
-            if (coach && coach.userId) {
-              coachUserId = (coach.userId as any)._id.toString();
-              // Rough estimation: split subtotal proportionally
-              // This is simplified; in production you'd track exact venue/coach prices
-              venuePrice = Math.round(subtotal * 0.6); // Assume 60% venue
-              coachPrice = subtotal - venuePrice;
-            }
-          } else {
-            venuePrice = subtotal;
-          }
-        }
-      }
+      const venueOwnerId = existingVenuePayout?.userId?.toString();
+      const venuePrice = existingVenuePayout?.amount || 0;
+      const coachUserId = existingCoachPayout?.userId?.toString();
+      const coachPrice = existingCoachPayout?.amount || 0;
 
       // All participants (including organizer)
       const allParticipantIds = [payload.userId, ...payload.invitedFriendIds];
@@ -2261,6 +2366,7 @@ export const initiateGroupBooking = async (
           allParticipantIds,
           coachPrice > 0 ? coachPrice : undefined,
           coachUserId,
+          PLATFORM_COMMISSION_RATE,
         );
 
         // Convert IPayment[] to BookingPayment[] (string userId to ObjectId)

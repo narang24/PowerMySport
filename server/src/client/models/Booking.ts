@@ -128,6 +128,7 @@ const bookingSchema = new Schema<BookingDocument>(
     status: {
       type: String,
       enum: [
+        "PENDING_PAYMENT",
         "PENDING_INVITES",
         "PENDING_CONFIRMATION",
         "CONFIRMED",
@@ -135,6 +136,7 @@ const bookingSchema = new Schema<BookingDocument>(
         "COMPLETED",
         "CANCELLED",
         "NO_SHOW",
+        "PAYMENT_FAILED",
       ],
       default: "PENDING_CONFIRMATION",
     },

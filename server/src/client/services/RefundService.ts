@@ -61,9 +61,11 @@ export async function initiateRefund(
   }
 
   // Validate refund amount
-  if (amount > transaction.amount) {
+  // transaction.amount is stored in paise, payload amount is in rupees
+  const originalAmountRupees = transaction.amount / 100;
+  if (amount > originalAmountRupees) {
     throw new Error(
-      `Refund amount (₹${amount}) cannot exceed original payment (₹${transaction.amount})`,
+      `Refund amount (₹${amount}) cannot exceed original payment (₹${originalAmountRupees})`,
     );
   }
 
@@ -125,7 +127,7 @@ async function initiateCardRefund(
     transaction.refundMerchantId = refundMerchantId;
     transaction.refundId = refundResult.refundId;
     transaction.refundState = refundResult.state || "INITIATED";
-    transaction.refundAmount = amount;
+    transaction.refundAmount = Math.round(amount * 100); // Store in paise for consistency with transaction.amount
     transaction.refundResponse = refundResult.raw;
     await transaction.save();
 
@@ -144,7 +146,7 @@ async function initiateCardRefund(
   } catch (error) {
     console.error("PhonePe refund initiation failed:", error);
     transaction.refundState = "FAILED";
-    transaction.refundAmount = amount;
+    transaction.refundAmount = Math.round(amount * 100); // Store in paise
     await transaction.save();
     throw error;
   }

@@ -18,6 +18,11 @@ export const cacheResponse = (ttlSeconds: number = 300) => {
     const cacheKey = `cache:${req.originalUrl || req.url}`;
 
     try {
+      // 0. Skip cache if Redis is not connected
+      if (redis.status !== "ready") {
+        return next();
+      }
+
       // 1. Check if we have a cached response
       const cachedData = await redis.get(cacheKey);
       if (cachedData) {

@@ -1,22 +1,11 @@
 import express from "express";
-import crypto from "crypto";
+import { validatePhonePeCallback } from "../services/PhonePeService";
 import PaymentWebhookEvent from "../models/PaymentWebhookEvent";
 import OutboxMessage from "../models/OutboxMessage";
 
 const router = express.Router();
 
-const getSignatureHeader = (req: express.Request) =>
-  (req.headers["x-phonepe-signature"] ||
-    req.headers["x-callback-signature"] ||
-    "") as string;
-
 router.post("/webhook", async (req, res) => {
-  const secret = process.env.PHONEPE_WEBHOOK_SECRET;
-  if (!secret) {
-    console.error("PHONEPE_WEBHOOK_SECRET not configured");
-    return res.status(500).send("server misconfigured");
-  }
-
   // Use the rawBody set by express.json verify middleware in app.ts
   const rawBody = (req as any).rawBody as string | undefined;
   if (!rawBody) {
@@ -24,31 +13,17 @@ router.post("/webhook", async (req, res) => {
     return res.status(400).send("raw body required");
   }
 
-  const signature = (getSignatureHeader(req) || "").trim();
-  const expected = crypto
-    .createHmac("sha256", secret)
-    .update(Buffer.from(rawBody, "utf8"))
-    .digest("hex");
+  const authHeader = (req.headers["authorization"] || "") as string;
 
+  let callbackResult;
   try {
-    const a = Buffer.from(expected, "utf8");
-    const b = Buffer.from(signature, "utf8");
-    if (!signature || a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
-      console.warn("PhonePe webhook signature mismatch");
-      return res.status(401).send("invalid signature");
-    }
+    callbackResult = validatePhonePeCallback(authHeader, rawBody);
   } catch (err) {
-    console.error("signature verify error", err);
+    console.warn("PhonePe webhook signature mismatch or invalid payload", err);
     return res.status(401).send("invalid signature");
   }
 
-  let payload: any;
-  try {
-    payload = JSON.parse(rawBody);
-  } catch (err) {
-    console.error("invalid json payload", err);
-    return res.status(400).send("invalid json");
-  }
+  const payload = callbackResult.payload;
 
   const eventId =
     payload?.eventId ||

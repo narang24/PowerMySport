@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 
-const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
+const GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY;
 const isDev = process.env.NODE_ENV === "development";
 
 type GeoCacheEntry = {
@@ -108,10 +108,10 @@ export const autocompleteLocation = async (req: Request, res: Response) => {
       });
     }
 
-    if (!GOOGLE_PLACES_API_KEY) {
+    if (!GEOAPIFY_API_KEY) {
       return res.status(500).json({
         success: false,
-        message: "Google Maps API key not configured",
+        message: "Geoapify API key not configured",
         data: [],
       });
     }
@@ -119,88 +119,37 @@ export const autocompleteLocation = async (req: Request, res: Response) => {
     if (isDev) {
       console.log(`[GEO] Autocomplete query: "${query}"`);
     }
-    const googleUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
+    const geoapifyUrl = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(
       query,
-    )}&key=${encodeURIComponent(GOOGLE_PLACES_API_KEY)}&region=in&components=country:in`;
+    )}&apiKey=${encodeURIComponent(GEOAPIFY_API_KEY)}&filter=countrycode:in`;
 
-    const googleData: any = await fetchJson(googleUrl);
+    const geoapifyData: any = await fetchJson(geoapifyUrl);
 
-    if (googleData?.status !== "OK") {
+    if (!geoapifyData?.features) {
       if (isDev) {
-        console.error(
-          `[GEO] Google status: ${googleData?.status} - ${googleData?.error_message}`,
-        );
+        console.error(`[GEO] Geoapify returned unexpected format or error`);
       }
       return res.status(400).json({
         success: false,
-        message: googleData?.error_message || "No results found",
+        message: "No results found",
         data: [],
       });
     }
 
-    const predictions = (googleData.predictions || []).slice(0, 6);
+    const predictions = geoapifyData.features.slice(0, 6);
 
-    const resolved = await Promise.all(
-      predictions.map(async (prediction: any) => {
-        try {
-          const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${encodeURIComponent(
-            prediction.place_id,
-          )}&key=${encodeURIComponent(GOOGLE_PLACES_API_KEY)}&fields=geometry,address_components,formatted_address,place_id`;
-
-          const detailsData: any = await fetchJson(detailsUrl);
-          const result = detailsData?.result;
-          const location = result?.geometry?.location;
-          if (!location) return null;
-
-          const addressComponents: Array<{
-            long_name?: string;
-            short_name?: string;
-            types?: string[];
-          }> = result?.address_components || [];
-
-          const getAddressComponent = (type: string): string | undefined => {
-            const component = addressComponents.find((item) =>
-              (item.types || []).includes(type),
-            );
-            return component?.long_name || component?.short_name;
-          };
-
-          const city =
-            getAddressComponent("locality") ||
-            getAddressComponent("administrative_area_level_2") ||
-            getAddressComponent("sublocality") ||
-            getAddressComponent("postal_town");
-          const state = getAddressComponent("administrative_area_level_1");
-          const pincode = getAddressComponent("postal_code");
-
-          return {
-            label: result?.formatted_address || prediction.description,
-            lat: location.lat,
-            lon: location.lng,
-            placeId: result?.place_id || prediction.place_id,
-            city,
-            state,
-            pincode,
-          };
-        } catch {
-          return null;
-        }
-      }),
-    );
-
-    const results = resolved.filter(
-      (
-        item,
-      ): item is {
-        label: string;
-        lat: number;
-        lon: number;
-        placeId: string;
-        city?: string;
-        state?: string;
-        pincode?: string;
-      } => item !== null,
-    );
+    const results = predictions.map((feature: any) => {
+      const props = feature.properties;
+      return {
+        label: props.formatted,
+        lat: props.lat,
+        lon: props.lon,
+        placeId: props.place_id,
+        city: props.city || props.county,
+        state: props.state,
+        pincode: props.postcode,
+      };
+    });
 
     setCache(cacheKey, results);
 
@@ -209,7 +158,7 @@ export const autocompleteLocation = async (req: Request, res: Response) => {
     }
     return res.json({
       success: true,
-      message: "Locations fetched from Google Places",
+      message: "Locations fetched from Geoapify",
       data: results,
     });
   } catch (error) {
@@ -249,10 +198,10 @@ export const geocodeAddress = async (req: Request, res: Response) => {
       });
     }
 
-    if (!GOOGLE_PLACES_API_KEY) {
+    if (!GEOAPIFY_API_KEY) {
       return res.status(500).json({
         success: false,
-        message: "Google Maps API key not configured",
+        message: "Geoapify API key not configured",
         data: null,
       });
     }
@@ -260,15 +209,15 @@ export const geocodeAddress = async (req: Request, res: Response) => {
     if (isDev) {
       console.log(`[GEO] Geocoding address: "${address}"`);
     }
-    const googleUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
+    const geoapifyUrl = `https://api.geoapify.com/v1/geocode/search?text=${encodeURIComponent(
       address,
-    )}&key=${encodeURIComponent(GOOGLE_PLACES_API_KEY)}&region=in&components=country:in`;
+    )}&apiKey=${encodeURIComponent(GEOAPIFY_API_KEY)}&filter=countrycode:in`;
 
-    const googleData: any = await fetchJson(googleUrl);
+    const geoapifyData: any = await fetchJson(geoapifyUrl);
 
-    if (googleData?.status !== "OK" || !googleData?.results?.[0]) {
+    if (!geoapifyData?.features || geoapifyData.features.length === 0) {
       if (isDev) {
-        console.error(`[GEO] Geocode status: ${googleData?.status}`);
+        console.error(`[GEO] Geocode empty result`);
       }
       setCache(cacheKey, null);
       return res.json({
@@ -278,15 +227,15 @@ export const geocodeAddress = async (req: Request, res: Response) => {
       });
     }
 
-    const result = googleData.results[0];
+    const props = geoapifyData.features[0].properties;
     if (isDev) {
-      console.log(`[GEO] Geocoded: ${result.formatted_address}`);
+      console.log(`[GEO] Geocoded: ${props.formatted}`);
     }
 
     const payload = {
-      label: result.formatted_address,
-      lat: result.geometry.location.lat,
-      lon: result.geometry.location.lng,
+      label: props.formatted,
+      lat: props.lat,
+      lon: props.lon,
     };
 
     setCache(cacheKey, payload);
@@ -335,10 +284,10 @@ export const reverseGeocode = async (req: Request, res: Response) => {
       });
     }
 
-    if (!GOOGLE_PLACES_API_KEY) {
+    if (!GEOAPIFY_API_KEY) {
       return res.status(500).json({
         success: false,
-        message: "Google Maps API key not configured",
+        message: "Geoapify API key not configured",
         data: null,
       });
     }
@@ -346,17 +295,17 @@ export const reverseGeocode = async (req: Request, res: Response) => {
     if (isDev) {
       console.log(`[GEO] Reverse geocoding: lat=${lat}, lon=${lon}`);
     }
-    const googleUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${encodeURIComponent(
+    const geoapifyUrl = `https://api.geoapify.com/v1/geocode/reverse?lat=${encodeURIComponent(
       String(lat),
-    )},${encodeURIComponent(String(lon))}&key=${encodeURIComponent(
-      GOOGLE_PLACES_API_KEY,
-    )}&region=in`;
+    )}&lon=${encodeURIComponent(String(lon))}&apiKey=${encodeURIComponent(
+      GEOAPIFY_API_KEY,
+    )}`;
 
-    const googleData: any = await fetchJson(googleUrl);
+    const geoapifyData: any = await fetchJson(geoapifyUrl);
 
-    if (googleData?.status !== "OK" || !googleData?.results?.[0]) {
+    if (!geoapifyData?.features || geoapifyData.features.length === 0) {
       if (isDev) {
-        console.error(`[GEO] Reverse geocode status: ${googleData?.status}`);
+        console.error(`[GEO] Reverse geocode empty result`);
       }
       setCache(cacheKey, null);
       return res.json({
@@ -366,13 +315,13 @@ export const reverseGeocode = async (req: Request, res: Response) => {
       });
     }
 
-    const result = googleData.results[0];
+    const props = geoapifyData.features[0].properties;
     if (isDev) {
-      console.log(`[GEO] Reverse geocoded: ${result.formatted_address}`);
+      console.log(`[GEO] Reverse geocoded: ${props.formatted}`);
     }
 
     const payload = {
-      label: result.formatted_address,
+      label: props.formatted,
       lat,
       lon,
     };

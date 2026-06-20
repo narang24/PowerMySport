@@ -4,6 +4,7 @@ import { Coach, IPayoutMethod } from "../../client/models/Coach";
 import { Venue } from "../../client/models/Venue";
 import { User } from "../../client/models/User";
 import mongoose from "mongoose";
+import { getPaginationParams } from "../../utils/pagination";
 
 const getPrimaryPayoutMethod = (
   payoutMethods?: IPayoutMethod[],
@@ -24,57 +25,79 @@ export const listPendingPayouts = async (
   res: Response,
 ): Promise<void> => {
   try {
-    // Find all completed bookings with pending payments for coaches or venue listers
-    const bookings = await Booking.find({
-      status: "COMPLETED",
-      "payments.status": "PENDING",
-      "payments.userType": { $in: ["VENUE_LISTER", "COACH"] },
-    }).lean();
+    const { page, limit, skip } = getPaginationParams(
+      req.query.page as string,
+      req.query.limit as string,
+      20,
+      100
+    );
 
-    const payoutMap = new Map<string, any>();
+    // Use aggregation pipeline to prevent memory issues with large datasets
+    const aggregationResult = await Booking.aggregate([
+      {
+        $match: {
+          status: "COMPLETED",
+          "payments.status": "PENDING",
+          "payments.userType": { $in: ["VENUE_LISTER", "COACH"] },
+        },
+      },
+      { $unwind: "$payments" },
+      {
+        $match: {
+          "payments.status": "PENDING",
+          "payments.userType": { $in: ["VENUE_LISTER", "COACH"] },
+        },
+      },
+      {
+        $group: {
+          _id: {
+            vendorId: "$payments.userId",
+            vendorRole: "$payments.userType",
+          },
+          totalPendingAmount: { $sum: "$payments.amount" },
+          bookingIds: { $push: "$_id" },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          vendorId: "$_id.vendorId",
+          vendorRole: "$_id.vendorRole",
+          totalPendingAmount: 1,
+          bookingIds: 1,
+        },
+      },
+      {
+        $sort: { totalPendingAmount: -1 }, // Highest pending amounts first
+      },
+      {
+        $facet: {
+          metadata: [{ $count: "total" }],
+          data: [{ $skip: skip }, { $limit: limit }],
+        },
+      },
+    ]);
 
-    bookings.forEach((booking) => {
-      booking.payments.forEach((payment) => {
-        if (
-          payment.status === "PENDING" &&
-          (payment.userType === "VENUE_LISTER" || payment.userType === "COACH")
-        ) {
-          const userIdStr = payment.userId.toString();
-          const key = `${userIdStr}_${payment.userType}`;
-
-          if (!payoutMap.has(key)) {
-            payoutMap.set(key, {
-              vendorId: userIdStr,
-              vendorRole: payment.userType,
-              totalPendingAmount: 0,
-              bookingIds: [],
-            });
-          }
-
-          const current = payoutMap.get(key)!;
-          current.totalPendingAmount += payment.amount;
-          current.bookingIds.push(booking._id.toString());
-        }
-      });
-    });
-
-    const pendingPayouts = Array.from(payoutMap.values());
+    const resultData = aggregationResult[0];
+    const totalCount = resultData.metadata[0]?.total || 0;
+    const pendingPayouts = resultData.data;
 
     // Populate vendor details and payout methods
     const populatedPayouts = await Promise.all(
-      pendingPayouts.map(async (payout) => {
-        const user = await User.findById(payout.vendorId).select("name email phone").lean();
+      pendingPayouts.map(async (payout: any) => {
+        const vendorIdStr = payout.vendorId.toString();
+        const user = await User.findById(vendorIdStr).select("name email phone").lean();
         
         let payoutMethod: IPayoutMethod | null = null;
         if (payout.vendorRole === "COACH") {
-          const coach = await Coach.findOne({ userId: payout.vendorId })
+          const coach = await Coach.findOne({ userId: vendorIdStr })
             .select("payoutMethods")
             .lean();
           payoutMethod = getPrimaryPayoutMethod(
             coach?.payoutMethods as IPayoutMethod[] | undefined,
           );
         } else if (payout.vendorRole === "VENUE_LISTER") {
-          const venue = await Venue.findOne({ ownerId: payout.vendorId })
+          const venue = await Venue.findOne({ ownerId: vendorIdStr })
             .select("payoutMethods")
             .lean();
           payoutMethod = getPrimaryPayoutMethod(
@@ -83,7 +106,10 @@ export const listPendingPayouts = async (
         }
 
         return {
-          ...payout,
+          vendorId: vendorIdStr,
+          vendorRole: payout.vendorRole,
+          totalPendingAmount: payout.totalPendingAmount,
+          bookingIds: payout.bookingIds,
           vendorName: user?.name || "Unknown",
           vendorEmail: user?.email || "Unknown",
           vendorPhone: user?.phone || "Unknown",
@@ -95,7 +121,15 @@ export const listPendingPayouts = async (
     res.status(200).json({
       success: true,
       message: "Pending payouts retrieved",
-      data: populatedPayouts,
+      data: {
+        payouts: populatedPayouts,
+        pagination: {
+          total: totalCount,
+          page,
+          limit,
+          totalPages: Math.ceil(totalCount / limit),
+        },
+      },
     });
   } catch (error) {
     console.error("listPendingPayouts error:", error);
@@ -115,12 +149,20 @@ export const markPayoutsAsPaid = async (
   res: Response,
 ): Promise<void> => {
   try {
-    const { vendorId, vendorRole, bookingIds } = req.body;
+    const { vendorId, vendorRole, bookingIds, transferReference } = req.body;
 
     if (!vendorId || !vendorRole || !Array.isArray(bookingIds) || bookingIds.length === 0) {
       res.status(400).json({
         success: false,
         message: "vendorId, vendorRole, and an array of bookingIds are required",
+      });
+      return;
+    }
+
+    if (!transferReference) {
+      res.status(400).json({
+        success: false,
+        message: "transferReference is required",
       });
       return;
     }
@@ -144,7 +186,8 @@ export const markPayoutsAsPaid = async (
           {
             $set: {
               "payments.$[elem].status": "PAID",
-              "payments.$[elem].paidAt": now
+              "payments.$[elem].paidAt": now,
+              "payments.$[elem].transferReference": transferReference
             }
           },
           {

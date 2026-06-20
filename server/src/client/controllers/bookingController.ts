@@ -782,11 +782,11 @@ export const getVenueAvailability = async (
         (slot) => {
           const slotHour = parseInt(slot.split(":")[0] || "0", 10);
           const slotMin = parseInt(slot.split(":")[1] || "0", 10);
-          
+
           let endMin = slotMin + intervalMinutes;
           let endHour = slotHour + Math.floor(endMin / 60);
           endMin = endMin % 60;
-          
+
           const slotEnd = `${String(endHour).padStart(2, "0")}:${String(endMin).padStart(2, "0")}`;
           return isWithinOpeningHours(
             targetDate,
@@ -804,20 +804,22 @@ export const getVenueAvailability = async (
       targetDate.getMonth() === now.getMonth() &&
       targetDate.getDate() === now.getDate();
 
-    const availableSlots = allSlots.filter((slot) => {
+    const futureAllSlots = allSlots.filter((slot) => {
+      if (isToday) {
+        const slotParts = slot.split(":");
+        const slotHour = parseInt(slotParts[0] || "0", 10);
+        const slotMinute = parseInt(slotParts[1] || "0", 10);
+        const slotStart = new Date(targetDate);
+        slotStart.setHours(slotHour, slotMinute, 0, 0);
+        return slotStart > now;
+      }
+      return true;
+    });
+
+    const availableSlots = futureAllSlots.filter((slot) => {
       const slotParts = slot.split(":");
       const slotHour = parseInt(slotParts[0] || "0", 10);
       const nextHour = String(slotHour + 1).padStart(2, "0") + ":00";
-
-      if (isToday) {
-        const slotStart = new Date(targetDate);
-        const slotMinute = parseInt(slotParts[1] || "0", 10);
-        slotStart.setHours(slotHour, slotMinute, 0, 0);
-
-        if (slotStart <= now) {
-          return false;
-        }
-      }
 
       return !bookedTimeSlots.some((booked) => {
         return (
@@ -838,18 +840,19 @@ export const getVenueAvailability = async (
     const alternateSlots =
       preferredStart && preferredEnd
         ? await getAlternateVenueSlots(
-            venueId,
-            targetDate,
-            preferredStart,
-            preferredEnd,
-            4,
-          )
+          venueId,
+          targetDate,
+          preferredStart,
+          preferredEnd,
+          4,
+        )
         : [];
 
     res.status(200).json({
       success: true,
       message: "Availability retrieved successfully",
       data: {
+        allSlots: futureAllSlots,
         availableSlots,
         bookedSlots,
         alternateSlots,
@@ -1158,24 +1161,33 @@ export const confirmMockPaymentSuccessById = async (
 };
 
 const getBookingPaymentAmount = (booking: any, userId: string): number => {
-  if (booking.payments && booking.payments.length > 0) {
-    const userPayment = booking.payments.find(
-      (payment: any) => payment.userId.toString() === userId,
-    );
-
-    if (!userPayment) {
-      throw new Error("No payment share found for this user");
-    }
-
-    if (userPayment.status === "PAID") {
-      throw new Error("Payment is already completed for this booking");
-    }
-
-    return userPayment.amount;
-  }
-
   if (booking.paymentConfirmedAt) {
     throw new Error("Payment is already completed for this booking");
+  }
+
+  if (booking.payments && booking.payments.length > 0) {
+    // Look for a PLAYER payment entry for this user (used in SPLIT/GROUP bookings)
+    const userPayment = booking.payments.find(
+      (payment: any) =>
+        payment.userId.toString() === userId &&
+        payment.userType === "PLAYER",
+    );
+
+    if (userPayment) {
+      if (userPayment.status === "PAID") {
+        throw new Error("Payment is already completed for this booking");
+      }
+      return userPayment.amount;
+    }
+
+    // For individual bookings, payments array contains only vendor payout
+    // records (VENUE_LISTER, COACH, PLATFORM) — no PLAYER entry exists.
+    // The organizer pays the full totalAmount.
+    if (booking.userId.toString() === userId) {
+      return booking.totalAmount || 0;
+    }
+
+    throw new Error("No payment share found for this user");
   }
 
   return booking.totalAmount || 0;
@@ -1247,7 +1259,39 @@ export const initiatePhonePePaymentForBooking = async (
       return;
     }
 
-    const merchantOrderId = `bk_${bookingId}_${Date.now()}`;
+    // Check for an existing pending transaction to prevent double-charges.
+    // If the user already initiated a payment that hasn't completed/expired,
+    // reuse it instead of creating a new PhonePe order.
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const existingPending = await BookingPaymentTransaction.findOne({
+      bookingId: booking._id,
+      userId,
+      status: "PENDING",
+      createdAt: { $gte: thirtyMinutesAgo },
+    }).sort({ createdAt: -1 });
+
+    if (existingPending?.redirectUrl) {
+      res.json({
+        success: true,
+        data: {
+          merchantOrderId: existingPending.merchantOrderId,
+          redirectUrl: existingPending.redirectUrl,
+          transactionId: existingPending._id.toString(),
+          state: existingPending.state || "PENDING",
+          reused: true,
+        },
+      });
+      return;
+    }
+
+    // Use deterministic merchantOrderId: bookingId + userId + counter
+    // This avoids timestamp-based collisions on rapid retries
+    const txCount = await BookingPaymentTransaction.countDocuments({
+      bookingId: booking._id,
+      userId,
+    });
+    const merchantOrderId = `bk_${bookingId}_${userId.slice(-6)}_${txCount + 1}`;
+
     const redirectBase =
       process.env.FRONTEND_URL ||
       process.env.PHONEPE_REDIRECT_URL_BASE ||
@@ -1287,7 +1331,10 @@ export const initiatePhonePePaymentForBooking = async (
     };
 
     if (payer?.phone) {
-      paymentPayload.userPhone = payer.phone;
+      const cleanPhone = payer.phone.replace(/\D/g, "");
+      if (cleanPhone) {
+        paymentPayload.userPhone = cleanPhone.slice(-15);
+      }
     }
 
     const initResult = await initiatePhonePePayment(paymentPayload);

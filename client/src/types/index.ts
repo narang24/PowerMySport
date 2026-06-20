@@ -17,12 +17,14 @@ export type UserRole =
   | "ADMIN";
 export type ServiceMode = "OWN_VENUE" | "FREELANCE" | "HYBRID";
 export type BookingStatus =
+  | "PENDING_PAYMENT"
   | "PENDING_INVITES"
   | "PENDING_CONFIRMATION"
   | "CONFIRMED"
   | "IN_PROGRESS"
   | "COMPLETED"
   | "NO_SHOW"
+  | "PAYMENT_FAILED"
   | "CANCELLED";
 
 export type PaymentUserType = "PLAYER" | "VENUE_LISTER" | "COACH";
@@ -437,6 +439,7 @@ export interface ApiResponse<T> {
 }
 
 export interface Availability {
+  allSlots?: string[];
   availableSlots: string[];
   bookedSlots: Array<{
     startTime: string;

@@ -28,12 +28,14 @@ export interface RoleTemplate {
 
 export type ServiceMode = "OWN_VENUE" | "FREELANCE" | "HYBRID";
 export type BookingStatus =
+  | "PENDING_PAYMENT"
   | "PENDING_INVITES" // Group booking waiting for invites to be accepted
   | "PENDING_CONFIRMATION" // Awaiting coach/venue confirmation
   | "CONFIRMED"
   | "IN_PROGRESS" // Booking started, check-in completed
   | "COMPLETED" // Booking finished successfully
   | "NO_SHOW" // User didn't show up
+  | "PAYMENT_FAILED"
   | "CANCELLED";
 
 // ============================================

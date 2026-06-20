@@ -72,6 +72,7 @@ export default function BookingsPage() {
   });
   const [itemsPerPage] = useState(10);
   const [activeTab, setActiveTab] = useState<TabType>("venues");
+  const [bookingFilter, setBookingFilter] = useState<"ACTIVE" | "CANCELLED">("ACTIVE");
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -111,14 +112,19 @@ export default function BookingsPage() {
   const handleCancelConfirm = async () => {
     if (!bookingToCancel) return;
 
+    // Optimistic UI update for snappy realtime feel
+    const previousBookings = [...bookings];
+    setBookings(bookings.filter((b) => b.id !== bookingToCancel));
+    setConfirmDialogOpen(false);
+
     try {
       setIsCancelling(true);
       await bookingApi.cancelBooking(bookingToCancel);
-      setBookings(bookings.filter((b) => b.id !== bookingToCancel));
       toast.success("Booking cancelled successfully");
-      setConfirmDialogOpen(false);
       setBookingToCancel(null);
     } catch (error) {
+      // Rollback on error
+      setBookings(previousBookings);
       console.error("Failed to cancel booking:", error);
       toast.error("Failed to cancel booking. Please try again.");
     } finally {
@@ -147,11 +153,52 @@ export default function BookingsPage() {
     }
   };
 
+  const getCheckoutUrl = (booking: Booking, type: "venue" | "coach") => {
+    const params = new URLSearchParams({
+      type,
+      date: new Date(booking.date).toISOString().split("T")[0],
+      startTime: booking.startTime,
+      endTime: booking.endTime,
+      step: "3",
+    });
+
+    if (booking.promoCode) {
+      params.append("promoCode", booking.promoCode);
+    }
+
+    if (type === "venue" && booking.venueId) {
+      params.append(
+        "venueId",
+        typeof booking.venueId === "object"
+          ? (booking.venueId as any)._id || (booking.venueId as any).id
+          : booking.venueId,
+      );
+    }
+
+    if (type === "coach" && booking.coachId) {
+      params.append(
+        "coachId",
+        typeof booking.coachId === "object"
+          ? (booking.coachId as any)._id || (booking.coachId as any).id
+          : booking.coachId,
+      );
+    }
+
+    if (booking.sport) {
+      params.append("sport", booking.sport);
+    }
+
+    return `/dashboard/checkout?${params.toString()}`;
+  };
+
   // Filter bookings by type
+  const isActiveBooking = (b: Booking) => !["CANCELLED", "PAYMENT_FAILED", "EXPIRED", "NO_SHOW"].includes(b.status);
   const venueBookings = bookings.filter((b) => b.venueId && !b.coachId);
   const coachBookings = bookings.filter((b) => b.coachId);
-  const filteredBookings =
-    activeTab === "venues" ? venueBookings : coachBookings;
+  const baseBookings = activeTab === "venues" ? venueBookings : coachBookings;
+  const filteredBookings = baseBookings.filter((b) => 
+    bookingFilter === "ACTIVE" ? isActiveBooking(b) : !isActiveBooking(b)
+  );
 
   // Stats
   const confirmedCount = bookings.filter(
@@ -304,6 +351,29 @@ export default function BookingsPage() {
             </div>
           </Card>
 
+          <div className="flex gap-2 mb-2 px-1">
+            <button
+              onClick={() => setBookingFilter("ACTIVE")}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                bookingFilter === "ACTIVE"
+                  ? "bg-slate-800 text-white shadow-sm"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              Confirmed & Pending
+            </button>
+            <button
+              onClick={() => setBookingFilter("CANCELLED")}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                bookingFilter === "CANCELLED"
+                  ? "bg-slate-800 text-white shadow-sm"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              Cancelled
+            </button>
+          </div>
+
           {/* Bookings List */}
           {filteredBookings.length === 0 ? (
             <Card className="shop-surface premium-shadow">
@@ -345,7 +415,7 @@ export default function BookingsPage() {
                               : "bg-slate-300"
                       }`}
                     />
-                    <div className="flex flex-1 flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
+                    <div className="flex flex-1 flex-col gap-3 p-4 sm:flex-row sm:items-end sm:justify-between sm:p-5">
                       <div className="flex-1">
                         {/* Venue Booking */}
                         {activeTab === "venues" &&
@@ -453,6 +523,11 @@ export default function BookingsPage() {
                           >
                             {formatBookingStatus(booking.status)}
                           </Badge>
+                          {booking.status === "PENDING_PAYMENT" && booking.expiresAt && (
+                            <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-md border border-orange-200">
+                              Reserved until {new Date(booking.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -485,8 +560,23 @@ export default function BookingsPage() {
                                 : "Cover Unpaid"}
                             </Button>
                           )}
+                        {(booking.status === "PENDING_CONFIRMATION" || 
+                          booking.status === "PENDING_PAYMENT" || 
+                          booking.status === "PAYMENT_FAILED") && (
+                          <Link href={getCheckoutUrl(booking, activeTab === "venues" ? "venue" : "coach")}>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              icon={<CreditCard size={14} />}
+                            >
+                              {booking.status === "PAYMENT_FAILED" ? "Retry Payment" : "Confirm Booking"}
+                            </Button>
+                          </Link>
+                        )}
                         {(booking.status === "CONFIRMED" ||
                           booking.status === "PENDING_CONFIRMATION" ||
+                          booking.status === "PENDING_PAYMENT" ||
+                          booking.status === "PAYMENT_FAILED" ||
                           booking.status === "PENDING_INVITES") && (
                           <Button
                             onClick={() => handleCancelClick(booking.id)}

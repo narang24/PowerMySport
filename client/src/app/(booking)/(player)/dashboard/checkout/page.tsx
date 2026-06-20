@@ -151,12 +151,14 @@ function CheckoutPageContent() {
   const [selectedDependentId, setSelectedDependentId] = useState(dependentId);
   const [loading, setLoading] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState("phonepe");
-  const [promoCode, setPromoCode] = useState("");
+  const initialPromoCode = searchParams.get("promoCode") || "";
+  const [promoCode, setPromoCode] = useState(initialPromoCode);
   const [promoMessage, setPromoMessage] = useState<string | null>(null);
   const [discount, setDiscount] = useState(0);
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
+  const initialStep = parseInt(searchParams.get("step") || "1", 10);
+  const [currentStep, setCurrentStep] = useState(initialStep);
   const [alternateSlots, setAlternateSlots] = useState<string[]>([]);
   const [showWaitlistPrompt, setShowWaitlistPrompt] = useState(false);
   const [isJoiningWaitlist, setIsJoiningWaitlist] = useState(false);
@@ -279,6 +281,27 @@ function CheckoutPageContent() {
   const taxes = serviceFee > 0 ? Math.round(serviceFee * safeTaxRate) : 0;
   const total = Math.max(0, subtotal + serviceFee + taxes - discount);
   const isZeroCommission = safeServiceFeeRate === 0;
+
+  // Auto-apply promo code if provided in URL
+  useEffect(() => {
+    if (initialPromoCode && subtotal > 0 && !isApplyingPromo && discount === 0) {
+      bookingApi
+        .validatePromoCode({
+          code: initialPromoCode,
+          subtotal,
+          hasCoach: type === "coach",
+        })
+        .then((result) => {
+          if (result.isValid) {
+            setDiscount(result.discountAmount);
+            setPromoMessage(result.message || "Promo applied successfully.");
+          } else {
+            setPromoMessage(result.message || "This promo code is not valid.");
+          }
+        })
+        .catch(() => {});
+    }
+  }, [initialPromoCode, subtotal, type]);
 
   // Booking details
   const bookingDetails: CheckoutDetailItem[] = [

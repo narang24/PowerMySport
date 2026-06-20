@@ -804,7 +804,10 @@ export const initiateCoachSubscriptionPaymentHandler = async (
     };
 
     if (payer?.phone) {
-      paymentPayload.userPhone = payer.phone;
+      const cleanPhone = payer.phone.replace(/\D/g, "");
+      if (cleanPhone) {
+        paymentPayload.userPhone = cleanPhone.slice(-15);
+      }
     }
 
     transaction = await CoachSubscriptionPaymentTransaction.create({

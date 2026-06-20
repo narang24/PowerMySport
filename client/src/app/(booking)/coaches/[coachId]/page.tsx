@@ -154,6 +154,17 @@ export default function CoachDetailsPage() {
   const [subscribingPackageId, setSubscribingPackageId] = useState<
     string | null
   >(null);
+  const slotsToDisplay = availability?.allSlots && availability.allSlots.length > 0
+    ? availability.allSlots
+    : (availability?.availableSlots || []);
+
+  const isSelectedSlotAvailable = (selectedSlot && availability?.availableSlots?.some(
+    (availSlot) => {
+      const availStart = availSlot.split("-")[0] || availSlot;
+      return availStart === selectedSlot.startTime;
+    }
+  )) ?? false;
+
   const communityIntent = buildCoachCommunityIntent({
     source: "coach_detail",
     selectedSport,
@@ -455,6 +466,46 @@ export default function CoachDetailsPage() {
       });
 
       router.push(`/dashboard/checkout?${params.toString()}`);
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
+  const handleJoinWaitlist = async () => {
+    if (!user) {
+      router.push(`/login?redirect=/coaches/${coachId}`);
+      return;
+    }
+
+    if (user.role !== "PLAYER") {
+      toast.error("Only player accounts can join waitlists.");
+      return;
+    }
+
+    if (!selectedSlot || !selectedSport) {
+      toast.error("Please select a sport and time slot");
+      return;
+    }
+
+    setBookingLoading(true);
+    try {
+      await bookingApi.joinWaitlist({
+        coachId,
+        sport: selectedSport,
+        date: new Date(selectedDate).toISOString(),
+        startTime: selectedSlot.startTime,
+        endTime: selectedSlot.endTime,
+      });
+      toast.success(
+        "You were added to the waitlist for this session! We will notify you if it becomes available.",
+      );
+      setSelectedSlot(null);
+    } catch (error: any) {
+      toast.error(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Failed to join waitlist. Please try again.",
+      );
     } finally {
       setBookingLoading(false);
     }
@@ -1092,16 +1143,15 @@ export default function CoachDetailsPage() {
                   {/* Slots */}
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-3">
-                      Available Slots
+                      Select Time Slot
                     </label>
                     {availabilityLoading ? (
                       <div className="flex justify-center py-4">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-turf-green"></div>
                       </div>
-                    ) : availability &&
-                      availability.availableSlots.length > 0 ? (
+                    ) : availability && slotsToDisplay.length > 0 ? (
                       <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto custom-scrollbar">
-                        {availability.availableSlots.map((slot: string) => {
+                        {slotsToDisplay.map((slot: string) => {
                           const startTime = slot.split("-")[0] || slot;
                           const startHour = parseInt(
                             startTime.split(":")[0] || "0",
@@ -1110,6 +1160,10 @@ export default function CoachDetailsPage() {
                           const endTime =
                             slot.split("-")[1] ||
                             `${String(startHour + 1).padStart(2, "0")}:00`;
+
+                          const isSlotAvailable = availability?.availableSlots?.some(
+                            (availSlot) => (availSlot.split("-")[0] || availSlot) === startTime
+                          ) ?? false;
 
                           const isSelected =
                             selectedSlot?.startTime === startTime;
@@ -1120,13 +1174,26 @@ export default function CoachDetailsPage() {
                               onClick={() =>
                                 setSelectedSlot({ startTime, endTime })
                               }
-                              className={`px-3 py-2.5 text-sm font-medium rounded-lg border-2 transition-all ${
-                                isSelected
-                                  ? "bg-turf-green text-white border-turf-green shadow-md"
-                                  : "bg-white text-slate-700 border-slate-200 hover:border-turf-green"
+                              className={`px-3 py-2 text-sm font-medium rounded-lg border-2 transition-all ${
+                                isSlotAvailable
+                                  ? isSelected
+                                    ? "bg-turf-green text-white border-turf-green shadow-md"
+                                    : "bg-white text-slate-700 border-slate-200 hover:border-turf-green"
+                                  : isSelected
+                                    ? "bg-power-orange text-white border-power-orange shadow-md"
+                                    : "bg-amber-50/50 text-amber-700 border-amber-200 border-dashed hover:border-amber-400 hover:bg-amber-50"
                               }`}
                             >
-                              {startTime} - {endTime}
+                              <div className="flex flex-col items-center justify-center">
+                                <span className={!isSlotAvailable && !isSelected ? "text-slate-500 line-through" : ""}>
+                                  {startTime} - {endTime}
+                                </span>
+                                {!isSlotAvailable && (
+                                  <span className={`text-[10px] font-semibold ${isSelected ? "text-white/90" : "text-amber-600"}`}>
+                                    Join Waitlist
+                                  </span>
+                                )}
+                              </div>
                             </button>
                           );
                         })}
@@ -1144,7 +1211,7 @@ export default function CoachDetailsPage() {
 
                   {/* Price Display */}
                   <div className="pt-5 border-t-2 border-slate-100">
-                    <div className="bg-turf-green/5 rounded-lg p-4 mb-4">
+                    <div className="bg-turf-green/5 rounded-lg p-4 mb-4 space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-slate-600">
                           {selectedSport || "Selected Sport"} Rate
@@ -1154,22 +1221,48 @@ export default function CoachDetailsPage() {
                           {selectedSportRate}
                         </span>
                       </div>
+                      {selectedSlot && (
+                        <div className="flex justify-between items-center pt-2 border-t border-turf-green/10">
+                          <span className="text-sm font-medium text-slate-600">
+                            Status
+                          </span>
+                          <span className={`text-sm font-semibold ${isSelectedSlotAvailable ? "text-turf-green" : "text-power-orange"}`}>
+                            {isSelectedSlotAvailable ? "Available" : "Booked (Waitlist)"}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {user ? (
-                      <Button
-                        variant="primary"
-                        className="w-full h-12 text-base font-semibold bg-turf-green hover:bg-green-700 shadow-md"
-                        onClick={handleBooking}
-                        disabled={bookingLoading || !selectedSlot}
-                      >
-                        {bookingLoading ? (
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                        ) : (
-                          <Check size={20} className="mr-2" />
-                        )}
-                        Confirm Booking
-                      </Button>
+                      isSelectedSlotAvailable ? (
+                        <Button
+                          variant="primary"
+                          className="w-full h-12 text-base font-semibold bg-turf-green hover:bg-green-700 shadow-md"
+                          onClick={handleBooking}
+                          disabled={bookingLoading || !selectedSlot}
+                        >
+                          {bookingLoading ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                          ) : (
+                            <Check size={20} className="mr-2" />
+                          )}
+                          Confirm Booking
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="primary"
+                          className="w-full h-12 text-base font-semibold shadow-lg bg-power-orange hover:bg-power-orange/90 text-white border-power-orange"
+                          onClick={handleJoinWaitlist}
+                          disabled={bookingLoading || !selectedSlot}
+                        >
+                          {bookingLoading ? (
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                          ) : (
+                            <Check size={20} className="mr-2" />
+                          )}
+                          Join Waitlist
+                        </Button>
+                      )
                     ) : (
                       <Link href={`/login?redirect=/coaches/${coachId}`}>
                         <Button

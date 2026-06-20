@@ -1,11 +1,12 @@
 import { Request, Response } from "express";
-import crypto from "crypto";
 import { PaymentService, RefundService } from "../services/PaymentService";
 import { OrderService } from "../../shop/services/EcommerceService";
 import { Order as OrderModel, PaymentTransaction as PaymentTransactionModel } from "../../shop/models/Ecommerce";
 import { NotificationService } from "../../client/services/NotificationService";
 import { sendEmail } from "../../utils/email";
 import { PaymentGateway, PaymentStatus } from "../../types/ecommerce";
+
+import { validatePhonePeCallback } from "../services/PhonePeService";
 
 // ============ WEBHOOK CONTROLLER ============
 
@@ -21,94 +22,52 @@ export class WebhookController {
   }
 
   /**
-   * Verify PhonePe webhook signature (HMAC-SHA256)
-   */
-  private verifyPhonePeSignature(
-    payload: string | Buffer,
-    signature: string,
-    secret: string,
-  ): boolean {
-    const expectedSignature = crypto
-      .createHmac("sha256", secret)
-      .update(payload)
-      .digest("hex");
-
-    const expectedBuffer = Buffer.from(expectedSignature, "utf8");
-    const signatureBuffer = Buffer.from(signature, "utf8");
-
-    if (expectedBuffer.length !== signatureBuffer.length) {
-      return false;
-    }
-
-    return crypto.timingSafeEqual(expectedBuffer, signatureBuffer);
-  }
-
-  /**
    * POST /api/v1/webhooks/phonepe
    * Handle PhonePe webhook events
    */
   async handlePhonePeWebhook(req: Request, res: Response): Promise<void> {
     try {
-      // Get raw body for signature verification
-      const rawBody = Buffer.isBuffer(req.body)
-        ? req.body
-        : (req as any).rawBody || JSON.stringify(req.body);
-      const signature = req.headers["x-phonepe-signature"] as string;
+      const rawBody = (req as any).rawBody || (Buffer.isBuffer(req.body) ? req.body.toString("utf8") : JSON.stringify(req.body));
+      const authHeader = (req.headers["authorization"] || "") as string;
 
-      if (!signature) {
+      if (!authHeader) {
         res.status(401).json({
           ok: false,
-          error: { code: "MISSING_SIGNATURE", message: "Signature missing" },
+          error: { code: "MISSING_AUTH", message: "Authorization header missing" },
         });
         return;
       }
 
-      // Verify signature
-      const webhookSecret = process.env.PHONEPE_WEBHOOK_SECRET || "";
-      if (!this.verifyPhonePeSignature(rawBody, signature, webhookSecret)) {
+      let callbackResult;
+      try {
+        callbackResult = validatePhonePeCallback(authHeader, rawBody);
+      } catch (err: any) {
         res.status(401).json({
           ok: false,
-          error: {
-            code: "INVALID_SIGNATURE",
-            message: "Webhook signature invalid",
-          },
+          error: { code: "INVALID_SIGNATURE", message: err.message },
         });
         return;
       }
 
-      // Parse payload
-      const payloadText = Buffer.isBuffer(req.body) ? req.body.toString("utf8") : req.body;
-      const payload = typeof payloadText === "string" ? JSON.parse(payloadText) : payloadText;
-      const { event, created_at, payload: eventPayload } = payload;
+      const payload = callbackResult.payload || {};
+      // PhonePe event type can come from the decoded token's type, or inside the payload itself
+      const event = callbackResult.type || payload.event || payload.type;
+      const state = payload.state;
+      const orderId = payload.orderId;
 
-      console.log(
-        `[Webhook] Processing event: ${event} at ${new Date(created_at * 1000).toISOString()}`,
-      );
+      console.log(`[Webhook] Processing event: ${event} | State: ${state} | OrderId: ${orderId}`);
 
-      // Process based on event type
-      switch (event) {
-        case "payment.authorized":
-          await this.handlePaymentAuthorized(eventPayload);
-          break;
-
-        case "payment.captured":
-          await this.handlePaymentCaptured(eventPayload);
-          break;
-
-        case "payment.failed":
-          await this.handlePaymentFailed(eventPayload);
-          break;
-
-        case "refund.created":
-          await this.handleRefundCreated(eventPayload);
-          break;
-
-        case "refund.failed":
-          await this.handleRefundFailed(eventPayload);
-          break;
-
-        default:
-          console.log(`[Webhook] Unhandled event type: ${event}`);
+      // Process based on PhonePe state or event
+      if (state === "COMPLETED" || event === "pg.order.completed" || event === "checkout.order.completed") {
+        await this.handlePaymentCaptured(payload);
+      } else if (state === "FAILED" || event === "pg.order.failed" || event === "checkout.order.failed") {
+        await this.handlePaymentFailed(payload);
+      } else if (event === "pg.refund.completed") {
+        await this.handleRefundCreated(payload);
+      } else if (event === "pg.refund.failed") {
+        await this.handleRefundFailed(payload);
+      } else {
+        console.log(`[Webhook] Unhandled or pending state: ${state} / event: ${event}`);
       }
 
       // Return success to PhonePe
@@ -128,49 +87,37 @@ export class WebhookController {
   }
 
   /**
-   * Handle payment.authorized event
-   * Called when payment is authorized but not yet captured
-   */
-  private async handlePaymentAuthorized(payload: any): Promise<void> {
-    const payment = payload.payment;
-    const orderId = payment.notes?.orderId;
-
-    console.log(
-      `[Webhook:Authorized] Payment ${payment.id} for order ${orderId}`,
-    );
-
-    if (!orderId) {
-      console.warn("[Webhook:Authorized] Order ID not found in payment notes");
-      return;
-    }
-
-    // Update payment transaction in DB
-    // Payment will be marked as CAPTURED when payment.captured event arrives
-  }
+   * Handle payment.captured event
+   * Called when payment is successfully captured
 
   /**
    * Handle payment.captured event
    * Called when payment is successfully captured
    */
   private async handlePaymentCaptured(payload: any): Promise<void> {
-    const payment = payload.payment;
-    const orderId = payment.notes?.orderId;
+    const data = payload.data || {};
+    const transactionId = data.transactionId || data.merchantTransactionId;
+    const providerReferenceId = data.providerReferenceId || transactionId;
 
-    console.log(
-      `[Webhook:Captured] Payment ${payment.id} for order ${orderId}`,
-    );
+    console.log(`[Webhook:Captured] Payment captured for transaction ${transactionId}`);
 
-    if (!orderId) {
-      console.warn("[Webhook:Captured] Order ID not found in payment notes");
+    if (!transactionId) {
+      console.warn("[Webhook:Captured] Transaction ID not found in payload");
       return;
+    }
+
+    // Extract real orderId from merchantOrderId (e.g. O_1234abcd_1623... -> 1234abcd)
+    let orderId = transactionId;
+    if (transactionId.startsWith("O_")) {
+      orderId = transactionId.split("_")[1];
     }
 
     try {
       // Confirm payment in order service
       const order = await this.orderService.confirmPayment(
         orderId,
-        payment.id,
-        payment.order_id,
+        providerReferenceId, // PhonePe's internal transaction ID
+        transactionId,       // Our merchant transaction ID
       );
 
       console.log(`[Webhook:Captured] Order ${orderId} payment confirmed`);
@@ -183,13 +130,6 @@ export class WebhookController {
         message: `Your payment for order ${order.orderNumber} has been confirmed.`,
         data: { orderId: order._id.toString(), orderNumber: order.orderNumber },
       });
-
-      // Emit socket event to user
-      // io.to(`user:${order.userId}`).emit("order_payment_confirmed", {
-      //   orderId: order._id,
-      //   orderNumber: order.orderNumber,
-      //   status: order.status,
-      // });
     } catch (error: any) {
       console.error(
         `[Webhook:Captured] Error confirming payment for order ${orderId}:`,
@@ -211,23 +151,26 @@ export class WebhookController {
    * Called when payment fails
    */
   private async handlePaymentFailed(payload: any): Promise<void> {
-    const payment = payload.payment;
-    const orderId = payment.notes?.orderId;
+    const data = payload.data || {};
+    const transactionId = data.transactionId || data.merchantTransactionId;
 
-    console.log(
-      `[Webhook:Failed] Payment ${payment.id} failed for order ${orderId}`,
-    );
+    console.log(`[Webhook:Failed] Payment failed for transaction ${transactionId}`);
 
-    if (!orderId) {
-      console.warn("[Webhook:Failed] Order ID not found in payment notes");
+    if (!transactionId) {
+      console.warn("[Webhook:Failed] Transaction ID not found in payload");
       return;
+    }
+
+    let orderId = transactionId;
+    if (transactionId.startsWith("O_")) {
+      orderId = transactionId.split("_")[1];
     }
 
     try {
       // Update order with payment failure
       const order = await this.orderService.handlePaymentFailure(
         orderId,
-        payment.reason || payment.error_code,
+        data.responseCode || payload.code || "PAYMENT_FAILED",
       );
 
       console.log(`[Webhook:Failed] Order ${orderId} marked as payment failed`);
@@ -237,16 +180,9 @@ export class WebhookController {
         userId: order.userId.toString(),
         type: "PAYMENT_FAILED",
         title: "Payment Failed",
-        message: `Payment failed for order ${order.orderNumber}. ${payment.error_description || "Please try again."}`,
+        message: `Payment failed for order ${order.orderNumber}. Please try again.`,
         data: { orderId: order._id.toString(), orderNumber: order.orderNumber },
       });
-
-      // Emit socket event
-      // io.to(`user:${order.userId}`).emit("order_payment_failed", {
-      //   orderId: order._id,
-      //   orderNumber: order.orderNumber,
-      //   reason: payment.reason,
-      // });
     } catch (error: any) {
       console.error(
         `[Webhook:Failed] Error handling payment failure for order ${orderId}:`,
@@ -263,62 +199,59 @@ export class WebhookController {
   }
 
   /**
-   * Handle refund.created event
-   * Called when refund is processed
+   * Handle pg.refund.completed event
+   * Called when refund is processed by PhonePe
    */
   private async handleRefundCreated(payload: any): Promise<void> {
-    const refund = payload.refund;
-    const paymentId = refund.payment_id;
+    const data = payload.data || {};
+    const refundId = data.merchantRefundId || data.refundId;
+    const transactionId = data.transactionId || data.merchantTransactionId;
+    const amount = data.amount; // in paise
 
-    console.log(
-      `[Webhook:Refund] Refund ${refund.id} for payment ${paymentId}`,
-    );
+    console.log(`[Webhook:Refund] Refund ${refundId} for transaction ${transactionId}`);
+
+    let orderId = transactionId;
+    if (transactionId && transactionId.startsWith("O_")) {
+      orderId = transactionId.split("_")[1];
+    }
 
     try {
-      // Find order by payment ID and mark as refunded
+      // Find order by gateway payment/order ID
       const order = await OrderModel.findOne({
-        paymentGatewayPaymentId: paymentId,
+        $or: [
+          { paymentGatewayPaymentId: transactionId },
+          { _id: orderId },
+        ],
       });
 
       if (!order) {
-        console.warn(
-          `[Webhook:Refund] Order not found for payment ${paymentId}`,
-        );
+        console.warn(`[Webhook:Refund] Order not found for transaction ${transactionId}`);
         return;
       }
 
       // Update order status
       await this.refundService.confirmRefundCompletion(
         order._id.toString(),
-        refund.id,
+        refundId,
       );
 
       console.log(`[Webhook:Refund] Order ${order._id} marked as refunded`);
 
       // Emit notification
+      const refundAmountRupees = amount ? (amount / 100) : order.totalAmount;
       await NotificationService.send({
         userId: order.userId.toString(),
         type: "PAYMENT_REFUND",
         title: "Refund Processed",
-        message: `Refund of INR ${refund.amount / 100} has been processed for order ${order.orderNumber}.`,
+        message: `Refund of INR ${refundAmountRupees} has been processed for order ${order.orderNumber}.`,
         data: { orderId: order._id.toString(), orderNumber: order.orderNumber },
       });
-
-      // Emit socket event
-      // io.to(`user:${order.userId}`).emit("order_refunded", {
-      //   orderId: order._id,
-      //   orderNumber: order.orderNumber,
-      //   refundAmount: refund.amount / 100,
-      // });
     } catch (error: any) {
-      console.error(
-        `[Webhook:Refund] Error processing refund ${refund.id}:`,
-        error,
-      );
+      console.error(`[Webhook:Refund] Error processing refund ${refundId}:`, error);
 
       await this.logWebhookError(
-        "refund.created",
-        paymentId,
+        "pg.refund.completed",
+        transactionId || "unknown",
         error.message,
         payload,
       );
@@ -326,28 +259,36 @@ export class WebhookController {
   }
 
   /**
-   * Handle refund.failed event
-   * Called when refund fails
+   * Handle pg.refund.failed event
+   * Called when refund fails on PhonePe
    */
   private async handleRefundFailed(payload: any): Promise<void> {
-    const refund = payload.refund;
-    const paymentId = refund.payment_id;
+    const data = payload.data || {};
+    const refundId = data.merchantRefundId || data.refundId;
+    const transactionId = data.transactionId || data.merchantTransactionId;
+    const responseCode = data.responseCode || payload.code || "UNKNOWN";
 
-    console.log(
-      `[Webhook:Refund Failed] Refund ${refund.id} failed for payment ${paymentId}`,
-    );
+    console.log(`[Webhook:Refund Failed] Refund ${refundId} failed for transaction ${transactionId}`);
+
+    let orderId = transactionId;
+    if (transactionId && transactionId.startsWith("O_")) {
+      orderId = transactionId.split("_")[1];
+    }
 
     try {
       // Find order and log failure for manual review
       const order = await OrderModel.findOne({
-        paymentGatewayPaymentId: paymentId,
+        $or: [
+          { paymentGatewayPaymentId: transactionId },
+          { _id: orderId },
+        ],
       });
 
       if (order) {
         // Log the failure with full context
         console.error(
           `[Webhook:Refund Failed] Order ${order._id} refund failed:`,
-          refund.reason_code,
+          responseCode,
         );
 
         // Alert support team via email
@@ -362,9 +303,9 @@ export class WebhookController {
               <table style="border-collapse:collapse;width:100%;">
                 <tr><td style="padding:8px;border:1px solid #e5e7eb;font-weight:bold;">Order ID</td><td style="padding:8px;border:1px solid #e5e7eb;">${order._id}</td></tr>
                 <tr><td style="padding:8px;border:1px solid #e5e7eb;font-weight:bold;">Order Number</td><td style="padding:8px;border:1px solid #e5e7eb;">${order.orderNumber}</td></tr>
-                <tr><td style="padding:8px;border:1px solid #e5e7eb;font-weight:bold;">Refund ID</td><td style="padding:8px;border:1px solid #e5e7eb;">${refund.id}</td></tr>
-                <tr><td style="padding:8px;border:1px solid #e5e7eb;font-weight:bold;">Payment ID</td><td style="padding:8px;border:1px solid #e5e7eb;">${paymentId}</td></tr>
-                <tr><td style="padding:8px;border:1px solid #e5e7eb;font-weight:bold;">Failure Reason</td><td style="padding:8px;border:1px solid #e5e7eb;">${refund.reason_code || 'Unknown'}</td></tr>
+                <tr><td style="padding:8px;border:1px solid #e5e7eb;font-weight:bold;">Refund ID</td><td style="padding:8px;border:1px solid #e5e7eb;">${refundId}</td></tr>
+                <tr><td style="padding:8px;border:1px solid #e5e7eb;font-weight:bold;">Transaction ID</td><td style="padding:8px;border:1px solid #e5e7eb;">${transactionId}</td></tr>
+                <tr><td style="padding:8px;border:1px solid #e5e7eb;font-weight:bold;">Failure Reason</td><td style="padding:8px;border:1px solid #e5e7eb;">${responseCode}</td></tr>
                 <tr><td style="padding:8px;border:1px solid #e5e7eb;font-weight:bold;">Failed At</td><td style="padding:8px;border:1px solid #e5e7eb;">${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST</td></tr>
               </table>
               <p style="color:#6b7280;font-size:12px;margin-top:24px;">Please investigate and process the refund manually if required.</p>
@@ -385,8 +326,8 @@ export class WebhookController {
             data: {
               orderId: order._id.toString(),
               orderNumber: order.orderNumber,
-              refundId: refund.id,
-              reasonCode: refund.reason_code,
+              refundId: refundId,
+              reasonCode: responseCode,
             },
           });
         } catch (notifError) {

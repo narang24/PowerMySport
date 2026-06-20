@@ -24,7 +24,8 @@ export const expireOldBookings = async (): Promise<number> => {
         expiresAt: { $lte: now },
       },
       {
-        $set: { status: "EXPIRED" },
+        $set: { status: "CANCELLED", cancellationReason: "Payment session expired" },
+        $unset: { expiresAt: "" },
       },
     );
 
